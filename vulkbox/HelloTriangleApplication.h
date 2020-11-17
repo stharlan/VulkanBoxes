@@ -86,10 +86,11 @@ struct Vertex3 {
 //    }
 //};
 
-struct UniformBufferObjectAlt1 {
+struct UniformBufferObjectAlt2 {
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
+    alignas(16) glm::vec4 upos;
 };
 
 extern const bool enableValidationLayers;
@@ -116,6 +117,11 @@ extern double dypos;
 extern int keys[];
 extern float WalkingStride;
 extern float vz;
+
+extern int64_t x_extent; // 0 to extent
+extern int64_t y_extent; // 0 to extent
+extern int64_t z_extent; // 0 to extent
+extern int8_t blockArray[];
 
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 

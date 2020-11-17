@@ -29,7 +29,7 @@
 
 void HelloTriangleApplication::createUniformBuffers()
 {
-    VkDeviceSize bufferSize = sizeof(UniformBufferObjectAlt1);
+    VkDeviceSize bufferSize = sizeof(UniformBufferObjectAlt2);
 
     uniformBuffers.resize(swapChainImages.size());
     uniformBuffersMemory.resize(swapChainImages.size());

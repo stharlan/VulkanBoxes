@@ -51,15 +51,6 @@ void HelloTriangleApplication::createVertexBuffer()
     uint32_t plusyVertexIndices[6] = { 12, 13, 14, 14, 15, 12 };
     uint32_t minusyVertexIndices[6] = { 16, 17, 18, 18, 19, 16 };
 
-    //uint32_t xfrontVertexIndices[6] = { 0, 3, 4, 3, 7, 4 };
-    //uint32_t yfrontVertexIndices[6] = { 1, 0, 5, 5, 0, 4 };
-    //uint32_t xbackVertexIndices[6] = { 1, 5, 2, 2, 5, 6 };
-    //uint32_t ybackVertexIndices[6] = { 6, 7, 2, 2, 7, 3 };
-
-    int64_t x_extent = 64; // 0 to extent
-    int64_t y_extent = 64; // 0 to extent
-    int64_t z_extent = 3; // 0 to extent
-    int8_t blockArray[64 * 64 * 3] = { };
 
     // assign blocks to level 0
     for (int64_t zc = 0; zc < z_extent; zc++) {

@@ -49,6 +49,11 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
+int64_t x_extent = 64; // 0 to extent
+int64_t y_extent = 64; // 0 to extent
+int64_t z_extent = 3; // 0 to extent
+int8_t blockArray[64 * 64 * 3] = { };
+
 // this is going to have to be a uniform
 // but, for now, it can be hard coded into shader
 //const std::vector<glm::vec3> transforms = {
@@ -164,8 +169,8 @@ void HelloTriangleApplication::initVulkan() {
     createSyncObjects();
 }
 
-float ex = 0.0f;
-float ey = 0.0f;
+float ex = 1.0f;
+float ey = 1.0f;
 float ez = 10.0f;
 float vz = 0.0f;
 float WalkingStride = 0.0f;

@@ -45,7 +45,7 @@ void HelloTriangleApplication::createDescriptorSets()
         VkDescriptorBufferInfo bufferInfo{};
         bufferInfo.buffer = uniformBuffers[i];
         bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(UniformBufferObjectAlt1);
+        bufferInfo.range = sizeof(UniformBufferObjectAlt2);
 
         //VkDescriptorImageInfo imageInfo{};
         //imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

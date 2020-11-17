@@ -51,7 +51,7 @@ void HelloTriangleApplication::recreateSwapChain()
     createCommandBuffers();
 }
 
-const float FLOOR = 2.0f;
+//const float FLOOR = 1.0f;
 const float JUMP_VELOCITY = 5.0f;
 const float ACCEL_GRAVITY = -9.8f;
 
@@ -64,30 +64,73 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage, float 
         //std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime)
         //.count();
 
+    float mx = 0.0f;
+    float my = 0.0f;
+
     if (keys[0] == 1) {
         // w
-        ex += cosf(DEG2RAD(azimuth)) * WalkingStride;
-        ey += sinf(DEG2RAD(azimuth)) * WalkingStride;
+        mx += cosf(DEG2RAD(azimuth)) * WalkingStride;
+        my += sinf(DEG2RAD(azimuth)) * WalkingStride;
     }
     else if (keys[1] == 1) {
         // s
-        ex -= cosf(DEG2RAD(azimuth)) * WalkingStride;
-        ey -= sinf(DEG2RAD(azimuth)) * WalkingStride;
+        mx += -1.0f * cosf(DEG2RAD(azimuth)) * WalkingStride;
+        my += -1.0f * sinf(DEG2RAD(azimuth)) * WalkingStride;
     }
     
     if (keys[2] == 1)
     {
         // a
-        ex -= sinf(DEG2RAD(azimuth)) * WalkingStride;
-        ey += cosf(DEG2RAD(azimuth)) * WalkingStride;
+        mx += -1.0f * sinf(DEG2RAD(azimuth)) * WalkingStride;
+        my += cosf(DEG2RAD(azimuth)) * WalkingStride;
     }
     else if (keys[3] == 1)
     {
         // d
-        ex += sinf(DEG2RAD(azimuth)) * WalkingStride;
-        ey -= cosf(DEG2RAD(azimuth)) * WalkingStride;
+        mx += sinf(DEG2RAD(azimuth)) * WalkingStride;
+        my += -1.0f * cosf(DEG2RAD(azimuth)) * WalkingStride;
     }
-    if (keys[5] == 1 && ez == FLOOR)
+
+    // floor
+    int ix = (int)(ex + mx);
+    int iy = (int)(ey + my);
+    int iz = (int)ez;
+    if (ix >= 0 && ix < x_extent)
+    {
+        if (iy >= 0 && iy < y_extent)
+        {
+            if (iz >= 0 && iz < z_extent)
+            {
+                int64_t idx = (iz * x_extent * y_extent) + (iy * x_extent) + ix;
+                if (blockArray[idx] == 1) {
+                    mx = my = 0.0f;
+                }
+            }
+        }
+    }
+
+    ex += mx;
+    ey += my;
+    ix = (int)(ex + mx);
+    iy = (int)(ey + my);
+
+    float floor = -100.0f;
+    if (ix >= 0 && ix < x_extent)
+    {
+        if (iy >= 0 && iy < y_extent)
+        {
+            if (iz >= 0 && iz < z_extent) 
+            {
+                int64_t idx = ((iz - 1ll) * x_extent * y_extent) + (iy * x_extent) + ix;
+                printf("%i, %i, %i, %lli\n", ix, iy, iz, idx);
+                if (blockArray[idx] == 1) {
+                    floor = (float)iz;
+                }
+            }
+        }
+    }
+
+    if (keys[5] == 1 && ez == floor)
     {
         keys[5] = 0;
         vz = JUMP_VELOCITY + (-9.8f /* m/s^2 */ * elapsed);
@@ -95,20 +138,20 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage, float 
     }
     else {
         keys[5] = 0;
-        if (ez > FLOOR) {
+        if (ez > floor) {
             // accelerate
             vz += ACCEL_GRAVITY * elapsed;
             ez += vz * elapsed;
         }
-        if (ez < FLOOR) {
+        if (ez < floor) {
             vz = 0.0f;
-            ez = FLOOR;
+            ez = floor;
         }
     }
 
     float azimuth_in_radians = DEG2RAD(azimuth);
 
-    UniformBufferObjectAlt1 ubo{};
+    UniformBufferObjectAlt2 ubo{};
     //ubo.model = glm::rotate(
         //glm::mat4(1.0f), 
         //time * glm::radians(90.0f), 
@@ -120,11 +163,11 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage, float 
     sinfElevation = FCLAMP(sinfElevation, -0.99f, 0.99f);
     float invSinfElevation = 1.0f - fabs(sinfElevation);
     ubo.view = glm::lookAt(
-        glm::vec3(ex, ey, ez),
+        glm::vec3(ex, ey, ez + 2),
         glm::vec3(
             ex + (cosf(azimuth_in_radians) * invSinfElevation), 
             ey + (sinf(azimuth_in_radians) * invSinfElevation),
-            ez + sinfElevation),
+            ez + 2 + sinfElevation),
         glm::vec3(0.0f, 0.0f, 1.0f));
 
     ubo.proj = glm::perspective(
@@ -133,6 +176,8 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage, float 
         0.01f, 
         100.0f);
     ubo.proj[1][1] *= -1;
+
+    ubo.upos = glm::vec4(ex, ey, ez + 2, 1.0);
 
     void* data;
     vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);

@@ -63,9 +63,13 @@ void HelloTriangleApplication::cleanup()
 
     vkDestroySampler(device, textureSampler, nullptr);
     vkDestroyImageView(device, textureImageView, nullptr);
+    vkDestroyImageView(device, textureImageView2, nullptr);
 
     vkDestroyImage(device, textureImage, nullptr);
+    vkDestroyImage(device, textureImage2, nullptr);
+
     vkFreeMemory(device, textureImageMemory, nullptr);
+    vkFreeMemory(device, textureImageMemory2, nullptr);
 
     vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 

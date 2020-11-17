@@ -24,6 +24,7 @@
 #include <array>
 #include <optional>
 #include <set>
+#include <time.h>
 
 #include "HelloTriangleApplication.h"
 
@@ -42,46 +43,154 @@ void HelloTriangleApplication::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer
 
 void HelloTriangleApplication::createVertexBuffer()
 {
+    srand(time(NULL));
+
     uint32_t topVertexIndices[6] = { 0, 1, 2, 2, 3, 0 };
-    uint32_t bottomVertexIndices[6] = { 4, 6, 5, 6, 4, 7 };
-    uint32_t xfrontVertexIndices[6] = { 0, 3, 4, 3, 7, 4 };
-    uint32_t yfrontVertexIndices[6] = { 1, 0, 5, 5, 0, 4 };
-    uint32_t xbackVertexIndices[6] = { 1, 5, 2, 2, 5, 6 };
-    uint32_t ybackVertexIndices[6] = { 6, 7, 2, 2, 7, 3 };
+    uint32_t plusxVertexIndices[6] = { 4, 5, 6, 6, 7, 4 };
+    uint32_t minusxVertexIndices[6] = { 8, 9, 10, 10, 11, 8 };
+    uint32_t plusyVertexIndices[6] = { 12, 13, 14, 14, 15, 12 };
+    uint32_t minusyVertexIndices[6] = { 16, 17, 18, 18, 19, 16 };
+
+    //uint32_t xfrontVertexIndices[6] = { 0, 3, 4, 3, 7, 4 };
+    //uint32_t yfrontVertexIndices[6] = { 1, 0, 5, 5, 0, 4 };
+    //uint32_t xbackVertexIndices[6] = { 1, 5, 2, 2, 5, 6 };
+    //uint32_t ybackVertexIndices[6] = { 6, 7, 2, 2, 7, 3 };
+
     int64_t x_extent = 64; // 0 to extent
     int64_t y_extent = 64; // 0 to extent
-    int64_t z_extent = 1; // 0 to extent
+    int64_t z_extent = 3; // 0 to extent
+    int8_t blockArray[64 * 64 * 3] = { };
+
+    // assign blocks to level 0
     for (int64_t zc = 0; zc < z_extent; zc++) {
         for (int64_t yc = 0; yc < y_extent; yc++) {
             for (int64_t xc = 0; xc < x_extent; xc++) {
+                int64_t idx = (zc * x_extent * y_extent) + (yc * x_extent) + xc;
+                if (zc == 0) blockArray[idx] = 1;
+                else if (rand() % 100 == 5) blockArray[idx] = 1;
+                else blockArray[idx] = 0;
+            }
+        }
+    }
+
+    for (int64_t zc = 0; zc < z_extent; zc++) {
+        for (int64_t yc = 0; yc < y_extent; yc++) {
+            for (int64_t xc = 0; xc < x_extent; xc++) {
+
+                int64_t idx = (zc * x_extent * y_extent) + (yc * x_extent) + xc;
+
+                // check for block on top (+z)
+                if (blockArray[idx] == 1)
+                {
+                    if (zc < z_extent - 1)
+                    {
+                        int64_t idx_zplus = ((zc + 1) * x_extent * y_extent) + (yc * x_extent) + xc;
+                        if (blockArray[idx_zplus] == 0) {
+                            for (int64_t v = 0; v < 6; v++) {
+                                vertices4.push_back({ topVertexIndices[v], {xc, yc, zc} });
+                            }
+                        }
+                    }
+                    else {
+                        for (int64_t v = 0; v < 6; v++) {
+                            vertices4.push_back({ topVertexIndices[v], {xc, yc, zc} });
+                        }
+                    }
+
+                    // check for block on +x
+                    if (xc < x_extent - 1)
+                    {
+                        int64_t idx_xplus = (zc * x_extent * y_extent) + (yc * x_extent) + xc + 1;
+                        if (blockArray[idx_xplus] == 0) {
+                            for (int64_t v = 0; v < 6; v++) {
+                                vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc} });
+                            }
+                        }
+                    }
+                    else {
+                        for (int64_t v = 0; v < 6; v++) {
+                            vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc} });
+                        }
+                    }
+
+                    // check for block on -x
+                    if (xc > 0)
+                    {
+                        int64_t idx_xminus = (zc * x_extent * y_extent) + (yc * x_extent) + xc - 1;
+                        if (blockArray[idx_xminus] == 0) {
+                            for (int64_t v = 0; v < 6; v++) {
+                                vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc} });
+                            }
+                        }
+                    }
+                    else {
+                        for (int64_t v = 0; v < 6; v++) {
+                            vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc} });
+                        }
+                    }
+
+                    // check for block on +y
+                    if (yc < y_extent - 1)
+                    {
+                        int64_t idx_yplus = (zc * x_extent * y_extent) + ((yc + 1) * x_extent) + xc;
+                        if (blockArray[idx_yplus] == 0) {
+                            for (int64_t v = 0; v < 6; v++) {
+                                vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc} });
+                            }
+                        }
+                    }
+                    else {
+                        for (int64_t v = 0; v < 6; v++) {
+                            vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc} });
+                        }
+                    }
+
+                    // check for block on -y
+                    if (yc > 0)
+                    {
+                        int64_t idx_yminus = (zc * x_extent * y_extent) + ((yc - 1) * x_extent) + xc;
+                        if (blockArray[idx_yminus] == 0) {
+                            for (int64_t v = 0; v < 6; v++) {
+                                vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc} });
+                            }
+                        }
+                    }
+                    else {
+                        for (int64_t v = 0; v < 6; v++) {
+                            vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc} });
+                        }
+                    }
+                }
+
                 // is there a block on top? no
-                for (int64_t v = 0; v < 6; v++) {
-                    vertices4.push_back({ topVertexIndices[v], {xc, yc, zc} });
-                }
+                //for (int64_t v = 0; v < 6; v++) {
+                    //vertices4.push_back({ topVertexIndices[v], {xc, yc, zc} });
+                //}
+
                 // is there a block on bottom? no
-                for (int64_t v = 0; v < 6; v++) {
-                    vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc} });
-                }
-                if (xc == 0) {
-                    for (int64_t v = 0; v < 6; v++) {
-                        vertices4.push_back({ xfrontVertexIndices[v], {xc, yc, zc} });
-                    }
-                }
-                if (yc == 0) {
-                    for (int64_t v = 0; v < 6; v++) {
-                        vertices4.push_back({ yfrontVertexIndices[v], {xc, yc, zc} });
-                    }
-                }
-                if (xc == x_extent - 1) {
-                    for (int64_t v = 0; v < 6; v++) {
-                        vertices4.push_back({ xbackVertexIndices[v], {xc, yc, zc} });
-                    }
-                }
-                if (yc == y_extent - 1) {
-                    for (int64_t v = 0; v < 6; v++) {
-                        vertices4.push_back({ ybackVertexIndices[v], {xc, yc, zc} });
-                    }
-                }
+                //for (int64_t v = 0; v < 6; v++) {
+                //    vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc} });
+                //}
+                //if (xc == 0) {
+                //    for (int64_t v = 0; v < 6; v++) {
+                //        vertices4.push_back({ xfrontVertexIndices[v], {xc, yc, zc} });
+                //    }
+                //}
+                //if (yc == 0) {
+                //    for (int64_t v = 0; v < 6; v++) {
+                //        vertices4.push_back({ yfrontVertexIndices[v], {xc, yc, zc} });
+                //    }
+                //}
+                //if (xc == x_extent - 1) {
+                //    for (int64_t v = 0; v < 6; v++) {
+                //        vertices4.push_back({ xbackVertexIndices[v], {xc, yc, zc} });
+                //    }
+                //}
+                //if (yc == y_extent - 1) {
+                //    for (int64_t v = 0; v < 6; v++) {
+                //        vertices4.push_back({ ybackVertexIndices[v], {xc, yc, zc} });
+                //    }
+                //}
             }
         }
     }

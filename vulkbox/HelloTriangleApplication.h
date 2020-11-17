@@ -157,8 +157,8 @@ private:
     void createGraphicsPipeline();
     void createFramebuffers();
     void createCommandPool();
-    void createTextureImage();
-    void createTextureImageView();
+    void createTextureImage(VkImage& vkImg, VkDeviceMemory& vkDevMem, const char* filename);
+    VkImageView createTextureImageView(VkImage vkImg);
     void createTextureSampler();
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
     void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
@@ -219,8 +219,14 @@ private:
     VkCommandPool commandPool;
 
     VkImage textureImage;
+    VkImage textureImage2;
+
     VkDeviceMemory textureImageMemory;
+    VkDeviceMemory textureImageMemory2;
+
     VkImageView textureImageView;
+    VkImageView textureImageView2;
+
     VkSampler textureSampler;
 
     VkBuffer vertexBuffer;

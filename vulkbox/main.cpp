@@ -150,8 +150,10 @@ void HelloTriangleApplication::initVulkan() {
     createCommandPool();
     createDepthResources();
     createFramebuffers();
-    createTextureImage();
-    createTextureImageView();
+    createTextureImage(textureImage, textureImageMemory, "c:\\temp\\grassbox.png");
+    createTextureImage(textureImage2, textureImageMemory2, "c:\\temp\\dirt.png");
+    textureImageView = createTextureImageView(textureImage);
+    textureImageView2 = createTextureImageView(textureImage2);
     createTextureSampler();
     createVertexBuffer();
     //createIndexBuffer();

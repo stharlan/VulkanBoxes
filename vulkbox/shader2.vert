@@ -1,18 +1,56 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-vec3 locs[8] = vec3[] (
+vec3 locs[20] = vec3[] (
+    // +z
     vec3(-0.5, -0.5, 0.5),
     vec3(0.5, -0.5, 0.5),
     vec3(0.5, 0.5, 0.5),
     vec3(-0.5, 0.5, 0.5),
-    vec3(-0.5, -0.5, -0.5),
+
+    // +x
     vec3(0.5, -0.5, -0.5),
     vec3(0.5, 0.5, -0.5),
-    vec3(-0.5, 0.5, -0.5)
+    vec3(0.5, 0.5, 0.5),
+    vec3(0.5, -0.5, 0.5),
+
+    // -x
+    vec3(-0.5, -0.5, -0.5),
+    vec3(-0.5, -0.5, 0.5),
+    vec3(-0.5, 0.5, 0.5),
+    vec3(-0.5, 0.5, -0.5),
+
+    // +y
+    vec3(-0.5, 0.5, -0.5),
+    vec3(-0.5, 0.5, 0.5),
+    vec3(0.5, 0.5, 0.5),
+    vec3(0.5, 0.5, -0.5),
+
+    // -y
+    vec3(-0.5, -0.5, -0.5),
+    vec3(0.5, -0.5, -0.5),
+    vec3(0.5, -0.5, 0.5),
+    vec3(-0.5, -0.5, 0.5)
+
+    //vec3(-0.5, -0.5, -0.5),
+    //vec3(0.5, -0.5, -0.5),
+    //vec3(0.5, 0.5, -0.5),
+    //vec3(-0.5, 0.5, -0.5)
 );
 
-vec3 clrs[8] = vec3[] (
+vec3 clrs[20] = vec3[] (
+    vec3(1.0f, 0.0f, 0.0f),
+    vec3(0.0f, 1.0f, 0.0f),
+    vec3(0.0f, 0.0f, 1.0f),
+    vec3(1.0f, 1.0f, 1.0f),
+    vec3(1.0f, 0.0f, 0.0f),
+    vec3(0.0f, 1.0f, 0.0f),
+    vec3(0.0f, 0.0f, 1.0f),
+    vec3(1.0f, 1.0f, 1.0f),
+    vec3(1.0f, 0.0f, 0.0f),
+    vec3(0.0f, 1.0f, 0.0f),
+    vec3(0.0f, 0.0f, 1.0f),
+    vec3(1.0f, 1.0f, 1.0f),
     vec3(1.0f, 0.0f, 0.0f),
     vec3(0.0f, 1.0f, 0.0f),
     vec3(0.0f, 0.0f, 1.0f),
@@ -23,15 +61,50 @@ vec3 clrs[8] = vec3[] (
     vec3(1.0f, 1.0f, 1.0f)
 );
 
-vec2 texcrds[8] = vec2[] (
+vec2 texcrds[20] = vec2[] (
     vec2(0.25f, 0.25f),
     vec2(0.49f, 0.25f),
     vec2(0.49f, 0.49f),
     vec2(0.25f, 0.49f),
-    vec2(0.0f, 0.0f),
-    vec2(1.0f, 0.0f),
-    vec2(1.0f, 1.0f),
-    vec2(0.0f, 1.0f)
+    vec2(0.5f, 0.25f),
+    vec2(0.75f, 0.25f),
+    vec2(0.75f, 0.5f),
+    vec2(0.5f, 0.5f),
+    vec2(0.0f, 0.25f),
+    vec2(0.24f, 0.25f),
+    vec2(0.24f, 0.49f),
+    vec2(0.0f, 0.49f),
+    vec2(0.25f, 0.5f),
+    vec2(0.49f, 0.5f),
+    vec2(0.49f, 0.74f),
+    vec2(0.25f, 0.74f),
+    vec2(0.25f, 0.0f),
+    vec2(0.49f, 0.0f),
+    vec2(0.49f, 0.24f),
+    vec2(0.25f, 0.24f)
+);
+
+vec3 normals[20] = vec3[] (
+    vec3(0.0f, 0.0f, 1.0f),
+    vec3(0.0f, 0.0f, 1.0f),
+    vec3(0.0f, 0.0f, 1.0f),
+    vec3(0.0f, 0.0f, 1.0f),
+    vec3(1.0f, 0.0f, 0.0f),
+    vec3(1.0f, 0.0f, 0.0f),
+    vec3(1.0f, 0.0f, 0.0f),
+    vec3(1.0f, 0.0f, 0.0f),
+    vec3(-1.0f, 0.0f, 0.0f),
+    vec3(-1.0f, 0.0f, 0.0f),
+    vec3(-1.0f, 0.0f, 0.0f),
+    vec3(-1.0f, 0.0f, 0.0f),
+    vec3(0.0f, 1.0f, 0.0f),
+    vec3(0.0f, 1.0f, 0.0f),
+    vec3(0.0f, 1.0f, 0.0f),
+    vec3(0.0f, 1.0f, 0.0f),
+    vec3(0.0f, -1.0f, 0.0f),
+    vec3(0.0f, -1.0f, 0.0f),
+    vec3(0.0f, -1.0f, 0.0f),
+    vec3(0.0f, -1.0f, 0.0f)
 );
 
 layout(binding = 0) uniform UniformBufferObject {
@@ -45,6 +118,8 @@ layout(location = 1) in vec3 inTrans;
 
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
+layout(location = 2) out vec3 fragNormal;
+layout(location = 3) out vec3 fragPos;
 
 void main() {
 
@@ -55,4 +130,6 @@ void main() {
     gl_Position = ubo.proj * ubo.view * (ubo.model * translate1) * vec4(locs[inIndex], 1.0);
     fragColor = clrs[inIndex];
     fragTexCoord = texcrds[inIndex];
+    fragNormal = normals[inIndex];
+    fragPos = vec3((ubo.model * translate1) * vec4(locs[inIndex], 1.0));
 }

@@ -1,54 +1,142 @@
 
 #include "Common.h"
 
+using namespace physx;
+
 void HelloTriangleApplication::initPhysics()
 {
+    static PxDefaultErrorCallback gDefaultErrorCallback;
+    static PxDefaultAllocator gDefaultAllocatorCallback;
 
-	this->world = this->physicsCommon.createPhysicsWorld();
-    reactphysics3d::Vector3 gravity(0.0f, 0.0f, -9.8f);
-    this->world->setGravity(gravity);
+    this->mFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gDefaultAllocatorCallback,
+        gDefaultErrorCallback);
+    if (!this->mFoundation) return;
 
-    reactphysics3d::Vector3 position(ex, ey, ez);
-    reactphysics3d::Quaternion orientation = reactphysics3d::Quaternion::identity();
-    reactphysics3d::Transform transform(position, orientation);
-    this->player = world->createRigidBody(transform);
+    bool recordMemoryAllocations = true;
 
-    float radius = 2.0f;
-    this->playerShape = this->physicsCommon.createSphereShape(radius);
-    reactphysics3d::Transform colliderTransform = reactphysics3d::Transform::identity();
-    this->playerCollider = this->player->addCollider(this->playerShape, colliderTransform);
+    this->mPvd = PxCreatePvd(*this->mFoundation);
+    if (!this->mPvd) return;
+    PxPvdTransport* transport = PxDefaultPvdSocketTransportCreate(PVD_HOST, 5425, 10);
+    mPvd->connect(*transport, PxPvdInstrumentationFlag::eALL);
 
-    reactphysics3d::Vector3 blockExtent(0.5f, 0.5f, 0.5f);
-    this->blockShape = this->physicsCommon.createBoxShape(blockExtent);
+    mPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *mFoundation,
+        PxTolerancesScale(), recordMemoryAllocations, mPvd);
+    if (!mPhysics) return;
+
+    PxSceneDesc sceneDesc(this->mPhysics->getTolerancesScale());
+    sceneDesc.gravity = PxVec3(0.0f, 0.0f, -9.81f);
+    this->mDispatcher = PxDefaultCpuDispatcherCreate(2);
+    sceneDesc.cpuDispatcher = this->mDispatcher;
+    sceneDesc.filterShader = PxDefaultSimulationFilterShader;
+    this->mScene = this->mPhysics->createScene(sceneDesc);
+
+    PxPvdSceneClient* pvdClient = this->mScene->getScenePvdClient();
+    if (pvdClient)
+    {
+        pvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_CONSTRAINTS, true);
+        pvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_CONTACTS, true);
+        pvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES, true);
+    }
+
+    PxMaterial* pMaterial = this->mPhysics->createMaterial(0.5f, 0.5f, 0.0f);
+
+    // create player
+    this->mPlayerCapsuleActor = this->mPhysics->createRigidDynamic(PxTransform(ex, ey, ez));    
+    PxTransform relativePose(PxQuat(PxHalfPi, PxVec3(0, 1, 0)));    
+    this->mPlayerCapsuleShape = PxRigidActorExt::createExclusiveShape(*this->mPlayerCapsuleActor,
+        PxCapsuleGeometry(0.5f, 1.0f), *pMaterial);
+    this->mPlayerCapsuleShape->setLocalPose(relativePose);
+    PxRigidBodyExt::updateMassAndInertia(*this->mPlayerCapsuleActor, 1.0f);
+    this->mScene->addActor(*this->mPlayerCapsuleActor);
+
+    this->mBlockShape = this->mPhysics->createShape(PxBoxGeometry(0.5f, 0.5f, 0.5f), *pMaterial);
 }
 
 void HelloTriangleApplication::addBlockRigidBody(float bx, float by, float bz)
 {
-    // Initial position and orientation of the collision body 
-    reactphysics3d::Vector3 position(bx + 0.5f, by + 0.5f, bz + 0.5f);
-    reactphysics3d::Quaternion orientation = reactphysics3d::Quaternion::identity();
-    reactphysics3d::Transform transform(position, orientation);
-
-    // Create a collision body in the world 
-    reactphysics3d::RigidBody* blockBody = world->createRigidBody(transform);
-    blockBody->setType(reactphysics3d::BodyType::STATIC);
-
-    reactphysics3d::Transform colliderTransform = reactphysics3d::Transform::identity();
-    reactphysics3d::Collider* pBlockCollider = 
-        blockBody->addCollider(this->blockShape, colliderTransform);
-
-    this->blocks.push_back(blockBody);
+    PxRigidStatic* block = this->mPhysics->createRigidStatic(PxTransform(bx + 0.5f, by + 0.5f, bz + 0.5f));
+    block->attachShape(*this->mBlockShape);
+    this->mScene->addActor(*block);
+    this->blocks.push_back(block);
 }
 
 void HelloTriangleApplication::cleanupPhysics()
 {
-    std::vector<reactphysics3d::RigidBody*>::iterator iter = this->blocks.begin();
-    for (; iter != this->blocks.end(); ++iter)
+    std::vector<physx::PxRigidStatic*>::iterator iter = blocks.begin();
+    for (; iter != blocks.end(); ++iter)
     {
-        this->world->destroyRigidBody(*iter);
+        (*iter)->release();
     }
-    this->world->destroyRigidBody(this->player);
-    this->physicsCommon.destroyBoxShape(this->blockShape);
-    this->physicsCommon.destroySphereShape(this->playerShape);
-    this->physicsCommon.destroyPhysicsWorld(this->world);
+    if (this->mBlockShape) this->mBlockShape->release();
+    if (this->mPlayerCapsuleShape) this->mPlayerCapsuleShape->release();
+    if (this->mPlayerCapsuleActor) this->mPlayerCapsuleActor->release();
+    if (this->mScene) this->mScene->release();
+    if (this->mDispatcher) this->mDispatcher->release();
+    if (this->mPhysics) this->mPhysics->release();
+    if (this->mPvd) this->mPvd->release();
+    if (this->mFoundation) this->mFoundation->release();
 }
+
+//void HelloTriangleApplication::initPhysics()
+//{
+//	this->world = this->physicsCommon.createPhysicsWorld();
+//    reactphysics3d::Vector3 gravity(0.0f, 0.0f, -9.8f);
+//    this->world->setGravity(gravity);
+//
+//    reactphysics3d::Vector3 position(ex, ey, ez);
+//    reactphysics3d::Quaternion orientation = reactphysics3d::Quaternion::identity();
+//    reactphysics3d::Transform transform(position, orientation);
+//    this->player = world->createRigidBody(transform);
+//
+//    float radius = 0.5f;
+//    float height = 2.0f;
+//    this->playerShape = this->physicsCommon.createCapsuleShape(radius, height);
+//
+//    // rotate 90 deg around x
+//    reactphysics3d::Vector3 colliderRotation(3.14159f / 2.0f, 0.0f, 0.0f);
+//    reactphysics3d::Vector3 colliderPosition(0, 0, 0);
+//    reactphysics3d::Quaternion colliderOrientation =
+//        reactphysics3d::Quaternion::fromEulerAngles(colliderRotation);
+//    reactphysics3d::Transform colliderTransform(colliderPosition, colliderOrientation);
+//    this->playerCollider = this->player->addCollider(this->playerShape, colliderTransform);
+//    reactphysics3d::Material& mat = this->playerCollider->getMaterial();
+//    mat.setBounciness(0.0f);
+//    this->playerCollider->setMaterial(mat);
+//
+//    reactphysics3d::Vector3 blockExtent(0.5f, 0.5f, 0.5f);
+//    this->blockShape = this->physicsCommon.createBoxShape(blockExtent);
+//}
+//
+//void HelloTriangleApplication::addBlockRigidBody(float bx, float by, float bz)
+//{
+//    // Initial position and orientation of the collision body 
+//    reactphysics3d::Vector3 position(bx + 0.5f, by + 0.5f, bz + 0.5f);
+//    reactphysics3d::Quaternion orientation = reactphysics3d::Quaternion::identity();
+//    reactphysics3d::Transform transform(position, orientation);
+//
+//    // Create a collision body in the world 
+//    reactphysics3d::RigidBody* blockBody = world->createRigidBody(transform);
+//    blockBody->setType(reactphysics3d::BodyType::STATIC);
+//
+//    reactphysics3d::Transform colliderTransform = reactphysics3d::Transform::identity();
+//    reactphysics3d::Collider* pBlockCollider = 
+//        blockBody->addCollider(this->blockShape, colliderTransform);
+//    reactphysics3d::Material& mat = pBlockCollider->getMaterial();
+//    mat.setBounciness(0.0f);
+//    pBlockCollider->setMaterial(mat);
+//
+//    this->blocks.push_back(blockBody);
+//}
+//
+//void HelloTriangleApplication::cleanupPhysics()
+//{
+//    std::vector<reactphysics3d::RigidBody*>::iterator iter = this->blocks.begin();
+//    for (; iter != this->blocks.end(); ++iter)
+//    {
+//        this->world->destroyRigidBody(*iter);
+//    }
+//    this->world->destroyRigidBody(this->player);
+//    this->physicsCommon.destroyBoxShape(this->blockShape);
+//    this->physicsCommon.destroyCapsuleShape(this->playerShape);
+//    this->physicsCommon.destroyPhysicsWorld(this->world);
+//}

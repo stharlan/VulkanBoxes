@@ -266,12 +266,22 @@ private:
     VkDeviceMemory depthImageMemory;
     VkImageView depthImageView;
 
-    reactphysics3d::PhysicsCommon physicsCommon;
-    reactphysics3d::PhysicsWorld* world = NULL;
-    reactphysics3d::RigidBody* player = NULL;
-    reactphysics3d::SphereShape* playerShape = NULL;
-    reactphysics3d::BoxShape* blockShape = NULL;
-    reactphysics3d::Collider* playerCollider = NULL;
-    std::vector<reactphysics3d::RigidBody*> blocks;
-    std::vector<reactphysics3d::Collider*> blockColliders;
+    physx::PxFoundation* mFoundation = NULL;
+    physx::PxPvd* mPvd = NULL;
+    physx::PxPhysics* mPhysics = NULL;
+    physx::PxDefaultCpuDispatcher* mDispatcher = NULL;
+    physx::PxScene* mScene = NULL;
+    physx::PxRigidDynamic* mPlayerCapsuleActor = NULL;
+    physx::PxShape* mPlayerCapsuleShape = NULL;
+    physx::PxShape* mBlockShape = NULL;
+    std::vector<physx::PxRigidStatic*> blocks;
+
+    //reactphysics3d::PhysicsCommon physicsCommon;
+    //reactphysics3d::PhysicsWorld* world = NULL;
+    //reactphysics3d::RigidBody* player = NULL;
+    //reactphysics3d::CapsuleShape* playerShape = NULL;
+    //reactphysics3d::BoxShape* blockShape = NULL;
+    //reactphysics3d::Collider* playerCollider = NULL;
+    //std::vector<reactphysics3d::RigidBody*> blocks;
+    //std::vector<reactphysics3d::Collider*> blockColliders;
 };

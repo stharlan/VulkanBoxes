@@ -31,20 +31,33 @@ const float ACCEL_GRAVITY = -9.8f;
 
 void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentImage, float elapsed)
 {
+    //reactphysics3d::Vector3 vel = this->player->getLinearVelocity();
+
+    if (keys[0] == 1) {
+        //reactphysics3d::Vector3 force(
+        //    20.0f * cosf(DEG2RAD(azimuth)),
+        //    20.0f * sinf(DEG2RAD(azimuth)),
+        //    0);
+        //this->player->applyForceToCenterOfMass(force);
+    }
+    else {
+        //reactphysics3d::Vector3 stop(0, 0, vel.z);
+        //this->player->setLinearVelocity(stop);
+    }
+
     // physics
-    this->world->update(elapsed);
+    //this->world->update(elapsed);
+    this->mScene->simulate(elapsed);
+    this->mScene->fetchResults(true);
 
-    const reactphysics3d::Transform& transform = this->player->getTransform();
-    const reactphysics3d::Vector3& position = transform.getPosition();
+    physx::PxTransform trx = this->mPlayerCapsuleActor->getGlobalPose();
+    printf("%.1f %.1f %.1f\n", trx.p.x, trx.p.y, trx.p.z);
 
-    const reactphysics3d::Transform& btransform = this->blocks[1]->getTransform();
-    const reactphysics3d::Vector3& bposition = btransform.getPosition();
-
-    printf("pos %.2f, %.2f, %.2f; block0 %.2f, %.2f, %.2f\n",
-        position.x, position.y, position.z,
-        bposition.x, bposition.y, bposition.z);
-    glm::vec3 glmpos(position.x, position.y, position.z);
-    glm::vec3 glmposlook(position.x + 1, position.y + 1, position.z);
+    glm::vec3 glmpos(trx.p.x, trx.p.y, trx.p.z);
+    glm::vec3 glmposlook(
+        trx.p.x + cosf(DEG2RAD(azimuth)),
+        trx.p.y + sinf(DEG2RAD(azimuth)),
+        trx.p.z);
 
     UniformBufferObjectAlt2 ubo{};
     //ubo.model = glm::rotate(
@@ -66,13 +79,84 @@ void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentIm
         100.0f);
     ubo.proj[1][1] *= -1;
 
-    ubo.upos = glm::vec4(position.x, position.y, position.z, 1.0);
+    ubo.upos = glm::vec4(trx.p.x, trx.p.y, trx.p.z, 1.0);
 
     void* data;
     vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
     memcpy(data, &ubo, sizeof(ubo));
     vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
 }
+
+//void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentImage, float elapsed)
+//{
+//    reactphysics3d::Vector3 vel = this->player->getLinearVelocity();
+//    //float vx = vel.x;
+//    //float vy = vel.y;
+//    //float xyvel = sqrtf((vx * vx) + (vy * vy));
+//    //if (isnan(xyvel)) xyvel = 0.0f;
+//    //printf("%.1f, %.1f, %.1f : lin vel %.2f\n", vel.x, vel.y, vel.z, xyvel);
+//    if (keys[0] == 1) {
+//        reactphysics3d::Vector3 force(
+//            20.0f * cosf(DEG2RAD(azimuth)),
+//            20.0f * sinf(DEG2RAD(azimuth)),
+//            0);
+//        this->player->applyForceToCenterOfMass(force);
+//        //reactphysics3d::Vector3 go(
+//            //10.0f * cosf(DEG2RAD(azimuth)),
+//            //10.0f * sinf(DEG2RAD(azimuth)),
+//            //vel.z);
+//        //this->player->setLinearVelocity(go);
+//    }
+//    else {
+//        //reactphysics3d::Vector3 stop(0, 0, vel.z);
+//        //this->player->setLinearVelocity(stop);
+//    }
+//
+//    // physics
+//    this->world->update(elapsed);
+//
+//    const reactphysics3d::Transform& transform = this->player->getTransform();
+//    const reactphysics3d::Vector3& position = transform.getPosition();
+//
+//    const reactphysics3d::Transform& btransform = this->blocks[1]->getTransform();
+//    const reactphysics3d::Vector3& bposition = btransform.getPosition();
+//
+//    //printf("pos %.2f, %.2f, %.2f; block0 %.2f, %.2f, %.2f\n",
+//        //position.x, position.y, position.z,
+//        //bposition.x, bposition.y, bposition.z);
+//    glm::vec3 glmpos(position.x, position.y, position.z);
+//    glm::vec3 glmposlook(
+//        position.x + cosf(DEG2RAD(azimuth)), 
+//        position.y + sinf(DEG2RAD(azimuth)), 
+//        position.z);
+//
+//    UniformBufferObjectAlt2 ubo{};
+//    //ubo.model = glm::rotate(
+//        //glm::mat4(1.0f), 
+//        //time * glm::radians(90.0f), 
+//        //glm::vec3(0.0f, 0.0f, 1.0f));
+//    ubo.model = glm::mat4(1.0f);
+//
+//    // eye, center, up
+//    ubo.view = glm::lookAt(
+//        glmpos,
+//        glmposlook,
+//        glm::vec3(0.0f, 0.0f, 1.0f));
+//
+//    ubo.proj = glm::perspective(
+//        glm::radians(45.0f),
+//        swapChainExtent.width / (float)swapChainExtent.height,
+//        0.01f,
+//        100.0f);
+//    ubo.proj[1][1] *= -1;
+//
+//    ubo.upos = glm::vec4(position.x, position.y, position.z, 1.0);
+//
+//    void* data;
+//    vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
+//    memcpy(data, &ubo, sizeof(ubo));
+//    vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
+//}
 
 void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage, float elapsed)
 {

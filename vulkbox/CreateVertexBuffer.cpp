@@ -1,32 +1,5 @@
 
-#pragma comment(lib, "C:\\VulkanSDK\\1.2.154.1\\Lib\\vulkan-1.lib")
-#pragma comment(lib, "C:\\Library\\glfw-3.3.2.bin.WIN64\\lib-vc2019\\glfw3.lib")
-
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
-#include "stb_image.h"
-
-#include <iostream>
-#include <fstream>
-#include <stdexcept>
-#include <algorithm>
-#include <chrono>
-#include <vector>
-#include <cstring>
-#include <cstdlib>
-#include <cstdint>
-#include <array>
-#include <optional>
-#include <set>
-#include <time.h>
-
-#include "HelloTriangleApplication.h"
+#include "Common.h"
 
 void HelloTriangleApplication::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
@@ -60,6 +33,7 @@ void HelloTriangleApplication::createVertexBuffer()
                 if (zc == 0) blockArray[idx] = 1;
                 else if (rand() % 100 == 5) blockArray[idx] = 1;
                 else blockArray[idx] = 0;
+                if (blockArray[idx] == 1) this->addBlockRigidBody(xc, yc, zc);
             }
         }
     }

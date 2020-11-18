@@ -1,34 +1,6 @@
 
-#pragma comment(lib, "C:\\VulkanSDK\\1.2.154.1\\Lib\\vulkan-1.lib")
-#pragma comment(lib, "C:\\Library\\glfw-3.3.2.bin.WIN64\\lib-vc2019\\glfw3.lib")
-
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
-#include <iostream>
-#include <fstream>
-#include <stdexcept>
-#include <algorithm>
-#include <chrono>
-#include <vector>
-#include <cstring>
-#include <cstdlib>
-#include <cstdint>
-#include <array>
-#include <optional>
-#include <set>
-
-#include <Windows.h>
-
-#include "HelloTriangleApplication.h"
+#include "Common.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -125,7 +97,7 @@ void HelloTriangleApplication::initWindow()
     glfwSetCursorPosCallback(window, cursor_position_callback);
     if (glfwRawMouseMotionSupported())
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-    glfwMaximizeWindow(window);
+    //glfwMaximizeWindow(window);
 }
 
 void HelloTriangleApplication::framebufferResizeCallback(GLFWwindow* window, int width, int height) 
@@ -169,8 +141,8 @@ void HelloTriangleApplication::initVulkan() {
     createSyncObjects();
 }
 
-float ex = 1.0f;
-float ey = 1.0f;
+float ex = 5.0f;
+float ey = 5.0f;
 float ez = 10.0f;
 float vz = 0.0f;
 float WalkingStride = 0.0f;

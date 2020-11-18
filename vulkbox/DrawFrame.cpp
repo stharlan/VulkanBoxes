@@ -1,31 +1,5 @@
 
-#pragma comment(lib, "C:\\VulkanSDK\\1.2.154.1\\Lib\\vulkan-1.lib")
-#pragma comment(lib, "C:\\Library\\glfw-3.3.2.bin.WIN64\\lib-vc2019\\glfw3.lib")
-
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
-#include "stb_image.h"
-
-#include <iostream>
-#include <fstream>
-#include <stdexcept>
-#include <algorithm>
-#include <chrono>
-#include <vector>
-#include <cstring>
-#include <cstdlib>
-#include <cstdint>
-#include <array>
-#include <optional>
-#include <set>
-
-#include "HelloTriangleApplication.h"
+#include "Common.h"
 
 void HelloTriangleApplication::recreateSwapChain()
 {
@@ -55,6 +29,51 @@ void HelloTriangleApplication::recreateSwapChain()
 const float JUMP_VELOCITY = 5.0f;
 const float ACCEL_GRAVITY = -9.8f;
 
+void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentImage, float elapsed)
+{
+    // physics
+    this->world->update(elapsed);
+
+    const reactphysics3d::Transform& transform = this->player->getTransform();
+    const reactphysics3d::Vector3& position = transform.getPosition();
+
+    const reactphysics3d::Transform& btransform = this->blocks[1]->getTransform();
+    const reactphysics3d::Vector3& bposition = btransform.getPosition();
+
+    printf("pos %.2f, %.2f, %.2f; block0 %.2f, %.2f, %.2f\n",
+        position.x, position.y, position.z,
+        bposition.x, bposition.y, bposition.z);
+    glm::vec3 glmpos(position.x, position.y, position.z);
+    glm::vec3 glmposlook(position.x + 1, position.y + 1, position.z);
+
+    UniformBufferObjectAlt2 ubo{};
+    //ubo.model = glm::rotate(
+        //glm::mat4(1.0f), 
+        //time * glm::radians(90.0f), 
+        //glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::mat4(1.0f);
+
+    // eye, center, up
+    ubo.view = glm::lookAt(
+        glmpos,
+        glmposlook,
+        glm::vec3(0.0f, 0.0f, 1.0f));
+
+    ubo.proj = glm::perspective(
+        glm::radians(45.0f),
+        swapChainExtent.width / (float)swapChainExtent.height,
+        0.01f,
+        100.0f);
+    ubo.proj[1][1] *= -1;
+
+    ubo.upos = glm::vec4(position.x, position.y, position.z, 1.0);
+
+    void* data;
+    vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
+    memcpy(data, &ubo, sizeof(ubo));
+    vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
+}
+
 void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage, float elapsed)
 {
     //static auto startTime = std::chrono::high_resolution_clock::now();
@@ -63,6 +82,12 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage, float 
     //float time = 
         //std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime)
         //.count();
+
+    // physics
+    //this->world->update(elapsed);
+    //const reactphysics3d::Transform& transform = this->body->getTransform();
+    //const reactphysics3d::Vector3& position = transform.getPosition();
+    //printf("pos %.2f, %.2f, %.2f\n", position.x, position.y, position.z);
 
     float mx = 0.0f;
     float my = 0.0f;
@@ -95,19 +120,64 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage, float 
     int ix = (int)(ex + mx);
     int iy = (int)(ey + my);
     int iz = (int)ez;
-    if (ix >= 0 && ix < x_extent)
-    {
-        if (iy >= 0 && iy < y_extent)
-        {
-            if (iz >= 0 && iz < z_extent)
-            {
-                int64_t idx = (iz * x_extent * y_extent) + (iy * x_extent) + ix;
-                if (blockArray[idx] == 1) {
-                    mx = my = 0.0f;
+    int64_t idx0 = 0;
+    int64_t idx1 = 0;
+
+    if (iz >= 0 && iz < z_extent) {
+        for (int bx = ix - 1; bx < ix + 2; bx++) {
+            if (bx >= 0 && bx < x_extent) {
+                for (int by = iy - 1; by < iy + 2; by++) {
+                    if (by >= 0 && by < y_extent) {
+                        if (!(bx == ix && by == iy)) {
+                            idx0 = (iz * x_extent * y_extent) + (by * x_extent) + bx;
+                            if ((iz + 1) < z_extent) {
+                                idx1 = ((iz + 1) * x_extent * y_extent) + (by * x_extent) + bx;
+                            }
+                            else {
+                                idx1 = 0;
+                            }
+                            if (blockArray[idx0] == 1 || blockArray[idx1] == 1)
+                            {
+                                float deltax = ((float)bx + 0.5f) - (ex + mx);
+                                float deltay = ((float)by + 0.5f) - (ey + my);
+                                float dist = (deltax * deltax) + (deltay * deltay);
+                                if (dist < 1.0f) {
+                                    // too close
+                                    mx = my = 0.0f;
+                                    goto cant_go_there;
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
+
+cant_go_there:
+
+    //if (ix >= 0 && ix < x_extent)
+    //{
+    //    if (iy >= 0 && iy < y_extent)
+    //    {
+    //        if (iz >= 0 && iz < z_extent)
+    //        {
+    //            for()
+
+
+    //            int64_t idx = (iz * x_extent * y_extent) + (iy * x_extent) + ix;
+    //            if (blockArray[idx] == 1) {
+    //                mx = my = 0.0f;
+    //            }
+    //            else {
+    //                idx = ((iz + 1) * x_extent * y_extent) + (iy * x_extent) + ix;
+    //                if (blockArray[idx] == 1) {
+    //                    mx = my = 0.0f;
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
 
     ex += mx;
     ey += my;
@@ -121,8 +191,7 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage, float 
         {
             if (iz >= 0 && iz < z_extent) 
             {
-                int64_t idx = ((iz - 1ll) * x_extent * y_extent) + (iy * x_extent) + ix;
-                printf("%i, %i, %i, %lli\n", ix, iy, iz, idx);
+                int64_t idx = ((iz - 1) * x_extent * y_extent) + (iy * x_extent) + ix;
                 if (blockArray[idx] == 1) {
                     floor = (float)iz;
                 }
@@ -163,11 +232,11 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage, float 
     sinfElevation = FCLAMP(sinfElevation, -0.99f, 0.99f);
     float invSinfElevation = 1.0f - fabs(sinfElevation);
     ubo.view = glm::lookAt(
-        glm::vec3(ex, ey, ez + 2),
+        glm::vec3(ex, ey, ez + 1),
         glm::vec3(
             ex + (cosf(azimuth_in_radians) * invSinfElevation), 
             ey + (sinf(azimuth_in_radians) * invSinfElevation),
-            ez + 2 + sinfElevation),
+            ez + 1 + sinfElevation),
         glm::vec3(0.0f, 0.0f, 1.0f));
 
     ubo.proj = glm::perspective(
@@ -177,12 +246,14 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage, float 
         100.0f);
     ubo.proj[1][1] *= -1;
 
-    ubo.upos = glm::vec4(ex, ey, ez + 2, 1.0);
+    ubo.upos = glm::vec4(ex, ey, ez + 1, 1.0);
 
     void* data;
     vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
     memcpy(data, &ubo, sizeof(ubo));
     vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
+
+    //printf("x, y, z : %.1f, %.1f, %.1f : fl %.1f\n", ex, ey, ez, floor);
 }
 
 void HelloTriangleApplication::drawFrame(float elapsed)
@@ -202,7 +273,8 @@ void HelloTriangleApplication::drawFrame(float elapsed)
         throw std::runtime_error("failed to acquire swap chain image!");
     }
 
-    updateUniformBuffer(imageIndex, elapsed);
+    //updateUniformBuffer(imageIndex, elapsed);
+    updateUniformBufferWithPhysics(imageIndex, elapsed);
 
     if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
         vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);

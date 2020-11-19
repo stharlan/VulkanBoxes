@@ -97,7 +97,7 @@ void HelloTriangleApplication::initWindow()
     glfwSetCursorPosCallback(window, cursor_position_callback);
     if (glfwRawMouseMotionSupported())
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-    //glfwMaximizeWindow(window);
+    glfwMaximizeWindow(window);
 }
 
 void HelloTriangleApplication::framebufferResizeCallback(GLFWwindow* window, int width, int height) 
@@ -168,7 +168,8 @@ void HelloTriangleApplication::key_callback(GLFWwindow* window, int key, int sca
             keys[3] = 1;
             break;
         case GLFW_KEY_SPACE:
-            keys[5] = 1;
+            keys[4] = 1;
+            printf("space\n");
             break;
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(window, 1);

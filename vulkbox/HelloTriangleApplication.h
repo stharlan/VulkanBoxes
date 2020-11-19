@@ -272,9 +272,13 @@ private:
     physx::PxDefaultCpuDispatcher* mDispatcher = NULL;
     physx::PxScene* mScene = NULL;
     physx::PxRigidDynamic* mPlayerCapsuleActor = NULL;
-    physx::PxShape* mPlayerCapsuleShape = NULL;
+    //physx::PxShape* mPlayerCapsuleShape = NULL;
     physx::PxShape* mBlockShape = NULL;
     std::vector<physx::PxRigidStatic*> blocks;
+    physx::PxControllerManager* mManager = NULL;
+    physx::PxMaterial* pMaterial = NULL;
+    physx::PxCapsuleController* mController = NULL;
+    physx::PxControllerFilters mCCFilters = {};
 
     //reactphysics3d::PhysicsCommon physicsCommon;
     //reactphysics3d::PhysicsWorld* world = NULL;

@@ -2,11 +2,12 @@
 
 #pragma comment(lib, "C:\\VulkanSDK\\1.2.154.1\\Lib\\vulkan-1.lib")
 #pragma comment(lib, "C:\\Library\\glfw-3.3.2.bin.WIN64\\lib-vc2019\\glfw3dll.lib")
-#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysX_64.lib")
-#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXCommon_64.lib")
-#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXFoundation_64.lib")
-#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXExtensions_static_64.lib")
-#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXPvdSDK_static_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\profile\\PhysX_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\profile\\PhysXCommon_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\profile\\PhysXFoundation_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\profile\\PhysXExtensions_static_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\profile\\PhysXPvdSDK_static_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\profile\\PhysXCharacterKinematic_static_64.lib")
 
 #include <Windows.h>
 
@@ -27,6 +28,8 @@
 #include <extensions/PxDefaultAllocator.h>
 #include <pvd/PxPvd.h>
 #include <pvd/PxPvdTransport.h>
+#include <characterkinematic/PxControllerManager.h>
+#include <characterkinematic/PxCapsuleController.h>
 
 
 #include "stb_image.h"

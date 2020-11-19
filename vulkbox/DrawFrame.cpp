@@ -28,36 +28,63 @@ void HelloTriangleApplication::recreateSwapChain()
 //const float FLOOR = 1.0f;
 const float JUMP_VELOCITY = 5.0f;
 const float ACCEL_GRAVITY = -9.8f;
+const float SPEED = 10.0f;
 
 void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentImage, float elapsed)
 {
-    //reactphysics3d::Vector3 vel = this->player->getLinearVelocity();
+
+    float mx = 0.0f;
+    float my = 0.0f;
 
     if (keys[0] == 1) {
-        //reactphysics3d::Vector3 force(
-        //    20.0f * cosf(DEG2RAD(azimuth)),
-        //    20.0f * sinf(DEG2RAD(azimuth)),
-        //    0);
-        //this->player->applyForceToCenterOfMass(force);
+        mx += cosf(DEG2RAD(azimuth)) / SPEED;
+        my += sinf(DEG2RAD(azimuth)) / SPEED;
+    }
+    else if (keys[1] == 1)
+    {
+        mx += cosf(DEG2RAD(azimuth)) / -SPEED;
+        my += sinf(DEG2RAD(azimuth)) / -SPEED;
+    }
+    if (keys[2] == 1)
+    {
+        mx += sinf(DEG2RAD(azimuth)) / -SPEED;
+        my += cosf(DEG2RAD(azimuth)) / SPEED;
+    }
+    else if (keys[3] == 1)
+    {
+        mx += sinf(DEG2RAD(azimuth)) / SPEED;
+        my += cosf(DEG2RAD(azimuth)) / -SPEED;
+    }
+
+    if (keys[4] == 1)
+    {
+        vz = 10.0f;
+        //printf("jump\n");
+        keys[4] = 0;
+        //this->mPlayerCapsuleActor->addForce(physx::PxVec3(0, 0, 20), physx::PxForceMode::eIMPULSE);
     }
     else {
-        //reactphysics3d::Vector3 stop(0, 0, vel.z);
-        //this->player->setLinearVelocity(stop);
+        vz += -20.0f * elapsed;
     }
 
     // physics
-    //this->world->update(elapsed);
+    physx::PxExtendedVec3 posb = this->mController->getPosition();
+    this->mController->move(
+        physx::PxVec3(mx, my, vz * elapsed),
+        0.00f, // min dist
+        elapsed, this->mCCFilters);
     this->mScene->simulate(elapsed);
     this->mScene->fetchResults(true);
 
-    physx::PxTransform trx = this->mPlayerCapsuleActor->getGlobalPose();
-    printf("%.1f %.1f %.1f\n", trx.p.x, trx.p.y, trx.p.z);
+    physx::PxExtendedVec3 pos = this->mController->getPosition();
 
-    glm::vec3 glmpos(trx.p.x, trx.p.y, trx.p.z);
+    //printf("%.4f %.4f %.4f %.4f\n", pos.x, pos.y, pos.z, vz);
+
+    glm::vec3 glmpos(pos.x, pos.y, pos.z);
     glm::vec3 glmposlook(
-        trx.p.x + cosf(DEG2RAD(azimuth)),
-        trx.p.y + sinf(DEG2RAD(azimuth)),
-        trx.p.z);
+        pos.x + cosf(DEG2RAD(azimuth)),
+        pos.y + sinf(DEG2RAD(azimuth)),
+        pos.z);
 
     UniformBufferObjectAlt2 ubo{};
     //ubo.model = glm::rotate(
@@ -79,7 +106,7 @@ void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentIm
         100.0f);
     ubo.proj[1][1] *= -1;
 
-    ubo.upos = glm::vec4(trx.p.x, trx.p.y, trx.p.z, 1.0);
+    ubo.upos = glm::vec4(pos.x, pos.y, pos.z, 1.0);
 
     void* data;
     vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
@@ -340,6 +367,9 @@ cant_go_there:
     //printf("x, y, z : %.1f, %.1f, %.1f : fl %.1f\n", ex, ey, ez, floor);
 }
 
+int physicsTripper = 0;
+float accumulatedElapsed = 0.0f;
+
 void HelloTriangleApplication::drawFrame(float elapsed)
 {
 
@@ -359,6 +389,21 @@ void HelloTriangleApplication::drawFrame(float elapsed)
 
     //updateUniformBuffer(imageIndex, elapsed);
     updateUniformBufferWithPhysics(imageIndex, elapsed);
+    //switch (physicsTripper)
+    //{
+    //case 0:
+    //    updateUniformBufferWithPhysics(imageIndex, elapsed);
+    //    physicsTripper = 1;
+    //    break;
+    //case 1:
+    //    accumulatedElapsed = elapsed;
+    //    physicsTripper = 2;
+    //    break;
+    //case 2:
+    //    physicsTripper = 1;
+    //    updateUniformBufferWithPhysics(imageIndex, accumulatedElapsed + elapsed);
+    //    break;
+    //}
 
     if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
         vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);

@@ -16,6 +16,8 @@ void HelloTriangleApplication::initPhysics()
 
     this->mPvd = PxCreatePvd(*this->mFoundation);
     if (!this->mPvd) return;
+
+    //PxPvdTransport* transport = PxDefaultPvdFileTransportCreate("c:\\temp\\data2.pvd");
     PxPvdTransport* transport = PxDefaultPvdSocketTransportCreate(PVD_HOST, 5425, 10);
     mPvd->connect(*transport, PxPvdInstrumentationFlag::eALL);
 
@@ -23,12 +25,18 @@ void HelloTriangleApplication::initPhysics()
         PxTolerancesScale(), recordMemoryAllocations, mPvd);
     if (!mPhysics) return;
 
+    PxInitExtensions(*this->mPhysics, this->mPvd);
+
     PxSceneDesc sceneDesc(this->mPhysics->getTolerancesScale());
     sceneDesc.gravity = PxVec3(0.0f, 0.0f, -9.81f);
     this->mDispatcher = PxDefaultCpuDispatcherCreate(2);
     sceneDesc.cpuDispatcher = this->mDispatcher;
     sceneDesc.filterShader = PxDefaultSimulationFilterShader;
     this->mScene = this->mPhysics->createScene(sceneDesc);
+
+    // debugger
+    this->mScene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
+    this->mScene->setVisualizationParameter(PxVisualizationParameter::eACTOR_AXES, 2.0f);
 
     PxPvdSceneClient* pvdClient = this->mScene->getScenePvdClient();
     if (pvdClient)
@@ -38,18 +46,42 @@ void HelloTriangleApplication::initPhysics()
         pvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES, true);
     }
 
-    PxMaterial* pMaterial = this->mPhysics->createMaterial(0.5f, 0.5f, 0.0f);
+    pMaterial = this->mPhysics->createMaterial(0.5f, 0.5f, 0.0f);
 
     // create player
-    this->mPlayerCapsuleActor = this->mPhysics->createRigidDynamic(PxTransform(ex, ey, ez));    
-    PxTransform relativePose(PxQuat(PxHalfPi, PxVec3(0, 1, 0)));    
-    this->mPlayerCapsuleShape = PxRigidActorExt::createExclusiveShape(*this->mPlayerCapsuleActor,
-        PxCapsuleGeometry(0.5f, 1.0f), *pMaterial);
-    this->mPlayerCapsuleShape->setLocalPose(relativePose);
-    PxRigidBodyExt::updateMassAndInertia(*this->mPlayerCapsuleActor, 1.0f);
-    this->mScene->addActor(*this->mPlayerCapsuleActor);
+    //this->mPlayerCapsuleActor = this->mPhysics->createRigidDynamic(PxTransform(ex, ey, ez));    
+    //PxTransform relativePose(PxQuat(PxHalfPi, PxVec3(0, 1, 0)));    
+    //this->mPlayerCapsuleShape = PxRigidActorExt::createExclusiveShape(*this->mPlayerCapsuleActor,
+    //    PxCapsuleGeometry(0.5f, 1.0f), *pMaterial);
+    //this->mPlayerCapsuleShape->setLocalPose(relativePose);
+    //this->mPlayerCapsuleShape->setRestOffset(0.1f);
+    //this->mPlayerCapsuleShape->setContactOffset(0.2f);
+    //PxRigidBodyExt::updateMassAndInertia(*this->mPlayerCapsuleActor, 1.0f);
+    //this->mScene->addActor(*this->mPlayerCapsuleActor);
+
+    this->mManager = PxCreateControllerManager(*this->mScene);
+
+    PxCapsuleControllerDesc cDesc;
+    cDesc.material = pMaterial;
+    cDesc.position = physx::PxExtendedVec3(ex, ey, ez);
+    cDesc.height = 2.0f;
+    cDesc.radius = 1.0f;
+    cDesc.slopeLimit = 0.0f;
+    cDesc.contactOffset = 0.1f;
+    cDesc.stepOffset = 0.02f;
+    cDesc.reportCallback = NULL;
+    cDesc.behaviorCallback = NULL;
+
+    this->mController = static_cast<PxCapsuleController*>(this->mManager->createController(cDesc));
+    this->mController->setUpDirection(PxVec3(0, 0, 1));
+
+    // remove controller shape from scene query for standup overlap test
+    this->mPlayerCapsuleActor = this->mController->getActor();
 
     this->mBlockShape = this->mPhysics->createShape(PxBoxGeometry(0.5f, 0.5f, 0.5f), *pMaterial);
+    this->mBlockShape->setRestOffset(0.1f);
+    this->mBlockShape->setContactOffset(0.2f);
+
 }
 
 void HelloTriangleApplication::addBlockRigidBody(float bx, float by, float bz)
@@ -62,14 +94,17 @@ void HelloTriangleApplication::addBlockRigidBody(float bx, float by, float bz)
 
 void HelloTriangleApplication::cleanupPhysics()
 {
+    mPvd->disconnect();
     std::vector<physx::PxRigidStatic*>::iterator iter = blocks.begin();
     for (; iter != blocks.end(); ++iter)
     {
         (*iter)->release();
     }
     if (this->mBlockShape) this->mBlockShape->release();
-    if (this->mPlayerCapsuleShape) this->mPlayerCapsuleShape->release();
-    if (this->mPlayerCapsuleActor) this->mPlayerCapsuleActor->release();
+    if (this->mManager) this->mManager->release();
+    //if (this->mPlayerCapsuleShape) this->mPlayerCapsuleShape->release();
+    //if (this->mPlayerCapsuleActor) this->mPlayerCapsuleActor->release();
+    if (this->pMaterial) pMaterial->release();
     if (this->mScene) this->mScene->release();
     if (this->mDispatcher) this->mDispatcher->release();
     if (this->mPhysics) this->mPhysics->release();

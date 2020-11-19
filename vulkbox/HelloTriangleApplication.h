@@ -117,6 +117,9 @@ extern double dypos;
 extern int keys[];
 extern float WalkingStride;
 extern float vz;
+extern int64_t xblock;
+extern int64_t yblock;
+extern int64_t zblock;
 
 extern int64_t x_extent; // 0 to extent
 extern int64_t y_extent; // 0 to extent
@@ -202,6 +205,7 @@ private:
     bool checkValidationLayerSupport();
     static std::vector<char> readFile(const std::string& filename);
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
+    void addActorsForCurrentLocation(int64_t xint, int64_t yint, int64_t zint);
 
 private:
     GLFWwindow* window;
@@ -274,7 +278,7 @@ private:
     physx::PxRigidDynamic* mPlayerCapsuleActor = NULL;
     //physx::PxShape* mPlayerCapsuleShape = NULL;
     physx::PxShape* mBlockShape = NULL;
-    std::vector<physx::PxRigidStatic*> blocks;
+    //std::vector<physx::PxRigidStatic*> blocks;
     physx::PxControllerManager* mManager = NULL;
     physx::PxMaterial* pMaterial = NULL;
     physx::PxCapsuleController* mController = NULL;

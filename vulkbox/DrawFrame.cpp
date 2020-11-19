@@ -28,12 +28,76 @@ void HelloTriangleApplication::recreateSwapChain()
 //const float FLOOR = 1.0f;
 const float JUMP_VELOCITY = 5.0f;
 const float ACCEL_GRAVITY = -9.8f;
-const float SPEED = 10.0f;
+const float SPEED = 100.0f;
+
+bool ActorsAdded = false;
+std::vector<physx::PxActor*> blocksAroundMe;
+
+void HelloTriangleApplication::addActorsForCurrentLocation(int64_t xint, int64_t yint, int64_t zint)
+{
+
+    printf("location has changed; add new actors\n");
+
+    // remove current actors
+    if (blocksAroundMe.size() > 0) {
+        this->mScene->removeActors(blocksAroundMe.data(), blocksAroundMe.size());
+    }
+
+    // release actors
+    std::vector<physx::PxActor*>::iterator iter = blocksAroundMe.begin();
+    for (; iter != blocksAroundMe.end(); ++iter)
+    {
+        (*iter)->release();
+    }
+
+    // clear array
+    blocksAroundMe.clear();
+
+    for (int64_t xbl = xint - 4; xbl < xint + 5; xbl++)
+    {
+        if (xbl >= 0 && xbl < x_extent)
+        {
+            for (int64_t ybl = yint - 4; ybl < yint + 5; ybl++)
+            {
+                if (ybl >= 0 && ybl < y_extent)
+                {
+                    for (int64_t zbl = zint - 8; zbl < zint + 1; zbl++)
+                    {
+                        if (zbl >= 0 && zbl < z_extent)
+                        {
+                            int64_t idx = (zbl * x_extent * y_extent) + (ybl * x_extent) + xbl;
+                            if (blockArray[idx] == 1) {
+                                // create new actors
+                                physx::PxRigidStatic* block =
+                                    this->mPhysics->createRigidStatic(
+                                        physx::PxTransform(xbl + 0.5f, ybl + 0.5f, zbl + 0.5f));
+                                block->attachShape(*this->mBlockShape);
+                                blocksAroundMe.push_back(block);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    printf("adding %lli actors\n", blocksAroundMe.size());
+
+    this->mScene->addActors(blocksAroundMe.data(), blocksAroundMe.size());
+
+    xblock = xint;
+    yblock = yint;
+    zblock = zint;
+}
 
 void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentImage, float elapsed)
 {
 
     // rebuild
+    if (ActorsAdded == false) {
+        this->addActorsForCurrentLocation((int)ex, (int)ey, (int)ez);
+        ActorsAdded = true;
+    }
 
     float mx = 0.0f;
     float my = 0.0f;
@@ -79,6 +143,17 @@ void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentIm
     this->mScene->fetchResults(true);
 
     physx::PxExtendedVec3 pos = this->mController->getPosition();
+
+    if (abs(xblock - (int64_t)pos.x) > 4) {
+        this->addActorsForCurrentLocation((int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+    }
+    else if (abs(yblock - (int64_t)pos.y) > 4) {
+        this->addActorsForCurrentLocation((int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+    }
+    else if (abs(zblock - (int64_t)pos.z) > 4)
+    {
+        this->addActorsForCurrentLocation((int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+    }
 
     //printf("%.4f %.4f %.4f %.4f\n", pos.x, pos.y, pos.z, vz);
 

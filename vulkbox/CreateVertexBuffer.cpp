@@ -23,26 +23,68 @@ void HelloTriangleApplication::createVertexBuffer()
     uint32_t minusxVertexIndices[6] = { 8, 9, 10, 10, 11, 8 };
     uint32_t plusyVertexIndices[6] = { 12, 13, 14, 14, 15, 12 };
     uint32_t minusyVertexIndices[6] = { 16, 17, 18, 18, 19, 16 };
-
+    uint32_t bottomVertexIndices[6] = { 20, 21, 22, 22, 23, 20 };
 
     // assign blocks to level 0
     for (int64_t zc = 0; zc < z_extent; zc++) {
         for (int64_t yc = 0; yc < y_extent; yc++) {
             for (int64_t xc = 0; xc < x_extent; xc++) {
                 int64_t idx = (zc * x_extent * y_extent) + (yc * x_extent) + xc;
+
+                //blockArray[idx] = 1;
+                
                 if (zc == 0) blockArray[idx] = 1;
-                else if (rand() % 100 == 5) blockArray[idx] = 1;
+                else if (rand() % 500 == 0) blockArray[idx] = 1;
                 else blockArray[idx] = 0;
-                if (blockArray[idx] == 1) this->addBlockRigidBody(xc, yc, zc);
+
+                // add blocks below for a column
+                //if (zc > 1) {
+                //    for (int64_t zz = zc - 1; zz > 0; zz--)
+                //    {
+                //        idx = (zz * x_extent * y_extent) + (yc * x_extent) + xc;
+                //        if (blockArray[idx] == 0)
+                //        {
+                //            blockArray[idx] = 1;
+                //        }
+                //    }
+                //}
             }
         }
     }
+
+    //for (int64_t zc = 0; zc < z_extent; zc++) {
+    //    for (int64_t yc = 0; yc < y_extent; yc++) {
+    //        for (int64_t xc = 0; xc < x_extent; xc++) {
+    //            int64_t idx = (zc * x_extent * y_extent) + (yc * x_extent) + xc;
+    //            if (blockArray[idx] == 1) {
+    //                this->addBlockRigidBody(xc, yc, zc);
+    //            }
+    //        }
+    //    }
+    //}
 
     for (int64_t zc = 0; zc < z_extent; zc++) {
         for (int64_t yc = 0; yc < y_extent; yc++) {
             for (int64_t xc = 0; xc < x_extent; xc++) {
 
                 int64_t idx = (zc * x_extent * y_extent) + (yc * x_extent) + xc;
+
+                // check for block on bottom (-z)
+                if (blockArray[idx] == 1) {
+                    if (zc > 0) {
+                        int64_t idx_zminus = ((zc - 1) * x_extent * y_extent) + (yc * x_extent) + xc;
+                        if (blockArray[idx_zminus] == 0) {
+                            for (int64_t v = 0; v < 6; v++) {
+                                vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc} });
+                            }
+                        }
+                    }
+                    else {
+                        for (int64_t v = 0; v < 6; v++) {
+                            vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc} });
+                        }
+                    }
+                }
 
                 // check for block on top (+z)
                 if (blockArray[idx] == 1)
@@ -126,61 +168,11 @@ void HelloTriangleApplication::createVertexBuffer()
                         }
                     }
                 }
-
-                // is there a block on top? no
-                //for (int64_t v = 0; v < 6; v++) {
-                    //vertices4.push_back({ topVertexIndices[v], {xc, yc, zc} });
-                //}
-
-                // is there a block on bottom? no
-                //for (int64_t v = 0; v < 6; v++) {
-                //    vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc} });
-                //}
-                //if (xc == 0) {
-                //    for (int64_t v = 0; v < 6; v++) {
-                //        vertices4.push_back({ xfrontVertexIndices[v], {xc, yc, zc} });
-                //    }
-                //}
-                //if (yc == 0) {
-                //    for (int64_t v = 0; v < 6; v++) {
-                //        vertices4.push_back({ yfrontVertexIndices[v], {xc, yc, zc} });
-                //    }
-                //}
-                //if (xc == x_extent - 1) {
-                //    for (int64_t v = 0; v < 6; v++) {
-                //        vertices4.push_back({ xbackVertexIndices[v], {xc, yc, zc} });
-                //    }
-                //}
-                //if (yc == y_extent - 1) {
-                //    for (int64_t v = 0; v < 6; v++) {
-                //        vertices4.push_back({ ybackVertexIndices[v], {xc, yc, zc} });
-                //    }
-                //}
             }
         }
     }
     vertices4.shrink_to_fit();
 
-    //int64_t gridSize = 50;
-    //std::vector<glm::vec3> transArray;
-    //transArray.resize(((2 * gridSize) + 1) * ((2 * gridSize) + 1));
-    //for (int ix = -gridSize; ix < gridSize + 1; ix++) {
-    //    for (int iy = -gridSize; iy < gridSize + 1; iy++) {
-    //        int idx = ((ix + gridSize) * ((2 * gridSize) + 1)) + (iy + gridSize);
-    //        transArray[idx] = glm::vec3((float)ix, (float)iy, 0.0f);
-    //    }
-    //}
-
-    //vertices4.resize(transArray.size() * 6);
-    //for (uint64_t f = 0; f < transArray.size(); f++) {
-    //    for (uint64_t v = 0; v < 6; v++) {
-    //        uint64_t i = (f * 6) + v;
-    //        vertices4[i].idx = vertexIndices[v];
-    //        vertices4[i].trans = transArray[f];
-    //    }
-    //}
-
-    //VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
     VkDeviceSize bufferSize = sizeof(vertices4[0]) * vertices4.size();
 
     VkBuffer stagingBuffer;

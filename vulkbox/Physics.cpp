@@ -84,22 +84,22 @@ void HelloTriangleApplication::initPhysics()
 
 }
 
-void HelloTriangleApplication::addBlockRigidBody(float bx, float by, float bz)
-{
-    PxRigidStatic* block = this->mPhysics->createRigidStatic(PxTransform(bx + 0.5f, by + 0.5f, bz + 0.5f));
-    block->attachShape(*this->mBlockShape);
-    this->mScene->addActor(*block);
-    this->blocks.push_back(block);
-}
+//void HelloTriangleApplication::addBlockRigidBody(float bx, float by, float bz)
+//{
+//    PxRigidStatic* block = this->mPhysics->createRigidStatic(PxTransform(bx + 0.5f, by + 0.5f, bz + 0.5f));
+//    block->attachShape(*this->mBlockShape);
+//    this->mScene->addActor(*block);
+//    this->blocks.push_back(block);
+//}
 
 void HelloTriangleApplication::cleanupPhysics()
 {
     mPvd->disconnect();
-    std::vector<physx::PxRigidStatic*>::iterator iter = blocks.begin();
-    for (; iter != blocks.end(); ++iter)
-    {
-        (*iter)->release();
-    }
+    //std::vector<physx::PxRigidStatic*>::iterator iter = blocks.begin();
+    //for (; iter != blocks.end(); ++iter)
+    //{
+        //(*iter)->release();
+    //}
     if (this->mBlockShape) this->mBlockShape->release();
     if (this->mManager) this->mManager->release();
     //if (this->mPlayerCapsuleShape) this->mPlayerCapsuleShape->release();

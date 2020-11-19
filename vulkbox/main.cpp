@@ -21,10 +21,14 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-int64_t x_extent = 128; // 0 to extent
-int64_t y_extent = 128; // 0 to extent
-int64_t z_extent = 5; // 0 to extent
-int8_t blockArray[128 * 128 * 5] = { };
+#define X_GRID_EXTENT 128
+#define Y_GRID_EXTENT 128
+#define Z_GRID_EXTENT 10
+
+int64_t x_extent = X_GRID_EXTENT; // 0 to extent
+int64_t y_extent = Y_GRID_EXTENT; // 0 to extent
+int64_t z_extent = Z_GRID_EXTENT; // 0 to extent
+int8_t blockArray[X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] = { };
 
 // this is going to have to be a uniform
 // but, for now, it can be hard coded into shader
@@ -97,7 +101,7 @@ void HelloTriangleApplication::initWindow()
     glfwSetCursorPosCallback(window, cursor_position_callback);
     if (glfwRawMouseMotionSupported())
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-    glfwMaximizeWindow(window);
+    //glfwMaximizeWindow(window);
 }
 
 void HelloTriangleApplication::framebufferResizeCallback(GLFWwindow* window, int width, int height) 
@@ -143,10 +147,13 @@ void HelloTriangleApplication::initVulkan() {
 
 float ex = 5.0f;
 float ey = 5.0f;
-float ez = 10.0f;
+float ez = 30.0f;
 float vz = 0.0f;
 float WalkingStride = 0.0f;
 int keys[] = {0,0,0,0,0};
+int64_t xblock = (int)ex;
+int64_t yblock = (int)ey;
+int64_t zblock = (int)ez;
 
 void HelloTriangleApplication::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {

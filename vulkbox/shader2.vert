@@ -40,7 +40,7 @@ vec3 locs[20] = vec3[] (
 );
 **/
 
-vec3 locs[20] = vec3[] (
+vec3 locs[24] = vec3[] (
     // +z
     vec3(0, 0, 1),
     vec3(1, 0, 1),
@@ -69,11 +69,22 @@ vec3 locs[20] = vec3[] (
     vec3(0, 0, 0),
     vec3(1, 0, 0),
     vec3(1, 0, 1),
-    vec3(0, 0, 1)
+    vec3(0, 0, 1),
+
+    // -z
+    vec3(0, 0, 0),
+    vec3(0, 1, 0),
+    vec3(1, 1, 0),
+    vec3(1, 0, 0)
+
 
 );
 
-vec3 clrs[20] = vec3[] (
+vec3 clrs[24] = vec3[] (
+    vec3(1.0f, 0.0f, 0.0f),
+    vec3(0.0f, 1.0f, 0.0f),
+    vec3(0.0f, 0.0f, 1.0f),
+    vec3(1.0f, 1.0f, 1.0f),
     vec3(1.0f, 0.0f, 0.0f),
     vec3(0.0f, 1.0f, 0.0f),
     vec3(0.0f, 0.0f, 1.0f),
@@ -125,7 +136,7 @@ vec2 texcrds[20] = vec2[] (
 );
 **/
 
-vec2 texcrds[20] = vec2[] (
+vec2 texcrds[24] = vec2[] (
 
     vec2(0.125f, 0.0f),
     vec2(0.249f, 0.0f),
@@ -150,10 +161,15 @@ vec2 texcrds[20] = vec2[] (
     vec2(0.5f, 0.0f),
     vec2(0.624f, 0.0f),
     vec2(0.624f, 0.124f),
-    vec2(0.5f, 0.124f)
+    vec2(0.5f, 0.124f),
+
+    vec2(0.375f, 0.0f),
+    vec2(0.499f, 0.0f),
+    vec2(0.499f, 0.124f),
+    vec2(0.375f, 0.124f)
 );
 
-vec3 normals[20] = vec3[] (
+vec3 normals[24] = vec3[] (
     vec3(0.0f, 0.0f, 1.0f),
     vec3(0.0f, 0.0f, 1.0f),
     vec3(0.0f, 0.0f, 1.0f),
@@ -173,7 +189,11 @@ vec3 normals[20] = vec3[] (
     vec3(0.0f, -1.0f, 0.0f),
     vec3(0.0f, -1.0f, 0.0f),
     vec3(0.0f, -1.0f, 0.0f),
-    vec3(0.0f, -1.0f, 0.0f)
+    vec3(0.0f, -1.0f, 0.0f),
+    vec3(0.0f, 0.0f, -1.0f),
+    vec3(0.0f, 0.0f, -1.0f),
+    vec3(0.0f, 0.0f, -1.0f),
+    vec3(0.0f, 0.0f, -1.0f)
 );
 
 layout(binding = 0) uniform UniformBufferObject {

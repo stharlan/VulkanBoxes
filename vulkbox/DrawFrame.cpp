@@ -33,6 +33,8 @@ const float SPEED = 10.0f;
 void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentImage, float elapsed)
 {
 
+    // rebuild
+
     float mx = 0.0f;
     float my = 0.0f;
 
@@ -80,11 +82,20 @@ void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentIm
 
     //printf("%.4f %.4f %.4f %.4f\n", pos.x, pos.y, pos.z, vz);
 
+    float sinfElevation = sinf(DEG2RAD(elevation));
+    sinfElevation = FCLAMP(sinfElevation, -0.99f, 0.99f);
+    float invSinfElevation = 1.0f - fabs(sinfElevation);
     glm::vec3 glmpos(pos.x, pos.y, pos.z);
     glm::vec3 glmposlook(
-        pos.x + cosf(DEG2RAD(azimuth)),
-        pos.y + sinf(DEG2RAD(azimuth)),
-        pos.z);
+        pos.x + (cosf(DEG2RAD(azimuth)) * invSinfElevation),
+        pos.y + (sinf(DEG2RAD(azimuth)) * invSinfElevation),
+        pos.z + sinfElevation);
+        //pos.x + cosf(DEG2RAD(azimuth)),
+        //pos.y + sinf(DEG2RAD(azimuth)),
+        //pos.z);
+    //,
+        //ey + ,
+        //ez + 1 + sinfElevation),
 
     UniformBufferObjectAlt2 ubo{};
     //ubo.model = glm::rotate(

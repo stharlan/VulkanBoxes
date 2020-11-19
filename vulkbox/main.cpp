@@ -21,10 +21,10 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-int64_t x_extent = 64; // 0 to extent
-int64_t y_extent = 64; // 0 to extent
-int64_t z_extent = 3; // 0 to extent
-int8_t blockArray[64 * 64 * 3] = { };
+int64_t x_extent = 128; // 0 to extent
+int64_t y_extent = 128; // 0 to extent
+int64_t z_extent = 5; // 0 to extent
+int8_t blockArray[128 * 128 * 5] = { };
 
 // this is going to have to be a uniform
 // but, for now, it can be hard coded into shader
@@ -127,7 +127,7 @@ void HelloTriangleApplication::initVulkan() {
     createCommandPool();
     createDepthResources();
     createFramebuffers();
-    createTextureImage(textureImage, textureImageMemory, "c:\\temp\\grassbox.png");
+    createTextureImage(textureImage, textureImageMemory, "c:\\temp\\grassbox512tg.png");
     createTextureImage(textureImage2, textureImageMemory2, "c:\\temp\\dirt.png");
     textureImageView = createTextureImageView(textureImage);
     textureImageView2 = createTextureImageView(textureImage2);

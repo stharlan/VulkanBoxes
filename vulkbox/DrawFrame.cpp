@@ -45,8 +45,8 @@ void HelloTriangleApplication::addActorsForCurrentLocation(int64_t xint, int64_t
     //printf("location has changed; add new actors\n");
 
     // remove current actors
-    if (blocksAroundMe.size() > 0) {
-        this->mScene->removeActors(blocksAroundMe.data(), blocksAroundMe.size());
+    if (blocksAroundMe.size() > (size_t)0) {
+        this->mScene->removeActors(blocksAroundMe.data(), (unsigned int)blocksAroundMe.size());
     }
 
     // release actors
@@ -89,7 +89,7 @@ void HelloTriangleApplication::addActorsForCurrentLocation(int64_t xint, int64_t
 
     //printf("adding %lli actors\n", blocksAroundMe.size());
 
-    this->mScene->addActors(blocksAroundMe.data(), blocksAroundMe.size());
+    this->mScene->addActors(blocksAroundMe.data(), (unsigned int)blocksAroundMe.size());
 
     xblock = xint;
     yblock = yint;

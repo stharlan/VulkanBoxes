@@ -5,6 +5,8 @@
 // https://blogs.igalia.com/itoral/2017/07/30/working-with-lights-and-shadows-part-ii-the-shadow-map/
 // TODO fox addActorsForCurrentLocation to store all blocks in mem
 
+// build
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "Common.h"
 

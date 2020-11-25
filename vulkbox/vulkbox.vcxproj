@@ -151,6 +151,7 @@ copy C:\Users\stuar\source\repos\PhysX\physx\bin\win.x86_64.vc142.mt\release\*.d
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CreateColorResources.cpp" />
     <ClCompile Include="CreateCommandBuffers.cpp" />
     <ClCompile Include="CreateDepthRes.cpp" />
     <ClCompile Include="CreateDescrPool.cpp" />

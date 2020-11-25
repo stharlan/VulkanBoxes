@@ -1,4 +1,10 @@
 
+// TODO per fragment lighting
+// https://paroj.github.io/gltut/Illumination/Tut10%20Fragment%20Lighting.html
+// TODO shadow mapping
+// https://blogs.igalia.com/itoral/2017/07/30/working-with-lights-and-shadows-part-ii-the-shadow-map/
+// TODO fox addActorsForCurrentLocation to store all blocks in mem
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "Common.h"
 
@@ -21,9 +27,9 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-#define X_GRID_EXTENT 128
-#define Y_GRID_EXTENT 128
-#define Z_GRID_EXTENT 10
+#define X_GRID_EXTENT 512
+#define Y_GRID_EXTENT 512
+#define Z_GRID_EXTENT 256
 
 int64_t x_extent = X_GRID_EXTENT; // 0 to extent
 int64_t y_extent = Y_GRID_EXTENT; // 0 to extent
@@ -101,7 +107,7 @@ void HelloTriangleApplication::initWindow()
     glfwSetCursorPosCallback(window, cursor_position_callback);
     if (glfwRawMouseMotionSupported())
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-    //glfwMaximizeWindow(window);
+    glfwMaximizeWindow(window);
 }
 
 void HelloTriangleApplication::framebufferResizeCallback(GLFWwindow* window, int width, int height) 
@@ -129,9 +135,10 @@ void HelloTriangleApplication::initVulkan() {
     createDescriptorSetLayout();
     createGraphicsPipeline();
     createCommandPool();
+    createColorResources();
     createDepthResources();
     createFramebuffers();
-    createTextureImage(textureImage, textureImageMemory, "c:\\temp\\grassbox512tg.png");
+    createTextureImage(textureImage, textureImageMemory, "c:\\temp\\grassbox512tg1.png");
     createTextureImage(textureImage2, textureImageMemory2, "c:\\temp\\dirt.png");
     textureImageView = createTextureImageView(textureImage);
     textureImageView2 = createTextureImageView(textureImage2);
@@ -145,9 +152,9 @@ void HelloTriangleApplication::initVulkan() {
     createSyncObjects();
 }
 
-float ex = 5.0f;
-float ey = 5.0f;
-float ez = 30.0f;
+float ex = 250.0f;
+float ey = 250.0f;
+float ez = Z_GRID_EXTENT + 10.0f;
 float vz = 0.0f;
 float WalkingStride = 0.0f;
 int keys[] = {0,0,0,0,0};

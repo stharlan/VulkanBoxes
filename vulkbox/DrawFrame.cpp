@@ -17,6 +17,7 @@ void HelloTriangleApplication::recreateSwapChain()
     createImageViews();
     createRenderPass();
     createGraphicsPipeline();
+    createColorResources();
     createDepthResources();
     createFramebuffers();
     createUniformBuffers();
@@ -28,7 +29,8 @@ void HelloTriangleApplication::recreateSwapChain()
 //const float FLOOR = 1.0f;
 const float JUMP_VELOCITY = 5.0f;
 const float ACCEL_GRAVITY = -9.8f;
-const float SPEED = 100.0f;
+// TODO need to make speed dependent on frame rate
+const float SPEED = 20.0f;
 
 bool ActorsAdded = false;
 std::vector<physx::PxActor*> blocksAroundMe;
@@ -36,7 +38,11 @@ std::vector<physx::PxActor*> blocksAroundMe;
 void HelloTriangleApplication::addActorsForCurrentLocation(int64_t xint, int64_t yint, int64_t zint)
 {
 
-    printf("location has changed; add new actors\n");
+    // create all the rigid static actors
+    // as an array in the crate vertex buffer algo
+    // then, just pull them out of the array in this method
+
+    //printf("location has changed; add new actors\n");
 
     // remove current actors
     if (blocksAroundMe.size() > 0) {
@@ -81,7 +87,7 @@ void HelloTriangleApplication::addActorsForCurrentLocation(int64_t xint, int64_t
         }
     }
 
-    printf("adding %lli actors\n", blocksAroundMe.size());
+    //printf("adding %lli actors\n", blocksAroundMe.size());
 
     this->mScene->addActors(blocksAroundMe.data(), blocksAroundMe.size());
 
@@ -189,7 +195,7 @@ void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentIm
         glm::radians(45.0f),
         swapChainExtent.width / (float)swapChainExtent.height,
         0.01f,
-        100.0f);
+        500.0f);
     ubo.proj[1][1] *= -1;
 
     ubo.upos = glm::vec4(pos.x, pos.y, pos.z, 1.0);
@@ -440,7 +446,7 @@ cant_go_there:
         glm::radians(45.0f), 
         swapChainExtent.width / (float)swapChainExtent.height, 
         0.01f, 
-        100.0f);
+        1000.0f);
     ubo.proj[1][1] *= -1;
 
     ubo.upos = glm::vec4(ex, ey, ez + 1, 1.0);

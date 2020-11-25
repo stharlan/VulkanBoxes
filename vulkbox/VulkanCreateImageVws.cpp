@@ -1,7 +1,8 @@
 
 #include "Common.h"
 
-VkImageView HelloTriangleApplication::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
+VkImageView HelloTriangleApplication::createImageView(VkImage image, VkFormat format, 
+    VkImageAspectFlags aspectFlags)
 {
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;

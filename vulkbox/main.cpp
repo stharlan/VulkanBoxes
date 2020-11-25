@@ -5,7 +5,7 @@
 // https://blogs.igalia.com/itoral/2017/07/30/working-with-lights-and-shadows-part-ii-the-shadow-map/
 // TODO fox addActorsForCurrentLocation to store all blocks in mem
 
-// build
+// build    
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Common.h"
@@ -207,14 +207,14 @@ void HelloTriangleApplication::key_callback(GLFWwindow* window, int key, int sca
         case GLFW_KEY_D:
             keys[3] = 0;
             break;
-        }
+        } 
     }
 }
 
 float azimuth = 0.0f;
 float elevation = 0.0f;
-double dxpos = 0;
-double dypos = 0;
+float dxpos = 0;
+float dypos = 0;
 int initMouse = 1;
 double lx = 0;
 double ly = 0;
@@ -223,7 +223,7 @@ double ly = 0;
 float turnSpeed = 8.0f;
 // higher is faster
 float walkSpeed = 10.0f;
-
+   
 void HelloTriangleApplication::cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
     if (initMouse == 1) {
@@ -231,8 +231,8 @@ void HelloTriangleApplication::cursor_position_callback(GLFWwindow* window, doub
         lx = xpos;
         ly = ypos;
     }
-    dxpos = xpos - lx;
-    dypos = ypos - ly;
+    dxpos = (float)(xpos - lx);
+    dypos = (float)(ypos - ly);
     lx = xpos;
     ly = ypos;
     float tempAz = azimuth - (dxpos / turnSpeed);

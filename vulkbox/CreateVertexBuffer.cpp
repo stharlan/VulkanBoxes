@@ -16,7 +16,7 @@ void HelloTriangleApplication::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer
 
 void HelloTriangleApplication::createVertexBuffer()
 {
-    srand(time(NULL));
+    srand((unsigned int)time(NULL));
 
     uint32_t topVertexIndices[6] = { 0, 1, 2, 2, 3, 0 };
     uint32_t plusxVertexIndices[6] = { 4, 5, 6, 6, 7, 4 };

@@ -1,4 +1,4 @@
 echo Compiling vertex shader...
-C:\VulkanSDK\1.2.154.1\Bin32\glslc.exe shader2.vert -o vert.spv
+C:\VulkanSDK\1.2.154.1\Bin32\glslc.exe shader2pfl.vert -o vert.spv
 echo Compiling fragment shader...
-C:\VulkanSDK\1.2.154.1\Bin32\glslc.exe shader.frag -o frag.spv
+C:\VulkanSDK\1.2.154.1\Bin32\glslc.exe shaderpfl.frag -o frag.spv

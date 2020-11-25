@@ -119,6 +119,12 @@
     <None Include="shader2.vert">
       <Filter>shaders</Filter>
     </None>
+    <None Include="shader2pfl.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaderpfl.frag">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stb_image.h">

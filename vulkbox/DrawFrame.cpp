@@ -19,6 +19,7 @@ void HelloTriangleApplication::recreateSwapChain()
     createGraphicsPipeline();
     createColorResources();
     createDepthResources();
+    createShadowMappingResources();
     createFramebuffers();
     createUniformBuffers();
     createDescriptorPool();
@@ -199,6 +200,9 @@ void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentIm
     ubo.proj[1][1] *= -1;
 
     ubo.upos = glm::vec4(pos.x, pos.y, pos.z, 1.0);
+
+    // shadow mapping
+    glm::mat4 lightProjection = glm::ortho(-1, 1, -1, 1);
 
     void* data;
     vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);

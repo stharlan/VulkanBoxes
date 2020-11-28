@@ -207,6 +207,7 @@ private:
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
     void addActorsForCurrentLocation(int64_t xint, int64_t yint, int64_t zint);
     void createColorResources();
+    void createShadowMappingResources();
 
 private:
     GLFWwindow* window;
@@ -275,6 +276,10 @@ private:
     VkImage colorImage;
     VkDeviceMemory colorImageMemory;
     VkImageView colorImageView;
+
+    VkImage shadowImage = {};
+    VkImageView shadowMapView = {};
+    VkDeviceMemory shadowImageMemory = {};
 
     physx::PxFoundation* mFoundation = NULL;
     physx::PxPvd* mPvd = NULL;

@@ -24,6 +24,10 @@ layout(binding = 1) uniform sampler2D texSampler[2];
 
 void main() {
 
+    // get the color from the texture
+    vec4 objectColor = texture(texSampler[0], fragTexCoord);
+    if(objectColor[3] < 0.5) discard;
+
     // old code - just passes texture color
     //outColor = texture(texSampler[0], fragTexCoord);
 
@@ -69,9 +73,6 @@ void main() {
 
     // calculate the ambient light color from the ambient strength
     vec3 ambient = ambientStrength * lightColor;
-
-    // get the color from the texture
-    vec4 objectColor = texture(texSampler[0], fragTexCoord);
 
     // get direction vector from frag to viewer
     //vec3 viewDir = normalize(viewPos - fragPos);

@@ -26,6 +26,8 @@ void HelloTriangleApplication::createVertexBuffer()
     uint32_t bottomVertexIndices[6] = { 20, 21, 22, 22, 23, 20 };
     uint32_t capVertices1[6] = { 24, 25, 26, 26, 27, 24 };
     uint32_t capVertices2[6] = { 28, 29, 30, 30, 31, 28 };
+    uint32_t capVertices3[6] = { 32, 33, 34, 34, 35, 32 };
+    uint32_t capVertices4[6] = { 36, 37, 38, 38, 39, 36 };
 
     int texWidth = 0;
     int texHeight = 0;
@@ -51,11 +53,11 @@ void HelloTriangleApplication::createVertexBuffer()
              
             // if the block is less than the z extent
             // put veg at the top
-            //if (h < z_extent)
-            //{
-                //int64_t idx = (h * x_extent * y_extent) + (yc * x_extent) + xc;
-                //blockArray[idx] = 2;
-            //}
+            if (h < z_extent && rand() % 100 == 1)
+            {
+                int64_t idx = (h * x_extent * y_extent) + (yc * x_extent) + xc;
+                blockArray[idx] = 2;
+            }
 
             //blockArray[idx] = 1;
                 
@@ -208,9 +210,15 @@ void HelloTriangleApplication::createVertexBuffer()
                     for (int64_t v = 0; v < 6; v++) {
                         vertices4.push_back({ capVertices1[v], {xc, yc, zc} });
                     }
-                    //for (int64_t v = 0; v < 6; v++) {
-                        //vertices4.push_back({ capVertices2[v], {xc, yc, zc} });
-                    //}
+                    for (int64_t v = 0; v < 6; v++) {
+                        vertices4.push_back({ capVertices2[v], {xc, yc, zc} });
+                    }
+                    for (int64_t v = 0; v < 6; v++) {
+                        vertices4.push_back({ capVertices3[v], {xc, yc, zc} });
+                    }
+                    for (int64_t v = 0; v < 6; v++) {
+                        vertices4.push_back({ capVertices4[v], {xc, yc, zc} });
+                    }
                 }
             }
         }

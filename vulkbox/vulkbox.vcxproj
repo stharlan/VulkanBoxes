@@ -116,7 +116,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Library\reactphysics3d\include;C:\VulkanSDK\1.2.154.1\Include;C:\Library\glm;C:\Library\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\stuar\source\repos\PhysX\physx\include;C:\Users\stuar\source\repos\PhysX\pxshared\include;C:\VulkanSDK\1.2.154.1\Include;C:\Library\glm;C:\Library\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -167,6 +167,7 @@ copy C:\Users\stuar\source\repos\PhysX\physx\bin\win.x86_64.vc142.mt\release\*.d
     <ClCompile Include="DrawFrame.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Physics.cpp" />
+    <ClCompile Include="ShadowMapping.cpp" />
     <ClCompile Include="VulkanCallback.cpp" />
     <ClCompile Include="VulkanCleanup.cpp" />
     <ClCompile Include="VulkanCreateCmdPool.cpp" />

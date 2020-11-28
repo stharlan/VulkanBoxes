@@ -2,7 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 // cube vertices
-vec3 locs[32] = vec3[] (
+vec3 locs[40] = vec3[] (
     // +z
     vec3(0, 0, 1),
     vec3(1, 0, 1),
@@ -49,12 +49,31 @@ vec3 locs[32] = vec3[] (
     vec3(0, 0, 0),
     vec3(0, 0, 1),
     vec3(1, 1, 1),
-    vec3(1, 1, 0)
+    vec3(1, 1, 0),
 
+    // diag 1a
+    vec3(1, 0, 0),
+    vec3(0, 1, 0),
+    vec3(0, 1, 1),
+    vec3(1, 0, 1),
+
+    // diag 1b
+    vec3(1, 0, 0),
+    vec3(1, 0, 1),
+    vec3(0, 1, 1),
+    vec3(0, 1, 0)
 );
 
 // cube colors (not used)
-vec3 clrs[32] = vec3[] (
+vec3 clrs[40] = vec3[] (
+    vec3(1.0f, 0.0f, 0.0f),
+    vec3(0.0f, 1.0f, 0.0f),
+    vec3(0.0f, 0.0f, 1.0f),
+    vec3(1.0f, 1.0f, 1.0f),
+    vec3(1.0f, 0.0f, 0.0f),
+    vec3(0.0f, 1.0f, 0.0f),
+    vec3(0.0f, 0.0f, 1.0f),
+    vec3(1.0f, 1.0f, 1.0f),
     vec3(1.0f, 0.0f, 0.0f),
     vec3(0.0f, 1.0f, 0.0f),
     vec3(0.0f, 0.0f, 1.0f),
@@ -93,7 +112,7 @@ vec3 clrs[32] = vec3[] (
 // based on an 8x8 tiled image
 // all in the first row of tiles
 // six sides of cube (last two tiles in row no used)
-vec2 texcrds[32] = vec2[] (
+vec2 texcrds[40] = vec2[] (
 
     vec2(0.125f, 0.0f),
     vec2(0.249f, 0.0f),
@@ -131,13 +150,23 @@ vec2 texcrds[32] = vec2[] (
     vec2(0.75f, 0.0f),
 
     vec2(0.75f, 0.124f),
+    vec2(0.75f, 0.0f),
+    vec2(0.874f, 0.0f),
+    vec2(0.874f, 0.124f),
+
+    vec2(0.75f, 0.124f),
     vec2(0.874f, 0.124f),
     vec2(0.874f, 0.0f),
-    vec2(0.75f, 0.0f)
+    vec2(0.75f, 0.0f),
+
+    vec2(0.75f, 0.124f),
+    vec2(0.75f, 0.0f),
+    vec2(0.874f, 0.0f),
+    vec2(0.874f, 0.124f)
 );
 
 // normals for cube sides
-vec3 normals[32] = vec3[] (
+vec3 normals[40] = vec3[] (
     vec3(0.0f, 0.0f, 1.0f),
     vec3(0.0f, 0.0f, 1.0f),
     vec3(0.0f, 0.0f, 1.0f),
@@ -169,7 +198,17 @@ vec3 normals[32] = vec3[] (
     vec3(-1.0f, 1.0f, 0.0f),
     vec3(-1.0f, 1.0f, 0.0f),
     vec3(-1.0f, 1.0f, 0.0f),
-    vec3(-1.0f, 1.0f, 0.0f)
+    vec3(-1.0f, 1.0f, 0.0f),
+
+    vec3(1.0f, 1.0f, 0.0f),
+    vec3(1.0f, 1.0f, 0.0f),
+    vec3(1.0f, 1.0f, 0.0f),
+    vec3(1.0f, 1.0f, 0.0f),
+
+    vec3(-1.0f, -1.0f, 0.0f),
+    vec3(-1.0f, -1.0f, 0.0f),
+    vec3(-1.0f, -1.0f, 0.0f),
+    vec3(-1.0f, -1.0f, 0.0f)
 );
 
 // model matrix

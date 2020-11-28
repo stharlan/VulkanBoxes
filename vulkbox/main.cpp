@@ -124,7 +124,7 @@ bool HelloTriangleApplication::hasStencilComponent(VkFormat format)
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format ==
         VK_FORMAT_D24_UNORM_S8_UINT;
 }
-
+     
 void HelloTriangleApplication::initVulkan() {
     createInstance();
     setupDebugMessenger();
@@ -139,6 +139,7 @@ void HelloTriangleApplication::initVulkan() {
     createCommandPool();
     createColorResources();
     createDepthResources();
+    createShadowMappingResources();
     createFramebuffers();
     createTextureImage(textureImage, textureImageMemory, "c:\\temp\\grassbox512tg1.png");
     createTextureImage(textureImage2, textureImageMemory2, "c:\\temp\\dirt.png");

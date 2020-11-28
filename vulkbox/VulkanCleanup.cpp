@@ -3,9 +3,14 @@
 
 void HelloTriangleApplication::cleanupSwapChain()
 {
+
     vkDestroyImageView(device, colorImageView, nullptr);
     vkDestroyImage(device, colorImage, nullptr);
     vkFreeMemory(device, colorImageMemory, nullptr);
+
+    vkDestroyImageView(device, shadowMapView, nullptr);
+    vkDestroyImage(device, shadowImage, nullptr);
+    vkFreeMemory(device, shadowImageMemory, nullptr);
 
     vkDestroyImageView(device, depthImageView, nullptr);
     vkDestroyImage(device, depthImage, nullptr);

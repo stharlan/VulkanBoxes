@@ -52,9 +52,21 @@ void HelloTriangleApplication::createVertexBuffer()
              
             // if the block is less than the z extent
             // put veg at the top
-            if (h < z_extent && rand() % 100 == 1)
-            {
-                this->pBlockArray[GRIDIDX(xc, yc, h)] = 2;
+            if (h < z_extent) {
+                if (rand() % 100 == 1)
+                {
+                    // flower
+                    this->pBlockArray[GRIDIDX(xc, yc, h)] = 2;
+                }
+                else if (rand() % 1000 == 1) {
+                    // tree trunk
+                    //this->pBlockArray[GRIDIDX(xc, yc, h)] = 3;
+                    for (uint64_t th = 0; th < 5; th++) {
+                        if ((h + th) < z_extent) {
+                            this->pBlockArray[GRIDIDX(xc, yc, h + th)] = 3;
+                        }
+                    }
+                }
             }
         }
     }
@@ -67,19 +79,24 @@ void HelloTriangleApplication::createVertexBuffer()
 
                 int64_t idx = GRIDIDX(xc, yc, zc);
 
-                if (this->pBlockArray[idx] == 1) {
+                if (this->pBlockArray[idx] == 1 || this->pBlockArray[idx] == 3) {
+
+                    float texOffset = 0.0f;
+                    if (this->pBlockArray[idx] == 3) texOffset = 0.125f;
+
+                    size_t numVerts = vertices4.size();
 
                     // check for block on bottom (-z)
                     if (zc > 0) {
                         if (this->pBlockArray[GRIDIDX(xc, yc, zc - 1)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
-                                vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc} });
+                                vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc}, texOffset });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
-                            vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc} });
+                            vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc}, texOffset });
                         }
                     }
 
@@ -88,13 +105,13 @@ void HelloTriangleApplication::createVertexBuffer()
                     {
                         if (this->pBlockArray[GRIDIDX(xc, yc, zc + 1)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
-                                vertices4.push_back({ topVertexIndices[v], {xc, yc, zc} });
+                                vertices4.push_back({ topVertexIndices[v], {xc, yc, zc}, texOffset });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
-                            vertices4.push_back({ topVertexIndices[v], {xc, yc, zc} });
+                            vertices4.push_back({ topVertexIndices[v], {xc, yc, zc}, texOffset });
                         }
                     }
 
@@ -103,13 +120,13 @@ void HelloTriangleApplication::createVertexBuffer()
                     {
                         if (this->pBlockArray[GRIDIDX(xc + 1, yc, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
-                                vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc} });
+                                vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc}, texOffset });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
-                            vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc} });
+                            vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc}, texOffset });
                         }
                     }
 
@@ -118,13 +135,13 @@ void HelloTriangleApplication::createVertexBuffer()
                     {
                         if (this->pBlockArray[GRIDIDX(xc - 1, yc, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
-                                vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc} });
+                                vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc}, texOffset });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
-                            vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc} });
+                            vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc}, texOffset });
                         }
                     }
 
@@ -133,13 +150,13 @@ void HelloTriangleApplication::createVertexBuffer()
                     {
                         if (this->pBlockArray[GRIDIDX(xc, yc + 1, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
-                                vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc} });
+                                vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc}, texOffset });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
-                            vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc} });
+                            vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc}, texOffset });
                         }
                     }
 
@@ -148,24 +165,29 @@ void HelloTriangleApplication::createVertexBuffer()
                     {
                         if (this->pBlockArray[GRIDIDX(xc, yc - 1, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
-                                vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc} });
+                                vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc}, texOffset });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
-                            vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc} });
+                            vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc}, texOffset });
                         }
                     }
 
-                    // create new actors
-                    this->pStaticBlockArray[idx] = this->mPhysics->createRigidStatic(
+                    if (vertices4.size() > numVerts)
+                    {
+                        // create new actors
+                        this->pStaticBlockArray[idx] = this->mPhysics->createRigidStatic(
                             physx::PxTransform(xc + 0.5f, yc + 0.5f, zc + 0.5f));
-                    this->pStaticBlockArray[idx]->attachShape(*this->mBlockShape);
+                        this->pStaticBlockArray[idx]->attachShape(*this->mBlockShape);
+                    }
+                    else {
+                        this->pStaticBlockArray[idx] = NULL;
 
+                    }
                 }
                 else {
-                    // grid block is not a 1
                     this->pStaticBlockArray[idx] = NULL;
                 }
             }
@@ -177,16 +199,16 @@ void HelloTriangleApplication::createVertexBuffer()
             for (int64_t xc = 0; xc < x_extent; xc++) {
                 if (this->pBlockArray[GRIDIDX(xc, yc, zc)] == 2) {
                     for (int64_t v = 0; v < 6; v++) {
-                        vertices4.push_back({ capVertices1[v], {xc, yc, zc} });
+                        vertices4.push_back({ capVertices1[v], {xc, yc, zc}, 0.0f });
                     }
                     for (int64_t v = 0; v < 6; v++) {
-                        vertices4.push_back({ capVertices2[v], {xc, yc, zc} });
+                        vertices4.push_back({ capVertices2[v], {xc, yc, zc}, 0.0f });
                     }
                     for (int64_t v = 0; v < 6; v++) {
-                        vertices4.push_back({ capVertices3[v], {xc, yc, zc} });
+                        vertices4.push_back({ capVertices3[v], {xc, yc, zc}, 0.0f });
                     }
                     for (int64_t v = 0; v < 6; v++) {
-                        vertices4.push_back({ capVertices4[v], {xc, yc, zc} });
+                        vertices4.push_back({ capVertices4[v], {xc, yc, zc}, 0.0f });
                     }
                 }
             }

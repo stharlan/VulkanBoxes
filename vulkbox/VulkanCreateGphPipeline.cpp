@@ -60,8 +60,8 @@ void HelloTriangleApplication::createGraphicsPipeline()
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-    auto bindingDescription = Vertex3::getBindingDescription();
-    auto attributeDescriptions = Vertex3::getAttributeDescriptions();
+    auto bindingDescription = Vertex4::getBindingDescription();
+    auto attributeDescriptions = Vertex4::getAttributeDescriptions();
 
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.vertexAttributeDescriptionCount = 

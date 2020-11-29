@@ -1,6 +1,216 @@
 
 #include "Common.h"
 
+// cube vertices
+const glm::vec4 locs[40] = {
+    // +z
+    {0, 0, 1,1},
+    {1, 0, 1,1},
+    {1, 1, 1,1},
+    {0, 1, 1,1},
+
+    // +x
+    {1, 0, 0,1},
+    {1, 1, 0,1},
+    {1, 1, 1,1},
+    {1, 0, 1,1},
+
+    // -x
+    {0, 0, 0,1},
+    {0, 0, 1,1},
+    {0, 1, 1,1},
+    {0, 1, 0,1},
+
+    // +y
+    {0, 1, 0,1},
+    {0, 1, 1,1},
+    {1, 1, 1,1},
+    {1, 1, 0,1},
+
+    // -y
+    {0, 0, 0,1},
+    {1, 0, 0,1},
+    {1, 0, 1,1},
+    {0, 0, 1,1},
+
+    // -z
+    {0, 0, 0,1},
+    {0, 1, 0,1},
+    {1, 1, 0,1},
+    {1, 0, 0,1},
+
+    // diag 1a
+    {0, 0, 0,1},
+    {1, 1, 0,1},
+    {1, 1, 1,1},
+    {0, 0, 1,1},
+
+    // diag 1b
+    {0, 0, 0,1},
+    {0, 0, 1,1},
+    {1, 1, 1,1},
+    {1, 1, 0,1},
+
+    // diag 1a
+    {1, 0, 0,1},
+    {0, 1, 0,1},
+    {0, 1, 1,1},
+    {1, 0, 1,1},
+
+    // diag 1b
+    {1, 0, 0,1},
+    {1, 0, 1,1},
+    {0, 1, 1,1},
+    {0, 1, 0,1}
+};
+
+//// cube colors (not used)
+//const glm::vec3 clrs[40] = vec3[](
+//    vec3(1.0f, 0.0f, 0.0f),
+//    vec3(0.0f, 1.0f, 0.0f),
+//    vec3(0.0f, 0.0f, 1.0f),
+//    vec3(1.0f, 1.0f, 1.0f),
+//    vec3(1.0f, 0.0f, 0.0f),
+//    vec3(0.0f, 1.0f, 0.0f),
+//    vec3(0.0f, 0.0f, 1.0f),
+//    vec3(1.0f, 1.0f, 1.0f),
+//    vec3(1.0f, 0.0f, 0.0f),
+//    vec3(0.0f, 1.0f, 0.0f),
+//    vec3(0.0f, 0.0f, 1.0f),
+//    vec3(1.0f, 1.0f, 1.0f),
+//    vec3(1.0f, 0.0f, 0.0f),
+//    vec3(0.0f, 1.0f, 0.0f),
+//    vec3(0.0f, 0.0f, 1.0f),
+//    vec3(1.0f, 1.0f, 1.0f),
+//    vec3(1.0f, 0.0f, 0.0f),
+//    vec3(0.0f, 1.0f, 0.0f),
+//    vec3(0.0f, 0.0f, 1.0f),
+//    vec3(1.0f, 1.0f, 1.0f),
+//    vec3(1.0f, 0.0f, 0.0f),
+//    vec3(0.0f, 1.0f, 0.0f),
+//    vec3(0.0f, 0.0f, 1.0f),
+//    vec3(1.0f, 1.0f, 1.0f),
+//    vec3(1.0f, 0.0f, 0.0f),
+//    vec3(0.0f, 1.0f, 0.0f),
+//    vec3(0.0f, 0.0f, 1.0f),
+//    vec3(1.0f, 1.0f, 1.0f),
+//    vec3(1.0f, 0.0f, 0.0f),
+//    vec3(0.0f, 1.0f, 0.0f),
+//    vec3(0.0f, 0.0f, 1.0f),
+//    vec3(1.0f, 1.0f, 1.0f),
+//    vec3(1.0f, 0.0f, 0.0f),
+//    vec3(0.0f, 1.0f, 0.0f),
+//    vec3(0.0f, 0.0f, 1.0f),
+//    vec3(1.0f, 1.0f, 1.0f),
+//    vec3(1.0f, 0.0f, 0.0f),
+//    vec3(0.0f, 1.0f, 0.0f),
+//    vec3(0.0f, 0.0f, 1.0f),
+//    vec3(1.0f, 1.0f, 1.0f)
+//    );
+
+// cube texture coords
+// based on an 8x8 tiled image
+// all in the first row of tiles
+// six sides of cube (last two tiles in row no used)
+const glm::vec4 texcrds[40] = {
+
+    {0.125f, 0.0f,0,0},
+    {0.249f, 0.0f,0,0},
+    {0.249f, 0.124f,0,0},
+    {0.125f, 0.124f,0,0},
+
+    {0.25f, 0.0f,0,0},
+    {0.374f, 0.0f,0,0},
+    {0.374f, 0.124f,0,0},
+    {0.25f, 0.124f,0,0},
+
+    {0.0f, 0.0f,0,0},
+    {0.124f, 0.0f,0,0},
+    {0.124f, 0.124f,0,0},
+    {0.0f, 0.124f,0,0},
+
+    {0.625f, 0.0f,0,0},
+    {0.749f, 0.0f,0,0},
+    {0.749f, 0.124f,0,0},
+    {0.625f, 0.124f,0,0},
+
+    {0.5f, 0.0f,0,0},
+    {0.624f, 0.0f,0,0},
+    {0.624f, 0.124f,0,0},
+    {0.5f, 0.124f,0,0},
+
+    {0.375f, 0.0f,0,0},
+    {0.499f, 0.0f,0,0},
+    {0.499f, 0.124f,0,0},
+    {0.375f, 0.124f,0,0},
+
+    {0.75f, 0.124f,0,0},
+    {0.874f, 0.124f,0,0},
+    {0.874f, 0.0f,0,0},
+    {0.75f, 0.0f,0,0},
+
+    {0.75f, 0.124f,0,0},
+    {0.75f, 0.0f,0,0},
+    {0.874f, 0.0f,0,0},
+    {0.874f, 0.124f,0,0},
+
+    {0.75f, 0.124f,0,0},
+    {0.874f, 0.124f,0,0},
+    {0.874f, 0.0f,0,0},
+    {0.75f, 0.0f,0,0},
+
+    {0.75f, 0.124f,0,0},
+    {0.75f, 0.0f,0,0},
+    {0.874f, 0.0f,0,0},
+    {0.874f, 0.124f,0,0}
+};
+
+// normals for cube sides
+const glm::vec4 normals[40] = {
+    {0.0f, 0.0f, 1.0f,0},
+    {0.0f, 0.0f, 1.0f,0},
+    {0.0f, 0.0f, 1.0f,0},
+    {0.0f, 0.0f, 1.0f,0},
+    {1.0f, 0.0f, 0.0f,0},
+    {1.0f, 0.0f, 0.0f,0},
+    {1.0f, 0.0f, 0.0f,0},
+    {1.0f, 0.0f, 0.0f,0},
+    {-1.0f, 0.0f, 0.0f,0},
+    {-1.0f, 0.0f, 0.0f,0},
+    {-1.0f, 0.0f, 0.0f,0},
+    {-1.0f, 0.0f, 0.0f,0},
+    {0.0f, 1.0f, 0.0f,0},
+    {0.0f, 1.0f, 0.0f,0},
+    {0.0f, 1.0f, 0.0f,0},
+    {0.0f, 1.0f, 0.0f,0},
+    {0.0f, -1.0f, 0.0f,0},
+    {0.0f, -1.0f, 0.0f,0},
+    {0.0f, -1.0f, 0.0f,0},
+    {0.0f, -1.0f, 0.0f,0},
+    {0.0f, 0.0f, -1.0f,0},
+    {0.0f, 0.0f, -1.0f,0},
+    {0.0f, 0.0f, -1.0f,0},
+    {0.0f, 0.0f, -1.0f,0},
+    {1.0f, -1.0f, 0.0f,0},
+    {1.0f, -1.0f, 0.0f,0},
+    {1.0f, -1.0f, 0.0f,0},
+    {1.0f, -1.0f, 0.0f,0},
+    {-1.0f, 1.0f, 0.0f,0},
+    {-1.0f, 1.0f, 0.0f,0},
+    {-1.0f, 1.0f, 0.0f,0},
+    {-1.0f, 1.0f, 0.0f,0},
+
+    {1.0f, 1.0f, 0.0f,0},
+    {1.0f, 1.0f, 0.0f,0},
+    {1.0f, 1.0f, 0.0f,0},
+    {1.0f, 1.0f, 0.0f,0},
+
+    {-1.0f, -1.0f, 0.0f,0},
+    {-1.0f, -1.0f, 0.0f,0},
+    {-1.0f, -1.0f, 0.0f,0},
+    {-1.0f, -1.0f, 0.0f,0}
+};
+
 void HelloTriangleApplication::recreateSwapChain()
 {
     int width = 0, height = 0;
@@ -69,7 +279,7 @@ void HelloTriangleApplication::addActorsForCurrentLocation(int64_t xint, int64_t
                         {
                             idx = GRIDIDX(xbl, ybl, zbl);
                             if (this->pBlockArray[idx] == 1) {
-                                blocksAroundMe.push_back(this->pStaticBlockArray[idx]);
+                                if(this->pStaticBlockArray[idx]) blocksAroundMe.push_back(this->pStaticBlockArray[idx]);
                             }
                         }
                     }
@@ -99,7 +309,7 @@ void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentIm
 
     // 2 units per second
     float speed = 5.0f * elapsed;
-    printf("sp %.6f\n", speed);
+    //printf("sp %.6f\n", speed);
 
     if (keys[0] == 1) {
         mx += cosf(DEG2RAD(azimuth)) * speed;
@@ -199,6 +409,10 @@ void HelloTriangleApplication::updateUniformBufferWithPhysics(uint32_t currentIm
 
     // shadow mapping
     glm::mat4 lightProjection = glm::ortho(-1, 1, -1, 1);
+
+    memcpy(&ubo.verts[0], &locs[0], sizeof(glm::vec4) * 40);
+    memcpy(&ubo.texcs[0], &texcrds[0], sizeof(glm::vec4) * 40);
+    memcpy(&ubo.norms[0], &normals[0], sizeof(glm::vec4) * 40);
 
     void* data;
     vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);

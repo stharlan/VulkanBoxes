@@ -1,216 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-// cube vertices
-vec3 locs[40] = vec3[] (
-    // +z
-    vec3(0, 0, 1),
-    vec3(1, 0, 1),
-    vec3(1, 1, 1),
-    vec3(0, 1, 1),
-
-    // +x
-    vec3(1, 0, 0),
-    vec3(1, 1, 0),
-    vec3(1, 1, 1),
-    vec3(1, 0, 1),
-
-    // -x
-    vec3(0, 0, 0),
-    vec3(0, 0, 1),
-    vec3(0, 1, 1),
-    vec3(0, 1, 0),
-
-    // +y
-    vec3(0, 1, 0),
-    vec3(0, 1, 1),
-    vec3(1, 1, 1),
-    vec3(1, 1, 0),
-
-    // -y
-    vec3(0, 0, 0),
-    vec3(1, 0, 0),
-    vec3(1, 0, 1),
-    vec3(0, 0, 1),
-
-    // -z
-    vec3(0, 0, 0),
-    vec3(0, 1, 0),
-    vec3(1, 1, 0),
-    vec3(1, 0, 0),
-
-    // diag 1a
-    vec3(0, 0, 0),
-    vec3(1, 1, 0),
-    vec3(1, 1, 1),
-    vec3(0, 0, 1),
-
-    // diag 1b
-    vec3(0, 0, 0),
-    vec3(0, 0, 1),
-    vec3(1, 1, 1),
-    vec3(1, 1, 0),
-
-    // diag 1a
-    vec3(1, 0, 0),
-    vec3(0, 1, 0),
-    vec3(0, 1, 1),
-    vec3(1, 0, 1),
-
-    // diag 1b
-    vec3(1, 0, 0),
-    vec3(1, 0, 1),
-    vec3(0, 1, 1),
-    vec3(0, 1, 0)
-);
-
-// cube colors (not used)
-vec3 clrs[40] = vec3[] (
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(1.0f, 1.0f, 1.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(1.0f, 1.0f, 1.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(1.0f, 1.0f, 1.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(1.0f, 1.0f, 1.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(1.0f, 1.0f, 1.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(1.0f, 1.0f, 1.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(1.0f, 1.0f, 1.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(1.0f, 1.0f, 1.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(1.0f, 1.0f, 1.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(1.0f, 1.0f, 1.0f)
-);
-
-// cube texture coords
-// based on an 8x8 tiled image
-// all in the first row of tiles
-// six sides of cube (last two tiles in row no used)
-vec2 texcrds[40] = vec2[] (
-
-    vec2(0.125f, 0.0f),
-    vec2(0.249f, 0.0f),
-    vec2(0.249f, 0.124f),
-    vec2(0.125f, 0.124f),
-
-    vec2(0.25f, 0.0f),
-    vec2(0.374f, 0.0f),
-    vec2(0.374f, 0.124f),
-    vec2(0.25f, 0.124f),
-
-    vec2(0.0f, 0.0f),
-    vec2(0.124f, 0.0f),
-    vec2(0.124f, 0.124f),
-    vec2(0.0f, 0.124f),
-
-    vec2(0.625f, 0.0f),
-    vec2(0.749f, 0.0f),
-    vec2(0.749f, 0.124f),
-    vec2(0.625f, 0.124f),
-
-    vec2(0.5f, 0.0f),
-    vec2(0.624f, 0.0f),
-    vec2(0.624f, 0.124f),
-    vec2(0.5f, 0.124f),
-
-    vec2(0.375f, 0.0f),
-    vec2(0.499f, 0.0f),
-    vec2(0.499f, 0.124f),
-    vec2(0.375f, 0.124f),
-
-    vec2(0.75f, 0.124f),
-    vec2(0.874f, 0.124f),
-    vec2(0.874f, 0.0f),
-    vec2(0.75f, 0.0f),
-
-    vec2(0.75f, 0.124f),
-    vec2(0.75f, 0.0f),
-    vec2(0.874f, 0.0f),
-    vec2(0.874f, 0.124f),
-
-    vec2(0.75f, 0.124f),
-    vec2(0.874f, 0.124f),
-    vec2(0.874f, 0.0f),
-    vec2(0.75f, 0.0f),
-
-    vec2(0.75f, 0.124f),
-    vec2(0.75f, 0.0f),
-    vec2(0.874f, 0.0f),
-    vec2(0.874f, 0.124f)
-);
-
-// normals for cube sides
-vec3 normals[40] = vec3[] (
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(0.0f, 0.0f, 1.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(1.0f, 0.0f, 0.0f),
-    vec3(-1.0f, 0.0f, 0.0f),
-    vec3(-1.0f, 0.0f, 0.0f),
-    vec3(-1.0f, 0.0f, 0.0f),
-    vec3(-1.0f, 0.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, -1.0f, 0.0f),
-    vec3(0.0f, -1.0f, 0.0f),
-    vec3(0.0f, -1.0f, 0.0f),
-    vec3(0.0f, -1.0f, 0.0f),
-    vec3(0.0f, 0.0f, -1.0f),
-    vec3(0.0f, 0.0f, -1.0f),
-    vec3(0.0f, 0.0f, -1.0f),
-    vec3(0.0f, 0.0f, -1.0f),
-    vec3(1.0f, -1.0f, 0.0f),
-    vec3(1.0f, -1.0f, 0.0f),
-    vec3(1.0f, -1.0f, 0.0f),
-    vec3(1.0f, -1.0f, 0.0f),
-    vec3(-1.0f, 1.0f, 0.0f),
-    vec3(-1.0f, 1.0f, 0.0f),
-    vec3(-1.0f, 1.0f, 0.0f),
-    vec3(-1.0f, 1.0f, 0.0f),
-
-    vec3(1.0f, 1.0f, 0.0f),
-    vec3(1.0f, 1.0f, 0.0f),
-    vec3(1.0f, 1.0f, 0.0f),
-    vec3(1.0f, 1.0f, 0.0f),
-
-    vec3(-1.0f, -1.0f, 0.0f),
-    vec3(-1.0f, -1.0f, 0.0f),
-    vec3(-1.0f, -1.0f, 0.0f),
-    vec3(-1.0f, -1.0f, 0.0f)
-);
-
 // model matrix
 // view matrix
 // projection matrix
@@ -220,6 +10,9 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
     vec4 upos;
+    vec4 verts[40];
+    vec4 texcs[40];
+    vec4 norms[40];
 } ubo;
 
 // inputs
@@ -228,6 +21,7 @@ layout(binding = 0) uniform UniformBufferObject {
 //           the cubes can't be rotated or scaled - only translated
 layout(location = 0) in uint inIndex;
 layout(location = 1) in vec3 inTrans;
+layout(location = 2) in float texOffset;
 
 // the color from the colors array
 layout(location = 0) out vec3 fragColor;
@@ -260,20 +54,21 @@ void main() {
 					       inTrans[0], inTrans[1], inTrans[2], 1.0);
 
     // compute position from proj/view/(model/translate)
-    gl_Position = ubo.proj * ubo.view * (ubo.model * translate1) * vec4(locs[inIndex], 1.0);
+    gl_Position = ubo.proj * ubo.view * (ubo.model * translate1) * ubo.verts[inIndex];
 
     // pass on to frag shader
-    fragColor = clrs[inIndex];
-    fragTexCoord = texcrds[inIndex];
-    fragNormal = normals[inIndex];
-    fragPos = vec3((ubo.model * translate1) * vec4(locs[inIndex], 1.0));
+    fragColor = vec3(1,1,1);
+    fragTexCoord = vec2(ubo.texcs[inIndex]);
+    fragTexCoord[1] += texOffset;
+    fragNormal = vec3(ubo.norms[inIndex]);
+    fragPos = vec3((ubo.model * translate1) * ubo.verts[inIndex]);
     viewPos = vec3(ubo.upos);
 
     // Transform the normal's orientation into eye space.
-    eyeNormal = vec3(ubo.view * (ubo.model * translate1) * vec4(normals[inIndex], 0.0));
+    eyeNormal = vec3(ubo.view * (ubo.model * translate1) * ubo.norms[inIndex]);
 
     // Transform the vertex into eye space.
-    eyePosition = vec3(ubo.view * (ubo.model * translate1) * vec4(locs[inIndex], 1.0));
+    eyePosition = vec3(ubo.view * (ubo.model * translate1) * ubo.verts[inIndex]);
 
     // Transform eye light pos to eye space.
     eyeLightPos = vec3(ubo.view * (ubo.model * translate1) * vec4(lightPos, 1.0));

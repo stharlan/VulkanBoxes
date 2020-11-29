@@ -53,7 +53,7 @@ const bool enableValidationLayers = true;
 // vertex is going to be two indices
 // index 1 is index into vertices 0-7
 // index 2 is index into transforms 0-n
-std::vector<Vertex3> vertices4;
+std::vector<Vertex4> vertices4;
 //const std::vector<Vertex3> vertices4 = {
 //    {0, {0.0f, 0.0f, 0.0f} }, 
 //    {1, {0.0f, 0.0f, 0.0f} },
@@ -179,7 +179,7 @@ void HelloTriangleApplication::key_callback(GLFWwindow* window, int key, int sca
             break;
         case GLFW_KEY_SPACE:
             keys[4] = 1;
-            printf("space\n");
+            //printf("space\n");
             break;
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(window, 1);

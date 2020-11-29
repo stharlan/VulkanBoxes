@@ -121,11 +121,6 @@ extern int64_t xblock;
 extern int64_t yblock;
 extern int64_t zblock;
 
-extern int64_t x_extent; // 0 to extent
-extern int64_t y_extent; // 0 to extent
-extern int64_t z_extent; // 0 to extent
-extern int8_t blockArray[];
-
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
 class HelloTriangleApplication {
@@ -137,6 +132,30 @@ public:
         mainLoop();
         cleanupPhysics();
         cleanup();
+    }
+
+    HelloTriangleApplication()
+    {
+        //int8_t* pBlockArray; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
+        //physx::PxRigidStatic** pStaticBlockArray; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
+        this->pBlockArray = (int8_t*)malloc(X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(int8_t));
+        this->pStaticBlockArray = (physx::PxRigidStatic**)malloc(X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(physx::PxRigidStatic*));
+    }
+
+    ~HelloTriangleApplication()
+    {
+        free(this->pBlockArray);
+        this->pBlockArray = NULL;
+        //for (int64_t xc = 0; xc < this->x_extent; xc++) {
+        //    for (int64_t yc = 0; yc < this->y_extent; yc++) {
+        //        for (int64_t zc = 0; zc < this->z_extent; zc++) {
+        //            int64_t idx = GRIDIDX(xc, yc, zc);
+        //            if (this->pStaticBlockArray[idx]) this->pStaticBlockArray[idx]->release();
+        //        }
+        //    }
+        //}
+        free(this->pStaticBlockArray);
+        this->pStaticBlockArray = NULL;
     }
 
 private:
@@ -190,7 +209,7 @@ private:
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     void createCommandBuffers();
     void createSyncObjects();
-    void updateUniformBuffer(uint32_t currentImage, float elapsed);
+    //void updateUniformBuffer(uint32_t currentImage, float elapsed);
     void updateUniformBufferWithPhysics(uint32_t currentImage, float elapsed);
     void drawFrame(float elapsed);
     VkShaderModule createShaderModule(const std::vector<char>& code);
@@ -295,12 +314,10 @@ private:
     physx::PxCapsuleController* mController = NULL;
     physx::PxControllerFilters mCCFilters = {};
 
-    //reactphysics3d::PhysicsCommon physicsCommon;
-    //reactphysics3d::PhysicsWorld* world = NULL;
-    //reactphysics3d::RigidBody* player = NULL;
-    //reactphysics3d::CapsuleShape* playerShape = NULL;
-    //reactphysics3d::BoxShape* blockShape = NULL;
-    //reactphysics3d::Collider* playerCollider = NULL;
-    //std::vector<reactphysics3d::RigidBody*> blocks;
-    //std::vector<reactphysics3d::Collider*> blockColliders;
+    int64_t x_extent = X_GRID_EXTENT; // 0 to extent
+    int64_t y_extent = Y_GRID_EXTENT; // 0 to extent
+    int64_t z_extent = Z_GRID_EXTENT; // 0 to extent
+    int8_t* pBlockArray; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
+    physx::PxRigidStatic** pStaticBlockArray; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
+
 };

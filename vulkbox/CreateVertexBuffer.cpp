@@ -47,62 +47,31 @@ void HelloTriangleApplication::createVertexBuffer()
             if (h < 1) h = 1;
             //int height = ((float)h / 255.0f) * z_extent;
             for (int64_t zc = 0; zc < h; zc++) {
-                int64_t idx = (zc * x_extent * y_extent) + (yc * x_extent) + xc;
-                blockArray[idx] = 1;
+                this->pBlockArray[GRIDIDX(xc,yc,zc)] = 1;
             }
              
             // if the block is less than the z extent
             // put veg at the top
             if (h < z_extent && rand() % 100 == 1)
             {
-                int64_t idx = (h * x_extent * y_extent) + (yc * x_extent) + xc;
-                blockArray[idx] = 2;
+                this->pBlockArray[GRIDIDX(xc, yc, h)] = 2;
             }
-
-            //blockArray[idx] = 1;
-                
-            //if (zc == 0) blockArray[idx] = 1;
-            //else if (rand() % 500 == 0) blockArray[idx] = 1;
-            //else blockArray[idx] = 0;
-
-            // add blocks below for a column
-            //if (zc > 1) {
-            //    for (int64_t zz = zc - 1; zz > 0; zz--)
-            //    {
-            //        idx = (zz * x_extent * y_extent) + (yc * x_extent) + xc;
-            //        if (blockArray[idx] == 0)
-            //        {
-            //            blockArray[idx] = 1;
-            //        }
-            //    }
-            //}
         }
     }
 
     stbi_image_free(pixels);
 
-    //for (int64_t zc = 0; zc < z_extent; zc++) {
-    //    for (int64_t yc = 0; yc < y_extent; yc++) {
-    //        for (int64_t xc = 0; xc < x_extent; xc++) {
-    //            int64_t idx = (zc * x_extent * y_extent) + (yc * x_extent) + xc;
-    //            if (blockArray[idx] == 1) {
-    //                this->addBlockRigidBody(xc, yc, zc);
-    //            }
-    //        }
-    //    }
-    //}
-
     for (int64_t zc = 0; zc < z_extent; zc++) {
         for (int64_t yc = 0; yc < y_extent; yc++) {
             for (int64_t xc = 0; xc < x_extent; xc++) {
 
-                int64_t idx = (zc * x_extent * y_extent) + (yc * x_extent) + xc;
+                int64_t idx = GRIDIDX(xc, yc, zc);
 
-                // check for block on bottom (-z)
-                if (blockArray[idx] == 1) {
+                if (this->pBlockArray[idx] == 1) {
+
+                    // check for block on bottom (-z)
                     if (zc > 0) {
-                        int64_t idx_zminus = ((zc - 1) * x_extent * y_extent) + (yc * x_extent) + xc;
-                        if (blockArray[idx_zminus] != 1) {
+                        if (this->pBlockArray[GRIDIDX(xc, yc, zc - 1)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc} });
                             }
@@ -113,15 +82,11 @@ void HelloTriangleApplication::createVertexBuffer()
                             vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc} });
                         }
                     }
-                }
 
-                // check for block on top (+z)
-                if (blockArray[idx] == 1)
-                {
+                    // check for block on top (+z)
                     if (zc < z_extent - 1)
                     {
-                        int64_t idx_zplus = ((zc + 1) * x_extent * y_extent) + (yc * x_extent) + xc;
-                        if (blockArray[idx_zplus] != 1) {
+                        if (this->pBlockArray[GRIDIDX(xc, yc, zc + 1)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 vertices4.push_back({ topVertexIndices[v], {xc, yc, zc} });
                             }
@@ -136,8 +101,7 @@ void HelloTriangleApplication::createVertexBuffer()
                     // check for block on +x
                     if (xc < x_extent - 1)
                     {
-                        int64_t idx_xplus = (zc * x_extent * y_extent) + (yc * x_extent) + xc + 1;
-                        if (blockArray[idx_xplus] != 1) {
+                        if (this->pBlockArray[GRIDIDX(xc + 1, yc, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc} });
                             }
@@ -152,8 +116,7 @@ void HelloTriangleApplication::createVertexBuffer()
                     // check for block on -x
                     if (xc > 0)
                     {
-                        int64_t idx_xminus = (zc * x_extent * y_extent) + (yc * x_extent) + xc - 1;
-                        if (blockArray[idx_xminus] != 1) {
+                        if (this->pBlockArray[GRIDIDX(xc - 1, yc, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc} });
                             }
@@ -168,8 +131,7 @@ void HelloTriangleApplication::createVertexBuffer()
                     // check for block on +y
                     if (yc < y_extent - 1)
                     {
-                        int64_t idx_yplus = (zc * x_extent * y_extent) + ((yc + 1) * x_extent) + xc;
-                        if (blockArray[idx_yplus] != 1) {
+                        if (this->pBlockArray[GRIDIDX(xc, yc + 1, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc} });
                             }
@@ -184,8 +146,7 @@ void HelloTriangleApplication::createVertexBuffer()
                     // check for block on -y
                     if (yc > 0)
                     {
-                        int64_t idx_yminus = (zc * x_extent * y_extent) + ((yc - 1) * x_extent) + xc;
-                        if (blockArray[idx_yminus] != 1) {
+                        if (this->pBlockArray[GRIDIDX(xc, yc - 1, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc} });
                             }
@@ -196,6 +157,16 @@ void HelloTriangleApplication::createVertexBuffer()
                             vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc} });
                         }
                     }
+
+                    // create new actors
+                    this->pStaticBlockArray[idx] = this->mPhysics->createRigidStatic(
+                            physx::PxTransform(xc + 0.5f, yc + 0.5f, zc + 0.5f));
+                    this->pStaticBlockArray[idx]->attachShape(*this->mBlockShape);
+
+                }
+                else {
+                    // grid block is not a 1
+                    this->pStaticBlockArray[idx] = NULL;
                 }
             }
         }
@@ -204,9 +175,7 @@ void HelloTriangleApplication::createVertexBuffer()
     for (int64_t zc = 0; zc < z_extent; zc++) {
         for (int64_t yc = 0; yc < y_extent; yc++) {
             for (int64_t xc = 0; xc < x_extent; xc++) {
-
-                int64_t idx = (zc * x_extent * y_extent) + (yc * x_extent) + xc;
-                if (blockArray[idx] == 2) {
+                if (this->pBlockArray[GRIDIDX(xc, yc, zc)] == 2) {
                     for (int64_t v = 0; v < 6; v++) {
                         vertices4.push_back({ capVertices1[v], {xc, yc, zc} });
                     }

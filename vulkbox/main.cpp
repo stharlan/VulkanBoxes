@@ -29,14 +29,7 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-#define X_GRID_EXTENT 512
-#define Y_GRID_EXTENT 512
-#define Z_GRID_EXTENT 256
 
-int64_t x_extent = X_GRID_EXTENT; // 0 to extent
-int64_t y_extent = Y_GRID_EXTENT; // 0 to extent
-int64_t z_extent = Z_GRID_EXTENT; // 0 to extent
-int8_t blockArray[X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] = { };
 
 // this is going to have to be a uniform
 // but, for now, it can be hard coded into shader

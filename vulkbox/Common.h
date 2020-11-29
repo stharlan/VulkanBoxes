@@ -9,6 +9,12 @@
 #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\profile\\PhysXPvdSDK_static_64.lib")
 #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\profile\\PhysXCharacterKinematic_static_64.lib")
 
+#define X_GRID_EXTENT 512
+#define Y_GRID_EXTENT 512
+#define Z_GRID_EXTENT 256
+
+#define GRIDIDX(ix,iy,iz) (((iz) * x_extent* y_extent) + ((iy) * x_extent) + (ix))
+
 #include <Windows.h>
 
 #define GLFW_INCLUDE_VULKAN

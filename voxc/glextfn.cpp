@@ -1,0 +1,81 @@
+
+#include "voxc.h"
+
+PFNGLDISPATCHCOMPUTEPROC glDispatchCompute = NULL;
+PFNGLMEMORYBARRIERPROC glMemoryBarrier = NULL;
+PFNGLACTIVETEXTUREPROC glActiveTexture = NULL;
+PFNGLBINDIMAGETEXTUREPROC glBindImageTexture = NULL;
+PFNGLGETINTEGERI_VPROC glGetIntegeri_v = NULL;
+PFNGLCREATESHADERPROC glCreateShader = NULL;
+PFNGLSHADERSOURCEPROC glShaderSource = NULL;
+PFNGLCOMPILESHADERPROC glCompileShader = NULL;
+PFNGLCREATEPROGRAMPROC glCreateProgram = NULL;
+PFNGLATTACHSHADERPROC glAttachShader = NULL;
+PFNGLLINKPROGRAMPROC glLinkProgram = NULL;
+PFNGLUSEPROGRAMPROC glUseProgram = NULL;
+PFNGLGETSHADERIVPROC glGetShaderiv = NULL;
+PFNGLGETSHADERINFOLOGPROC glGetShaderInfoLog = NULL;
+PFNGLDELETESHADERPROC glDeleteShader = NULL;
+PFNGLGETPROGRAMIVPROC glGetProgramiv = NULL;
+PFNGLGETPROGRAMINFOLOGPROC glGetProgramInfoLog = NULL;
+PFNGLDELETEPROGRAMPROC glDeleteProgram = NULL;
+PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation = NULL;
+PFNGLUNIFORM4FVPROC glUniform4fv = NULL;
+PFNGLUNIFORM3FVPROC glUniform3fv = NULL;
+PFNGLUNIFORM2FVPROC glUniform2fv = NULL;
+PFNGLUNIFORM1IPROC glUniform1i = NULL;
+PFNGLGENBUFFERSPROC glGenBuffers = NULL;
+PFNGLBINDBUFFERPROC glBindBuffer = NULL;
+PFNGLBUFFERDATAPROC glBufferData = NULL;
+PFNGLGETATTRIBLOCATIONPROC glGetAttribLocation = NULL;
+PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer = NULL;
+PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray = NULL;
+PFNGLGENVERTEXARRAYSPROC glGenVertexArrays = NULL;
+PFNGLBINDVERTEXARRAYPROC glBindVertexArray = NULL;
+PFNGLBINDATTRIBLOCATIONPROC glBindAttribLocation = NULL;
+PFNGLUNIFORMMATRIX4FVPROC glUniformMatrix4fv = NULL;
+PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray = NULL;
+PFNGLGENERATEMIPMAPPROC glGenerateMipmap = NULL;
+
+BOOL loadExtensionFunctions()
+{
+    GETPROC(PFNGLACTIVETEXTUREPROC, glActiveTexture, "glActiveTexture");
+    GETPROC(PFNGLBINDIMAGETEXTUREPROC, glBindImageTexture, "glBindImageTexture");
+    GETPROC(PFNGLGETINTEGERI_VPROC, glGetIntegeri_v, "glGetIntegeri_v");
+    GETPROC(PFNGLCREATESHADERPROC, glCreateShader, "glCreateShader");
+    GETPROC(PFNGLSHADERSOURCEPROC, glShaderSource, "glShaderSource");
+    GETPROC(PFNGLCOMPILESHADERPROC, glCompileShader, "glCompileShader");
+    GETPROC(PFNGLCREATEPROGRAMPROC, glCreateProgram, "glCreateProgram");
+    GETPROC(PFNGLATTACHSHADERPROC, glAttachShader, "glAttachShader");
+    GETPROC(PFNGLLINKPROGRAMPROC, glLinkProgram, "glLinkProgram");
+    GETPROC(PFNGLUSEPROGRAMPROC, glUseProgram, "glUseProgram");
+    GETPROC(PFNGLDISPATCHCOMPUTEPROC, glDispatchCompute, "glDispatchCompute");
+    GETPROC(PFNGLMEMORYBARRIERPROC, glMemoryBarrier, "glMemoryBarrier");
+    GETPROC(PFNGLGETSHADERIVPROC, glGetShaderiv, "glGetShaderiv");
+    GETPROC(PFNGLGETSHADERINFOLOGPROC, glGetShaderInfoLog, "glGetShaderInfoLog");
+    GETPROC(PFNGLDELETESHADERPROC, glDeleteShader, "glDeleteShader");
+    GETPROC(PFNGLGETPROGRAMIVPROC, glGetProgramiv, "glGetProgramiv");
+    GETPROC(PFNGLGETPROGRAMINFOLOGPROC, glGetProgramInfoLog, "glGetProgramInfoLog");
+    GETPROC(PFNGLDELETEPROGRAMPROC, glDeleteProgram, "glDeleteProgram");
+    GETPROC(PFNGLGETUNIFORMLOCATIONPROC, glGetUniformLocation, "glGetUniformLocation");
+    GETPROC(PFNGLUNIFORM4FVPROC, glUniform4fv, "glUniform4fv");
+    GETPROC(PFNGLUNIFORM3FVPROC, glUniform3fv, "glUniform3fv");
+    GETPROC(PFNGLUNIFORM1IPROC, glUniform1i, "glUniform1i");
+    GETPROC(PFNGLUNIFORM2FVPROC, glUniform2fv, "glUniform2fv");
+    GETPROC(PFNGLGENBUFFERSPROC, glGenBuffers, "glGenBuffers");
+    GETPROC(PFNGLBINDBUFFERPROC, glBindBuffer, "glBindBuffer");
+    GETPROC(PFNGLBUFFERDATAPROC, glBufferData, "glBufferData");
+    GETPROC(PFNGLGETATTRIBLOCATIONPROC, glGetAttribLocation, "glGetAttribLocation");
+    GETPROC(PFNGLVERTEXATTRIBPOINTERPROC, glVertexAttribPointer, "glVertexAttribPointer");
+    GETPROC(PFNGLENABLEVERTEXATTRIBARRAYPROC, glEnableVertexAttribArray, "glEnableVertexAttribArray");
+    GETPROC(PFNGLGENVERTEXARRAYSPROC, glGenVertexArrays, "glGenVertexArrays");
+    GETPROC(PFNGLBINDVERTEXARRAYPROC, glBindVertexArray, "glBindVertexArray");
+    GETPROC(PFNGLBINDATTRIBLOCATIONPROC, glBindAttribLocation, "glBindAttribLocation");
+    GETPROC(PFNGLUNIFORMMATRIX4FVPROC, glUniformMatrix4fv, "glUniformMatrix4fv");
+    GETPROC(PFNGLDISABLEVERTEXATTRIBARRAYPROC, glDisableVertexAttribArray, "glDisableVertexAttribArray");
+    GETPROC(PFNGLGENERATEMIPMAPPROC, glGenerateMipmap, "glGenerateMipmap");
+
+    return TRUE;
+cleanup:
+    return FALSE;
+}

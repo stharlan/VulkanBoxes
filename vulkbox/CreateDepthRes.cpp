@@ -36,7 +36,7 @@ uint32_t HelloTriangleApplication::findMemoryType(uint32_t typeFilter, VkMemoryP
     throw std::runtime_error("failed to find suitable memory type!");
 }
 
-void HelloTriangleApplication::createImage(uint32_t width, uint32_t height, 
+void HelloTriangleApplication::createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
     VkSampleCountFlagBits numSamples,
     VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, 
     VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory)
@@ -47,7 +47,7 @@ void HelloTriangleApplication::createImage(uint32_t width, uint32_t height,
     imageInfo.extent.width = width;
     imageInfo.extent.height = height;
     imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
+    imageInfo.mipLevels = mipLevels;
     imageInfo.arrayLayers = 1;
     imageInfo.format = format;
     imageInfo.tiling = tiling;

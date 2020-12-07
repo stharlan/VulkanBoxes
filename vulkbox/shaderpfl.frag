@@ -26,7 +26,7 @@ void main() {
 
     // get the color from the texture
     vec4 objectColor = texture(texSampler[0], fragTexCoord);
-    if(objectColor[3] < 0.5) discard;
+    if(objectColor[3] == 0.0f) discard;
 
     // old code - just passes texture color
     //outColor = texture(texSampler[0], fragTexCoord);

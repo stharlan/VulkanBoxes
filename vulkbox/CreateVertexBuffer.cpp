@@ -1,6 +1,8 @@
 
 #include "Common.h"
 
+
+
 void HelloTriangleApplication::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
     // beginSingleTimeCommands from create texture image
@@ -60,10 +62,14 @@ void HelloTriangleApplication::createVertexBuffer()
                 }
                 else if (rand() % 1000 == 1) {
                     // tree trunk
-                    //this->pBlockArray[GRIDIDX(xc, yc, h)] = 3;
-                    for (uint64_t th = 0; th < 5; th++) {
+                    for (uint64_t th = 0; th < 6; th++) {
                         if ((h + th) < z_extent) {
-                            this->pBlockArray[GRIDIDX(xc, yc, h + th)] = 3;
+                            if (th == 5) {
+                                this->pBlockArray[GRIDIDX(xc, yc, h + th)] = 4;
+                            }
+                            else {
+                                this->pBlockArray[GRIDIDX(xc, yc, h + th)] = 3;
+                            }
                         }
                     }
                 }
@@ -79,10 +85,13 @@ void HelloTriangleApplication::createVertexBuffer()
 
                 int64_t idx = GRIDIDX(xc, yc, zc);
 
-                if (this->pBlockArray[idx] == 1 || this->pBlockArray[idx] == 3) {
+                if (this->pBlockArray[idx] == 1 
+                    || this->pBlockArray[idx] == 3
+                    || this->pBlockArray[idx] == 4) {
 
                     float texOffset = 0.0f;
                     if (this->pBlockArray[idx] == 3) texOffset = 0.125f;
+                    if (this->pBlockArray[idx] == 4) texOffset = 0.25f;
 
                     size_t numVerts = vertices4.size();
 

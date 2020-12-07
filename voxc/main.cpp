@@ -7,11 +7,11 @@ HANDLE hRenderThread = 0;
 
 BYTE* rawBuffer[48];
 
-float ex = 0.0f;
+float ex = 10.0f;
 float ey = 10.0f;
-float ez = 0.0f;
+float ez = 50.0f;
 float elevation = 0.0f;
-float azimuth = 270.0f;
+float azimuth = 0.0f;
 
 GLuint topVertexIndices[6] = { 0, 1, 2, 2, 3, 0 };
 GLuint plusxVertexIndices[6] = { 4, 5, 6, 6, 7, 4 };
@@ -20,13 +20,16 @@ GLuint plusyVertexIndices[6] = { 12, 13, 14, 14, 15, 12 };
 GLuint minusyVertexIndices[6] = { 16, 17, 18, 18, 19, 16 };
 GLuint bottomVertexIndices[6] = { 20, 21, 22, 22, 23, 20 };
  
+int8_t* pBlockArray; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
+
 typedef struct _VERTEX
 {
     glm::vec3 vertex;
     glm::vec2 texc;
 } VERTEX;
 
-VERTEX vertices[36];
+//VERTEX vertices[36];
+std::vector<VERTEX> vertices4;
         
 // cube vertices
 const glm::vec4 locs[40] = {
@@ -334,6 +337,196 @@ HGLRC createRenderingContext(HDC hdc)
     return hglrc;
 }
 
+void CreateVertexBuffer()
+{
+    int texWidth = 0;
+    int texHeight = 0;
+    int texChannels = 0;
+    stbi_uc* pixels = stbi_load("c:\\temp\\height8.png", &texWidth, &texHeight,
+        &texChannels, 1);
+
+    pBlockArray = (int8_t*)malloc(X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(int8_t));
+    memset(pBlockArray, 0, X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(int8_t));
+
+    // assign blocks to level 0
+    for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
+        for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
+
+            int h = pixels[(yc * texWidth) + xc];
+
+            if (h < 1) h = 1;
+            for (int64_t zc = 0; zc < h; zc++) {
+                pBlockArray[GRIDIDX(xc, yc, zc)] = 1;
+            }
+
+            // if the block is less than the z extent
+            // put veg at the top
+            if (h < Z_GRID_EXTENT) {
+                if (rand() % 100 == 1)
+                {
+                    // flower
+                    pBlockArray[GRIDIDX(xc, yc, h)] = 2;
+                }
+                else if (rand() % 1000 == 1) {
+                    // tree trunk
+                    for (uint64_t th = 0; th < 6; th++) {
+                        if ((h + th) < Z_GRID_EXTENT) {
+                            if (th == 5) {
+                                pBlockArray[GRIDIDX(xc, yc, h + th)] = 4;
+                            }
+                            else {
+                                pBlockArray[GRIDIDX(xc, yc, h + th)] = 3;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    stbi_image_free(pixels);
+
+    for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
+        for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
+            for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
+
+                glm::mat4 xlate = glm::translate(glm::mat4(1.0f), glm::vec3(xc, yc, zc));
+
+                int64_t idx = GRIDIDX(xc, yc, zc);
+
+                if (pBlockArray[idx] == 1
+                    || pBlockArray[idx] == 3
+                    || pBlockArray[idx] == 4) {
+
+                    float texOffset = 0.0f;
+                    if (pBlockArray[idx] == 3) texOffset = 0.125f;
+                    if (pBlockArray[idx] == 4) texOffset = 0.25f;
+
+                    size_t numVerts = vertices4.size();
+
+                    // check for block on bottom (-z)
+                    if (zc > 0) {
+                        if (pBlockArray[GRIDIDX(xc, yc, zc - 1)] != 1) {
+                            for (int64_t v = 0; v < 6; v++) {
+                                //vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc}, texOffset });
+                                vertices4.push_back({xlate * locs[bottomVertexIndices[v]],texcrds[bottomVertexIndices[v]]});
+                            }
+                        }
+                    }
+                    else {
+                        for (int64_t v = 0; v < 6; v++) {
+                            //vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc}, texOffset });
+                            vertices4.push_back({ xlate * locs[bottomVertexIndices[v]],texcrds[bottomVertexIndices[v]] });
+                        }
+                    }
+
+                    // check for block on top (+z)
+                    if (zc < Z_GRID_EXTENT - 1)
+                    {
+                        if (pBlockArray[GRIDIDX(xc, yc, zc + 1)] != 1) {
+                            for (int64_t v = 0; v < 6; v++) {
+                                //vertices4.push_back({ topVertexIndices[v], {xc, yc, zc}, texOffset });
+                                vertices4.push_back({ xlate * locs[topVertexIndices[v]],texcrds[topVertexIndices[v]] });
+                            }
+                        }
+                    }
+                    else {
+                        for (int64_t v = 0; v < 6; v++) {
+                            //vertices4.push_back({ topVertexIndices[v], {xc, yc, zc}, texOffset });
+                            vertices4.push_back({ xlate * locs[topVertexIndices[v]],texcrds[topVertexIndices[v]] });
+                        }
+                    }
+
+                    // check for block on +x
+                    if (xc < X_GRID_EXTENT - 1)
+                    {
+                        if (pBlockArray[GRIDIDX(xc + 1, yc, zc)] != 1) {
+                            for (int64_t v = 0; v < 6; v++) {
+                                //vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc}, texOffset });
+                                vertices4.push_back({ xlate * locs[plusxVertexIndices[v]],texcrds[plusxVertexIndices[v]] });
+                            }
+                        }
+                    }
+                    else {
+                        for (int64_t v = 0; v < 6; v++) {
+                            //vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc}, texOffset });
+                            vertices4.push_back({ xlate * locs[plusxVertexIndices[v]],texcrds[plusxVertexIndices[v]] });
+                        }
+                    }
+
+                    // check for block on -x
+                    if (xc > 0)
+                    {
+                        if (pBlockArray[GRIDIDX(xc - 1, yc, zc)] != 1) {
+                            for (int64_t v = 0; v < 6; v++) {
+                                //vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc}, texOffset });
+                                vertices4.push_back({ xlate * locs[minusxVertexIndices[v]],texcrds[minusxVertexIndices[v]] });
+                            }
+                        }
+                    }
+                    else {
+                        for (int64_t v = 0; v < 6; v++) {
+                            //vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc}, texOffset });
+                            vertices4.push_back({ xlate * locs[minusxVertexIndices[v]],texcrds[minusxVertexIndices[v]] });
+                        }
+                    }
+
+                    // check for block on +y
+                    if (yc < Y_GRID_EXTENT - 1)
+                    {
+                        if (pBlockArray[GRIDIDX(xc, yc + 1, zc)] != 1) {
+                            for (int64_t v = 0; v < 6; v++) {
+                                //vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc}, texOffset });
+                                vertices4.push_back({ xlate * locs[plusyVertexIndices[v]],texcrds[plusyVertexIndices[v]] });
+                            }
+                        }
+                    }
+                    else {
+                        for (int64_t v = 0; v < 6; v++) {
+                            //vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc}, texOffset });
+                            vertices4.push_back({ xlate * locs[plusyVertexIndices[v]],texcrds[plusyVertexIndices[v]] });
+                        }
+                    }
+
+                    // check for block on -y
+                    if (yc > 0)
+                    {
+                        if (pBlockArray[GRIDIDX(xc, yc - 1, zc)] != 1) {
+                            for (int64_t v = 0; v < 6; v++) {
+                                //vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc}, texOffset });
+                                vertices4.push_back({ xlate * locs[minusyVertexIndices[v]],texcrds[minusyVertexIndices[v]] });
+                            }
+                        }
+                    }
+                    else {
+                        for (int64_t v = 0; v < 6; v++) {
+                            //vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc}, texOffset });
+                            vertices4.push_back({ xlate * locs[minusyVertexIndices[v]],texcrds[minusyVertexIndices[v]] });
+                        }
+                    }
+
+                    if (vertices4.size() > numVerts)
+                    {
+                        // create new actors
+                        //this->pStaticBlockArray[idx] = this->mPhysics->createRigidStatic(
+                            //physx::PxTransform(xc + 0.5f, yc + 0.5f, zc + 0.5f));
+                        //this->pStaticBlockArray[idx]->attachShape(*this->mBlockShape);
+                    }
+                    else {
+                        //this->pStaticBlockArray[idx] = NULL;
+
+                    }
+                }
+                else {
+                    //this->pStaticBlockArray[idx] = NULL;
+                }
+            }
+        }
+    }
+
+    vertices4.shrink_to_fit();
+}
+
 DWORD WINAPI RenderThread(LPVOID parm)
 {
     HWND hwnd = (HWND)parm;
@@ -343,9 +536,11 @@ DWORD WINAPI RenderThread(LPVOID parm)
     GLuint fragmentShader = 0;
     GLuint shaderProg = 0;
 
-    glViewport(0, 0, 640, 480);
+    glViewport(0, 0, 1024, 768);
     glFrontFace(GL_CCW);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+
 
     if (FALSE == loadExtensionFunctions())
     {
@@ -378,37 +573,14 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glDeleteProgram(shaderProg);
     }
 
-    for (int i = 0; i < 6; i++) {
-        vertices[i].vertex = locs[topVertexIndices[i]];
-        vertices[i].texc = texcrds[topVertexIndices[i]];
-    }
-    for (int i = 6; i < 12; i++) {
-        vertices[i].vertex = locs[bottomVertexIndices[i - 6]];
-        vertices[i].texc = texcrds[bottomVertexIndices[i-6]];
-    }
-    for (int i = 12; i < 18; i++) {
-        vertices[i].vertex = locs[plusxVertexIndices[i - 12]];
-        vertices[i].texc = texcrds[plusxVertexIndices[i-12]];
-    }
-    for (int i = 18; i < 24; i++) {
-        vertices[i].vertex = locs[minusxVertexIndices[i - 18]];
-        vertices[i].texc = texcrds[minusxVertexIndices[i-18]];
-    }
-    for (int i = 24; i < 30; i++) {
-        vertices[i].vertex = locs[plusyVertexIndices[i - 24]];
-        vertices[i].texc = texcrds[plusyVertexIndices[i-24]];
-    }
-    for (int i = 30; i < 36; i++) {
-        vertices[i].vertex = locs[minusyVertexIndices[i - 30]];
-        vertices[i].texc = texcrds[minusyVertexIndices[i-30]];
-    }
+    CreateVertexBuffer();
       
     glUseProgram(shaderProg);
      
     GLuint vbo = 0;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(VERTEX) * vertices4.size(), vertices4.data(), GL_STATIC_DRAW);
 
     GLuint modelm = glGetUniformLocation(shaderProg, "model");
     GLuint viewm = glGetUniformLocation(shaderProg, "view");
@@ -423,9 +595,15 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    free(pixels);
+    stbi_image_free(pixels);
 
     glClearColor(0, 0, 0, 1);
+
+    LARGE_INTEGER freq;
+    QueryPerformanceFrequency(&freq);
+    LARGE_INTEGER ct;
+    QueryPerformanceCounter(&ct);
+    LARGE_INTEGER ct1;
 
     while(TRUE) 
     {
@@ -442,16 +620,11 @@ DWORD WINAPI RenderThread(LPVOID parm)
                 ex + (cosf(DEG2RAD(azimuth)) * invSinfElevation),
                 ey + (sinf(DEG2RAD(azimuth)) * invSinfElevation),
                 ez + sinfElevation),
-            //glm::vec3(
-                //ex + (cosf(DEG2RAD(azimuth)) * invSinfElevation),
-                //ey + (sinf(DEG2RAD(azimuth)) * invSinfElevation),
-                //ez + sinfElevation
-            //),
             glm::vec3(0, 0, 1)
         );
         glm::mat4 projMatrix = glm::perspective(
             glm::radians(45.0f),
-            640.0f / 480.0f,
+            1024.0f / 768.0f,
             0.01f,
             500.0f);
 
@@ -470,7 +643,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec3) + sizeof(glm::vec2),
             (void*)sizeof(glm::vec3));
 
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDrawArrays(GL_TRIANGLES, 0, vertices4.size());
 
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
@@ -480,6 +653,14 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glFlush();
 
         SwapBuffers(hdc);
+
+        //QueryPerformanceCounter(&ct1);
+
+        //printf("%.1f fps; %lli counts\n",
+            //(double)freq.QuadPart / (double)(ct1.QuadPart - ct.QuadPart),
+            //ct1.QuadPart - ct.QuadPart);
+        //ct = ct1;
+
     }
 
     glUseProgram(0);
@@ -491,6 +672,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
     wglMakeCurrent(hdc, nullptr);
     ReleaseDC(hwnd, hdc);
     wglDeleteContext(hglrc);
+
+    free(pBlockArray);
+
     return 0;
 }
 
@@ -507,15 +691,7 @@ LRESULT CALLBACK WndProc(
     {
     case WM_INPUT:
         GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
-        //printf("%i\n", dwSize);
-        //LPBYTE lpb = new BYTE[dwSize];
-        //if (lpb == NULL)
-        //{
-        //    return 0;
-        //}
-
         GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &rawBuffer, &dwSize, sizeof(RAWINPUTHEADER));
-
         if (raw->header.dwType == RIM_TYPEKEYBOARD)
         {
             if (raw->data.keyboard.Flags == 0) {
@@ -550,37 +726,12 @@ LRESULT CALLBACK WndProc(
                     printf("kb %i\n", raw->data.keyboard.MakeCode);
                 }
             }
-            //printf("kb %i, %i, %i\n", raw->data.keyboard.MakeCode,
-                //raw->data.keyboard.Flags == 0,
-                //raw->data.keyboard.Flags & RI_KEY_BREAK);
-        //    //hResult = StringCchPrintf(szTempOutput, STRSAFE_MAX_CCH, TEXT(" Kbd: make=%04x Flags:%04x Reserved:%04x ExtraInformation:%08x, msg=%04x VK=%04x \n"),
-        //    //    raw->data.keyboard.MakeCode,
-        //    //    raw->data.keyboard.Flags,
-        //    //    raw->data.keyboard.Reserved,
-        //    //    raw->data.keyboard.ExtraInformation,
-        //    //    raw->data.keyboard.Message,
-        //    //    raw->data.keyboard.VKey);
-
         }
         else if (raw->header.dwType == RIM_TYPEMOUSE)
         {
             elevation -= (raw->data.mouse.lLastY / 20.0f);
             azimuth -= (raw->data.mouse.lLastX / 20.0f);
-            //printf("mouse %i ,%i, %i\n", raw->data.mouse.usFlags,
-                //raw->data.mouse.lLastX,
-                //raw->data.mouse.lLastY);
-        //    //hResult = StringCchPrintf(szTempOutput, STRSAFE_MAX_CCH, TEXT("Mouse: usFlags=%04x ulButtons=%04x usButtonFlags=%04x usButtonData=%04x ulRawButtons=%04x lLastX=%04x lLastY=%04x ulExtraInformation=%04x\r\n"),
-        //    //    raw->data.mouse.usFlags,
-        //    //    raw->data.mouse.ulButtons,
-        //    //    raw->data.mouse.usButtonFlags,
-        //    //    raw->data.mouse.usButtonData,
-        //    //    raw->data.mouse.ulRawButtons,
-        //    //    raw->data.mouse.lLastX,
-        //    //    raw->data.mouse.lLastY,
-        //    //    raw->data.mouse.ulExtraInformation);
         }
-
-        //delete[] lpb;
         return 0;
     case WM_CREATE:
         hQuitEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -630,7 +781,7 @@ int WINAPI WinMain(
 
     HWND hwnd = CreateWindow(WNDCLASS_VNAME, L"GLCS View", 
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE,
-        CW_USEDEFAULT, CW_USEDEFAULT, 640, 480,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768,
         NULL, NULL, GetModuleHandle(NULL), 0);
     if (!hwnd) {
         printf("Failed to create visible window\n");

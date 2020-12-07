@@ -16,6 +16,12 @@
 
 #define FCLAMP(v,i,x) (v < i ? i : (v > x ? x : v))
 
+#define X_GRID_EXTENT 512
+#define Y_GRID_EXTENT 512
+#define Z_GRID_EXTENT 256
+
+#define GRIDIDX(ix,iy,iz) (((iz) * X_GRID_EXTENT * Y_GRID_EXTENT) + ((iy) * X_GRID_EXTENT) + (ix))
+
 #include <Windows.h>
 #include <gl/GL.h>
 #include <stdio.h>

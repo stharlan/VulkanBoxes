@@ -8,7 +8,7 @@ int WINAPI WinMain(
     LPSTR     lpCmdLine,
     int       nShowCmd
 )
-{
+{   
 
     //AllocConsole();
     //FILE* f = nullptr;

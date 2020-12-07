@@ -196,14 +196,21 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if (lpctx->pBlockArray[GRIDIDX(xc, yc, zc - 1)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 //vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc}, texOffset });
-                                lpctx->vertices4.push_back({ xlate * locs[bottomVertexIndices[v]],texcrds[bottomVertexIndices[v]] });
+                                lpctx->vertices4.push_back({ 
+                                    xlate * locs[bottomVertexIndices[v]],
+                                    //texcrds[bottomVertexIndices[v]] 
+                                    {texcrds[bottomVertexIndices[v]].x, texcrds[bottomVertexIndices[v]].y + texOffset}
+                                    });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             //vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc}, texOffset });
-                            lpctx->vertices4.push_back({ xlate * locs[bottomVertexIndices[v]],texcrds[bottomVertexIndices[v]] });
+                            lpctx->vertices4.push_back({ 
+                                xlate * locs[bottomVertexIndices[v]],
+                                {texcrds[bottomVertexIndices[v]].x, texcrds[bottomVertexIndices[v]].y + texOffset}
+                                });
                         }
                     }
 
@@ -213,14 +220,21 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if (lpctx->pBlockArray[GRIDIDX(xc, yc, zc + 1)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 //vertices4.push_back({ topVertexIndices[v], {xc, yc, zc}, texOffset });
-                                lpctx->vertices4.push_back({ xlate * locs[topVertexIndices[v]],texcrds[topVertexIndices[v]] });
+                                lpctx->vertices4.push_back({ 
+                                    xlate * locs[topVertexIndices[v]],
+                                    //texcrds[topVertexIndices[v]] 
+                                    {texcrds[topVertexIndices[v]].x, texcrds[topVertexIndices[v]].y + texOffset}
+                                    });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             //vertices4.push_back({ topVertexIndices[v], {xc, yc, zc}, texOffset });
-                            lpctx->vertices4.push_back({ xlate * locs[topVertexIndices[v]],texcrds[topVertexIndices[v]] });
+                            lpctx->vertices4.push_back({ 
+                                xlate * locs[topVertexIndices[v]],
+                                {texcrds[topVertexIndices[v]].x, texcrds[topVertexIndices[v]].y + texOffset}
+                                });
                         }
                     }
 
@@ -230,14 +244,21 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if (lpctx->pBlockArray[GRIDIDX(xc + 1, yc, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 //vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc}, texOffset });
-                                lpctx->vertices4.push_back({ xlate * locs[plusxVertexIndices[v]],texcrds[plusxVertexIndices[v]] });
+                                lpctx->vertices4.push_back({ 
+                                    xlate * locs[plusxVertexIndices[v]],
+                                    //texcrds[plusxVertexIndices[v]] 
+                                    {texcrds[plusxVertexIndices[v]].x, texcrds[plusxVertexIndices[v]].y + texOffset}
+                                    });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             //vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc}, texOffset });
-                            lpctx->vertices4.push_back({ xlate * locs[plusxVertexIndices[v]],texcrds[plusxVertexIndices[v]] });
+                            lpctx->vertices4.push_back({ 
+                                xlate * locs[plusxVertexIndices[v]],
+                                {texcrds[plusxVertexIndices[v]].x, texcrds[plusxVertexIndices[v]].y + texOffset}
+                                });
                         }
                     }
 
@@ -247,14 +268,22 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if (lpctx->pBlockArray[GRIDIDX(xc - 1, yc, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 //vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc}, texOffset });
-                                lpctx->vertices4.push_back({ xlate * locs[minusxVertexIndices[v]],texcrds[minusxVertexIndices[v]] });
+                                lpctx->vertices4.push_back({ 
+                                    xlate * locs[minusxVertexIndices[v]],
+                                    //texcrds[minusxVertexIndices[v]] 
+                                    {texcrds[minusxVertexIndices[v]].x, texcrds[minusxVertexIndices[v]].y + texOffset}
+                                    });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             //vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc}, texOffset });
-                            lpctx->vertices4.push_back({ xlate * locs[minusxVertexIndices[v]],texcrds[minusxVertexIndices[v]] });
+                            lpctx->vertices4.push_back({ 
+                                xlate * locs[minusxVertexIndices[v]],
+                                //texcrds[minusxVertexIndices[v]] 
+                                {texcrds[minusxVertexIndices[v]].x, texcrds[minusxVertexIndices[v]].y + texOffset}
+                                });
                         }
                     }
 
@@ -264,14 +293,21 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if (lpctx->pBlockArray[GRIDIDX(xc, yc + 1, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 //vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc}, texOffset });
-                                lpctx->vertices4.push_back({ xlate * locs[plusyVertexIndices[v]],texcrds[plusyVertexIndices[v]] });
+                                lpctx->vertices4.push_back({ 
+                                    xlate * locs[plusyVertexIndices[v]],
+                                    //texcrds[plusyVertexIndices[v]] 
+                                    {texcrds[plusyVertexIndices[v]].x, texcrds[plusyVertexIndices[v]].y + texOffset}
+                                    });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             //vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc}, texOffset });
-                            lpctx->vertices4.push_back({ xlate * locs[plusyVertexIndices[v]],texcrds[plusyVertexIndices[v]] });
+                            lpctx->vertices4.push_back({ 
+                                xlate * locs[plusyVertexIndices[v]],
+                                {texcrds[plusyVertexIndices[v]].x, texcrds[plusyVertexIndices[v]].y + texOffset}
+                                });
                         }
                     }
 
@@ -281,14 +317,21 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if (lpctx->pBlockArray[GRIDIDX(xc, yc - 1, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 //vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc}, texOffset });
-                                lpctx->vertices4.push_back({ xlate * locs[minusyVertexIndices[v]],texcrds[minusyVertexIndices[v]] });
+                                lpctx->vertices4.push_back({ 
+                                    xlate * locs[minusyVertexIndices[v]],
+                                    //texcrds[minusyVertexIndices[v]] 
+                                    {texcrds[minusyVertexIndices[v]].x, texcrds[minusyVertexIndices[v]].y + texOffset}
+                                    });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             //vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc}, texOffset });
-                            lpctx->vertices4.push_back({ xlate * locs[minusyVertexIndices[v]],texcrds[minusyVertexIndices[v]] });
+                            lpctx->vertices4.push_back({ 
+                                xlate * locs[minusyVertexIndices[v]],
+                                {texcrds[minusyVertexIndices[v]].x, texcrds[minusyVertexIndices[v]].y + texOffset}
+                                });
                         }
                     }
 

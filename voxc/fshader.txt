@@ -9,4 +9,5 @@ uniform sampler2D texs;
 void main()
 {
     outColor = texture( texs, UV ).rgba;
+    if(outColor[3] < 0.5f) discard;
 }

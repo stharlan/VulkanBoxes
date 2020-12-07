@@ -2,35 +2,33 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "voxc.h"
 
-HANDLE hQuitEvent = 0;
-HANDLE hRenderThread = 0;
-
-BYTE* rawBuffer[48];
-
-float ex = 10.0f;
-float ey = 10.0f;
-float ez = 50.0f;
-float elevation = 0.0f;
-float azimuth = 0.0f;
-
-GLuint topVertexIndices[6] = { 0, 1, 2, 2, 3, 0 };
-GLuint plusxVertexIndices[6] = { 4, 5, 6, 6, 7, 4 };
-GLuint minusxVertexIndices[6] = { 8, 9, 10, 10, 11, 8 };
-GLuint plusyVertexIndices[6] = { 12, 13, 14, 14, 15, 12 };
-GLuint minusyVertexIndices[6] = { 16, 17, 18, 18, 19, 16 };
-GLuint bottomVertexIndices[6] = { 20, 21, 22, 22, 23, 20 };
- 
-int8_t* pBlockArray; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
-
 typedef struct _VERTEX
 {
     glm::vec3 vertex;
     glm::vec2 texc;
 } VERTEX;
 
-//VERTEX vertices[36];
-std::vector<VERTEX> vertices4;
-        
+typedef struct _VOXC_WINDOW_CONTEXT
+{
+    HANDLE hQuitEvent = 0;
+    HANDLE hRenderThread = 0;
+    BYTE* rawBuffer[48];
+    float ex = 10.0f;
+    float ey = 10.0f;
+    float ez = 50.0f;
+    float elevation = 0.0f;
+    float azimuth = 0.0f;
+    int8_t* pBlockArray; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
+    std::vector<VERTEX> vertices4;
+} VOXC_WINDOW_CONTEXT;
+
+const GLuint topVertexIndices[6] = { 0, 1, 2, 2, 3, 0 };
+const GLuint plusxVertexIndices[6] = { 4, 5, 6, 6, 7, 4 };
+const GLuint minusxVertexIndices[6] = { 8, 9, 10, 10, 11, 8 };
+const GLuint plusyVertexIndices[6] = { 12, 13, 14, 14, 15, 12 };
+const GLuint minusyVertexIndices[6] = { 16, 17, 18, 18, 19, 16 };
+const GLuint bottomVertexIndices[6] = { 20, 21, 22, 22, 23, 20 };
+
 // cube vertices
 const glm::vec4 locs[40] = {
     // +z
@@ -338,7 +336,7 @@ HGLRC createRenderingContext(HDC hdc)
     return hglrc;
 }
 
-void CreateVertexBuffer()
+void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 {
     int texWidth = 0;
     int texHeight = 0;
@@ -346,8 +344,8 @@ void CreateVertexBuffer()
     stbi_uc* pixels = stbi_load("c:\\temp\\height8.png", &texWidth, &texHeight,
         &texChannels, 1);
 
-    pBlockArray = (int8_t*)malloc(X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(int8_t));
-    memset(pBlockArray, 0, X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(int8_t));
+    lpctx->pBlockArray = (int8_t*)malloc(X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(int8_t));
+    memset(lpctx->pBlockArray, 0, X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(int8_t));
 
     // assign blocks to level 0
     for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
@@ -357,7 +355,7 @@ void CreateVertexBuffer()
 
             if (h < 1) h = 1;
             for (int64_t zc = 0; zc < h; zc++) {
-                pBlockArray[GRIDIDX(xc, yc, zc)] = 1;
+                lpctx->pBlockArray[GRIDIDX(xc, yc, zc)] = 1;
             }
 
             // if the block is less than the z extent
@@ -366,17 +364,17 @@ void CreateVertexBuffer()
                 if (rand() % 100 == 1)
                 {
                     // flower
-                    pBlockArray[GRIDIDX(xc, yc, h)] = 2;
+                    lpctx->pBlockArray[GRIDIDX(xc, yc, h)] = 2;
                 }
                 else if (rand() % 1000 == 1) {
                     // tree trunk
                     for (uint64_t th = 0; th < 6; th++) {
                         if ((h + th) < Z_GRID_EXTENT) {
                             if (th == 5) {
-                                pBlockArray[GRIDIDX(xc, yc, h + th)] = 4;
+                                lpctx->pBlockArray[GRIDIDX(xc, yc, h + th)] = 4;
                             }
                             else {
-                                pBlockArray[GRIDIDX(xc, yc, h + th)] = 3;
+                                lpctx->pBlockArray[GRIDIDX(xc, yc, h + th)] = 3;
                             }
                         }
                     }
@@ -395,118 +393,118 @@ void CreateVertexBuffer()
 
                 int64_t idx = GRIDIDX(xc, yc, zc);
 
-                if (pBlockArray[idx] == 1
-                    || pBlockArray[idx] == 3
-                    || pBlockArray[idx] == 4) {
+                if (lpctx->pBlockArray[idx] == 1
+                    || lpctx->pBlockArray[idx] == 3
+                    || lpctx->pBlockArray[idx] == 4) {
 
                     float texOffset = 0.0f;
-                    if (pBlockArray[idx] == 3) texOffset = 0.125f;
-                    if (pBlockArray[idx] == 4) texOffset = 0.25f;
+                    if (lpctx->pBlockArray[idx] == 3) texOffset = 0.125f;
+                    if (lpctx->pBlockArray[idx] == 4) texOffset = 0.25f;
 
-                    size_t numVerts = vertices4.size();
+                    size_t numVerts = lpctx->vertices4.size();
 
                     // check for block on bottom (-z)
                     if (zc > 0) {
-                        if (pBlockArray[GRIDIDX(xc, yc, zc - 1)] != 1) {
+                        if (lpctx->pBlockArray[GRIDIDX(xc, yc, zc - 1)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 //vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc}, texOffset });
-                                vertices4.push_back({xlate * locs[bottomVertexIndices[v]],texcrds[bottomVertexIndices[v]]});
+                                lpctx->vertices4.push_back({xlate * locs[bottomVertexIndices[v]],texcrds[bottomVertexIndices[v]]});
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             //vertices4.push_back({ bottomVertexIndices[v], {xc, yc, zc}, texOffset });
-                            vertices4.push_back({ xlate * locs[bottomVertexIndices[v]],texcrds[bottomVertexIndices[v]] });
+                            lpctx->vertices4.push_back({ xlate * locs[bottomVertexIndices[v]],texcrds[bottomVertexIndices[v]] });
                         }
                     }
 
                     // check for block on top (+z)
                     if (zc < Z_GRID_EXTENT - 1)
                     {
-                        if (pBlockArray[GRIDIDX(xc, yc, zc + 1)] != 1) {
+                        if (lpctx->pBlockArray[GRIDIDX(xc, yc, zc + 1)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 //vertices4.push_back({ topVertexIndices[v], {xc, yc, zc}, texOffset });
-                                vertices4.push_back({ xlate * locs[topVertexIndices[v]],texcrds[topVertexIndices[v]] });
+                                lpctx->vertices4.push_back({ xlate * locs[topVertexIndices[v]],texcrds[topVertexIndices[v]] });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             //vertices4.push_back({ topVertexIndices[v], {xc, yc, zc}, texOffset });
-                            vertices4.push_back({ xlate * locs[topVertexIndices[v]],texcrds[topVertexIndices[v]] });
+                            lpctx->vertices4.push_back({ xlate * locs[topVertexIndices[v]],texcrds[topVertexIndices[v]] });
                         }
                     }
 
                     // check for block on +x
                     if (xc < X_GRID_EXTENT - 1)
                     {
-                        if (pBlockArray[GRIDIDX(xc + 1, yc, zc)] != 1) {
+                        if (lpctx->pBlockArray[GRIDIDX(xc + 1, yc, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 //vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc}, texOffset });
-                                vertices4.push_back({ xlate * locs[plusxVertexIndices[v]],texcrds[plusxVertexIndices[v]] });
+                                lpctx->vertices4.push_back({ xlate * locs[plusxVertexIndices[v]],texcrds[plusxVertexIndices[v]] });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             //vertices4.push_back({ plusxVertexIndices[v], {xc, yc, zc}, texOffset });
-                            vertices4.push_back({ xlate * locs[plusxVertexIndices[v]],texcrds[plusxVertexIndices[v]] });
+                            lpctx->vertices4.push_back({ xlate * locs[plusxVertexIndices[v]],texcrds[plusxVertexIndices[v]] });
                         }
                     }
 
                     // check for block on -x
                     if (xc > 0)
                     {
-                        if (pBlockArray[GRIDIDX(xc - 1, yc, zc)] != 1) {
+                        if (lpctx->pBlockArray[GRIDIDX(xc - 1, yc, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 //vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc}, texOffset });
-                                vertices4.push_back({ xlate * locs[minusxVertexIndices[v]],texcrds[minusxVertexIndices[v]] });
+                                lpctx->vertices4.push_back({ xlate * locs[minusxVertexIndices[v]],texcrds[minusxVertexIndices[v]] });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             //vertices4.push_back({ minusxVertexIndices[v], {xc, yc, zc}, texOffset });
-                            vertices4.push_back({ xlate * locs[minusxVertexIndices[v]],texcrds[minusxVertexIndices[v]] });
+                            lpctx->vertices4.push_back({ xlate * locs[minusxVertexIndices[v]],texcrds[minusxVertexIndices[v]] });
                         }
                     }
 
                     // check for block on +y
                     if (yc < Y_GRID_EXTENT - 1)
                     {
-                        if (pBlockArray[GRIDIDX(xc, yc + 1, zc)] != 1) {
+                        if (lpctx->pBlockArray[GRIDIDX(xc, yc + 1, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 //vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc}, texOffset });
-                                vertices4.push_back({ xlate * locs[plusyVertexIndices[v]],texcrds[plusyVertexIndices[v]] });
+                                lpctx->vertices4.push_back({ xlate * locs[plusyVertexIndices[v]],texcrds[plusyVertexIndices[v]] });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             //vertices4.push_back({ plusyVertexIndices[v], {xc, yc, zc}, texOffset });
-                            vertices4.push_back({ xlate * locs[plusyVertexIndices[v]],texcrds[plusyVertexIndices[v]] });
+                            lpctx->vertices4.push_back({ xlate * locs[plusyVertexIndices[v]],texcrds[plusyVertexIndices[v]] });
                         }
                     }
 
                     // check for block on -y
                     if (yc > 0)
                     {
-                        if (pBlockArray[GRIDIDX(xc, yc - 1, zc)] != 1) {
+                        if (lpctx->pBlockArray[GRIDIDX(xc, yc - 1, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 //vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc}, texOffset });
-                                vertices4.push_back({ xlate * locs[minusyVertexIndices[v]],texcrds[minusyVertexIndices[v]] });
+                                lpctx->vertices4.push_back({ xlate * locs[minusyVertexIndices[v]],texcrds[minusyVertexIndices[v]] });
                             }
                         }
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             //vertices4.push_back({ minusyVertexIndices[v], {xc, yc, zc}, texOffset });
-                            vertices4.push_back({ xlate * locs[minusyVertexIndices[v]],texcrds[minusyVertexIndices[v]] });
+                            lpctx->vertices4.push_back({ xlate * locs[minusyVertexIndices[v]],texcrds[minusyVertexIndices[v]] });
                         }
                     }
 
-                    if (vertices4.size() > numVerts)
+                    if (lpctx->vertices4.size() > numVerts)
                     {
                         // create new actors
                         //this->pStaticBlockArray[idx] = this->mPhysics->createRigidStatic(
@@ -525,12 +523,13 @@ void CreateVertexBuffer()
         }
     }
 
-    vertices4.shrink_to_fit();
+    lpctx->vertices4.shrink_to_fit();
 }
 
 DWORD WINAPI RenderThread(LPVOID parm)
 {
     HWND hwnd = (HWND)parm;
+    VOXC_WINDOW_CONTEXT* lpctx = (VOXC_WINDOW_CONTEXT*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     HDC hdc = GetDC(hwnd);
     HGLRC hglrc = createRenderingContext(hdc);
     GLuint vertexShader = 0;
@@ -541,7 +540,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glFrontFace(GL_CCW);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
-
 
     if (FALSE == loadExtensionFunctions())
     {
@@ -574,14 +572,15 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glDeleteProgram(shaderProg);
     }
 
-    CreateVertexBuffer();
+    CreateVertexBuffer(lpctx);
       
     glUseProgram(shaderProg);
      
     GLuint vbo = 0;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(VERTEX) * vertices4.size(), vertices4.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(VERTEX) * lpctx->vertices4.size(), 
+        lpctx->vertices4.data(), GL_STATIC_DRAW);
 
     GLuint modelm = glGetUniformLocation(shaderProg, "model");
     GLuint viewm = glGetUniformLocation(shaderProg, "view");
@@ -610,19 +609,19 @@ DWORD WINAPI RenderThread(LPVOID parm)
 
     while(TRUE) 
     {
-        if (WAIT_OBJECT_0 == WaitForSingleObject(hQuitEvent, 0)) break;
+        if (WAIT_OBJECT_0 == WaitForSingleObject(lpctx->hQuitEvent, 0)) break;
 
-        float sinfElevation = sinf(DEG2RAD(elevation));
+        float sinfElevation = sinf(DEG2RAD(lpctx->elevation));
         sinfElevation = FCLAMP(sinfElevation, -0.99f, 0.99f);
         float invSinfElevation = 1.0f - fabs(sinfElevation);
 
         glm::mat4 modelMatrix = glm::mat4(1.0f);
         glm::mat4 viewMatrix = glm::lookAt(
-            glm::vec3(ex, ey, ez),
+            glm::vec3(lpctx->ex, lpctx->ey, lpctx->ez),
             glm::vec3(
-                ex + (cosf(DEG2RAD(azimuth)) * invSinfElevation),
-                ey + (sinf(DEG2RAD(azimuth)) * invSinfElevation),
-                ez + sinfElevation),
+                lpctx->ex + (cosf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
+                lpctx->ey + (sinf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
+                lpctx->ez + sinfElevation),
             glm::vec3(0, 0, 1)
         );
         glm::mat4 projMatrix = glm::perspective(
@@ -646,7 +645,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec3) + sizeof(glm::vec2),
             (void*)sizeof(glm::vec3));
 
-        glDrawArrays(GL_TRIANGLES, 0, vertices4.size());
+        glDrawArrays(GL_TRIANGLES, 0, lpctx->vertices4.size());
 
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
@@ -676,7 +675,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     ReleaseDC(hwnd, hdc);
     wglDeleteContext(hglrc);
 
-    free(pBlockArray);
+    free(lpctx->pBlockArray);
 
     return 0;
 }
@@ -689,38 +688,40 @@ LRESULT CALLBACK WndProc(
 )
 {
     UINT dwSize = 0;
-    RAWINPUT* raw = (RAWINPUT*)rawBuffer;
+    VOXC_WINDOW_CONTEXT* lpctx = (VOXC_WINDOW_CONTEXT*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    RAWINPUT* raw = NULL;
     switch (uMsg)
     {
     case WM_INPUT:
         GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
-        GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &rawBuffer, &dwSize, sizeof(RAWINPUTHEADER));
+        GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &lpctx->rawBuffer, &dwSize, sizeof(RAWINPUTHEADER));
+        raw = (RAWINPUT*)lpctx->rawBuffer;
         if (raw->header.dwType == RIM_TYPEKEYBOARD)
         {
             if (raw->data.keyboard.Flags == 0) {
                 switch (raw->data.keyboard.MakeCode)
                 {
                 case 17: // w
-                    ex += cosf(DEG2RAD(azimuth));
-                    ey += sinf(DEG2RAD(azimuth));
+                    lpctx->ex += cosf(DEG2RAD(lpctx->azimuth));
+                    lpctx->ey += sinf(DEG2RAD(lpctx->azimuth));
                     break;
                 case 30: // a
-                    ex += sinf(DEG2RAD(azimuth)) * -1.0f;
-                    ey += cosf(DEG2RAD(azimuth));
+                    lpctx->ex += sinf(DEG2RAD(lpctx->azimuth)) * -1.0f;
+                    lpctx->ey += cosf(DEG2RAD(lpctx->azimuth));
                     break;
                 case 31: // s
-                    ex += cosf(DEG2RAD(azimuth)) * -1.0f;
-                    ey += sinf(DEG2RAD(azimuth)) * -1.0f;
+                    lpctx->ex += cosf(DEG2RAD(lpctx->azimuth)) * -1.0f;
+                    lpctx->ey += sinf(DEG2RAD(lpctx->azimuth)) * -1.0f;
                     break;
                 case 32: // d
-                    ex += sinf(DEG2RAD(azimuth));
-                    ey += cosf(DEG2RAD(azimuth)) * -1.0f;
+                    lpctx->ex += sinf(DEG2RAD(lpctx->azimuth));
+                    lpctx->ey += cosf(DEG2RAD(lpctx->azimuth)) * -1.0f;
                     break;
                 case 16: // q
-                    ez += 0.1f;
+                    lpctx->ez += 0.1f;
                     break;
                 case 44: // z
-                    ez -= 0.1f;
+                    lpctx->ez -= 0.1f;
                     break;
                 case 1:
                     DestroyWindow(hwnd);
@@ -732,19 +733,22 @@ LRESULT CALLBACK WndProc(
         }
         else if (raw->header.dwType == RIM_TYPEMOUSE)
         {
-            elevation -= (raw->data.mouse.lLastY / 20.0f);
-            azimuth -= (raw->data.mouse.lLastX / 20.0f);
+            lpctx->elevation -= (raw->data.mouse.lLastY / 20.0f);
+            lpctx->azimuth -= (raw->data.mouse.lLastX / 20.0f);
         }
         return 0;
     case WM_CREATE:
-        hQuitEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-        hRenderThread = CreateThread(NULL, 0, RenderThread, (LPVOID)hwnd, 0, NULL);
+        lpctx = new VOXC_WINDOW_CONTEXT();
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)lpctx);
+        lpctx->hQuitEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+        lpctx->hRenderThread = CreateThread(NULL, 0, RenderThread, (LPVOID)hwnd, 0, NULL);
         return 0;
     case WM_DESTROY:
-        SetEvent(hQuitEvent);
-        WaitForSingleObject(hRenderThread, INFINITE);
-        CloseHandle(hQuitEvent);
-        CloseHandle(hRenderThread);
+        SetEvent(lpctx->hQuitEvent);
+        WaitForSingleObject(lpctx->hRenderThread, INFINITE);
+        CloseHandle(lpctx->hQuitEvent);
+        CloseHandle(lpctx->hRenderThread);
+        delete lpctx;
         PostQuitMessage(0);
         return 0;
     }

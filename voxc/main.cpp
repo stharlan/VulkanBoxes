@@ -183,6 +183,7 @@ BOOL loadExtensionFunctions()
     GETPROC(PFNGLBINDATTRIBLOCATIONPROC, glBindAttribLocation, "glBindAttribLocation");
     GETPROC(PFNGLUNIFORMMATRIX4FVPROC, glUniformMatrix4fv, "glUniformMatrix4fv");
     GETPROC(PFNGLDISABLEVERTEXATTRIBARRAYPROC, glDisableVertexAttribArray, "glDisableVertexAttribArray");
+    GETPROC(PFNGLGENERATEMIPMAPPROC, glGenerateMipmap, "glGenerateMipmap");
 
     return TRUE;
 cleanup:
@@ -593,8 +594,10 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+    
     stbi_image_free(pixels);
 
     glClearColor(0, 0, 0, 1);

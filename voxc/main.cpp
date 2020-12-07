@@ -11,10 +11,10 @@ int WINAPI WinMain(
 {
 
     //AllocConsole();
-    FILE* f = nullptr;
-    freopen_s(&f, "CONIN$", "r", stdin);
-    freopen_s(&f, "CONOUT$", "w", stdout);
-    freopen_s(&f, "CONOUT$", "w", stderr);
+    //FILE* f = nullptr;
+    //freopen_s(&f, "CONIN$", "r", stdin);
+    //freopen_s(&f, "CONOUT$", "w", stdout);
+    //freopen_s(&f, "CONOUT$", "w", stderr);
 
     const LPCWSTR WNDCLASS_VNAME = L"VOXC";
     WNDCLASS wc = {};

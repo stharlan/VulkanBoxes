@@ -61,12 +61,14 @@ LRESULT CALLBACK WndProc(
                     break;
                 default:
                     printf("kb %i\n", raw->data.keyboard.MakeCode);
+                    break;
                 }
             }
         }
         else if (raw->header.dwType == RIM_TYPEMOUSE)
         {
             lpctx->elevation -= (raw->data.mouse.lLastY / 20.0f);
+            lpctx->elevation = FCLAMP(lpctx->elevation, -90.0f, 90.0f);
             lpctx->azimuth -= (raw->data.mouse.lLastX / 20.0f);
         }
         return 0;

@@ -10,8 +10,7 @@ int WINAPI WinMain(
 )
 {
 
-    ShowCursor(FALSE);
-    AllocConsole();
+    //AllocConsole();
     FILE* f = nullptr;
     freopen_s(&f, "CONIN$", "r", stdin);
     freopen_s(&f, "CONOUT$", "w", stdout);
@@ -33,14 +32,32 @@ int WINAPI WinMain(
     wc.style = CS_HREDRAW | CS_VREDRAW;
     RegisterClass(&wc);
 
-    HWND hwnd = CreateWindow(WNDCLASS_VNAME, L"GLCS View", 
-        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE,
-        CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768,
-        NULL, NULL, GetModuleHandle(NULL), 0);
+    VOXC_WINDOW_CONTEXT* lpctx = new VOXC_WINDOW_CONTEXT();
+    lpctx->screenWidth = 1280;
+    lpctx->screenHeight = 1024;
+
+    DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;           // Window Extended Style
+    DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE; // Windows Style
+
+    HWND hwnd = CreateWindowEx(
+        dwExStyle,
+        WNDCLASS_VNAME,
+        L"GLCS View",
+        dwStyle,
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        lpctx->screenWidth,
+        lpctx->screenHeight,
+        NULL,
+        NULL,
+        hInstance,
+        lpctx);
+
     if (!hwnd) {
         printf("Failed to create visible window\n");
         return 0;
     }
+
+    ShowCursor(FALSE);
 
     RAWINPUTDEVICE Rid[2];
 
@@ -80,7 +97,9 @@ int WINAPI WinMain(
         }
     }
 
-    FreeConsole();
+    delete lpctx;
+
+    //FreeConsole();
     ShowCursor(TRUE);
 
     return 0;

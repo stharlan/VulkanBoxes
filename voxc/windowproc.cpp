@@ -1,6 +1,17 @@
 
 #include "voxc.h"
 
+void OnResize(LPARAM lParam, VOXC_WINDOW_CONTEXT* lpctx)
+{
+    //LOWORD(lParam) w
+    //HIWORD(lParam) h
+    int w = LOWORD(lParam);
+    int h = HIWORD(lParam);
+    if (h == 0) h = 1;
+    glViewport(0, 0, w, h);
+    lpctx->viewportRatio = (float)w / (float)h;
+}
+
 LRESULT CALLBACK WndProc(
     _In_ HWND   hwnd,
     _In_ UINT   uMsg,
@@ -11,6 +22,7 @@ LRESULT CALLBACK WndProc(
     UINT dwSize = 0;
     VOXC_WINDOW_CONTEXT* lpctx = (VOXC_WINDOW_CONTEXT*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     RAWINPUT* raw = NULL;
+    CREATESTRUCT* lpCS = NULL;
     switch (uMsg)
     {
     case WM_INPUT:
@@ -39,10 +51,10 @@ LRESULT CALLBACK WndProc(
                     lpctx->ey += cosf(DEG2RAD(lpctx->azimuth)) * -1.0f;
                     break;
                 case 16: // q
-                    lpctx->ez += 0.1f;
+                    lpctx->ez += 1.0f;
                     break;
                 case 44: // z
-                    lpctx->ez -= 0.1f;
+                    lpctx->ez -= 1.0f;
                     break;
                 case 1:
                     DestroyWindow(hwnd);
@@ -59,7 +71,8 @@ LRESULT CALLBACK WndProc(
         }
         return 0;
     case WM_CREATE:
-        lpctx = new VOXC_WINDOW_CONTEXT();
+        lpCS = (CREATESTRUCT*)lParam;
+        lpctx = (VOXC_WINDOW_CONTEXT*)lpCS->lpCreateParams;
         SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)lpctx);
         lpctx->hQuitEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
         lpctx->hRenderThread = CreateThread(NULL, 0, RenderThread, (LPVOID)hwnd, 0, NULL);
@@ -69,8 +82,10 @@ LRESULT CALLBACK WndProc(
         WaitForSingleObject(lpctx->hRenderThread, INFINITE);
         CloseHandle(lpctx->hQuitEvent);
         CloseHandle(lpctx->hRenderThread);
-        delete lpctx;
         PostQuitMessage(0);
+        return 0;
+    case WM_SIZE:
+        OnResize(lParam, lpctx);
         return 0;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);

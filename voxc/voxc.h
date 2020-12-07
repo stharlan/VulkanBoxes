@@ -69,6 +69,10 @@ typedef struct _VOXC_WINDOW_CONTEXT
     float azimuth = 0.0f;
     int8_t* pBlockArray; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
     std::vector<VERTEX> vertices4;
+    float viewportRatio = 0.0f;
+    bool isFullscreen = 0;
+    int screenWidth = 0;
+    int screenHeight = 0;
 } VOXC_WINDOW_CONTEXT;
 
 extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;

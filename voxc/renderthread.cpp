@@ -159,10 +159,14 @@ DWORD WINAPI RenderThread(LPVOID parm)
     GLuint fragmentShader = 0;
     GLuint shaderProg = 0;
 
-    glViewport(0, 0, 1024, 768);
+    glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
     glFrontFace(GL_CCW);
+    glClearDepth(1.0f);
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
     glEnable(GL_CULL_FACE);
+    glShadeModel(GL_SMOOTH);
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
     if (FALSE == loadExtensionFunctions())
     {
@@ -249,7 +253,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
         );
         glm::mat4 projMatrix = glm::perspective(
             glm::radians(45.0f),
-            1024.0f / 768.0f,
+            lpctx->viewportRatio,
             0.01f,
             500.0f);
 
@@ -293,6 +297,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
     glDeleteProgram(shaderProg);
+
+    if(lpctx->isFullscreen == 1) ChangeDisplaySettings(NULL, 0);
 
     wglMakeCurrent(hdc, nullptr);
     ReleaseDC(hwnd, hdc);

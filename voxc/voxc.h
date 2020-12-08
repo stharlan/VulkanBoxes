@@ -22,12 +22,17 @@
 
 #define GRIDIDX(ix,iy,iz) (((iz) * X_GRID_EXTENT * Y_GRID_EXTENT) + ((iy) * X_GRID_EXTENT) + (ix))
 
+#define TEX_DIRT 0
+#define TEX_DIRTGRASS 1
+#define TEX_GRASS 2
+
 #include <Windows.h>
 #include <gl/GL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
+#include <chrono>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -57,6 +62,13 @@ typedef struct _VERTEX
     glm::vec2 texc;
 } VERTEX;
 
+typedef struct _VERTEX_BUFFER_GROUP1
+{
+    GLuint tid;
+    GLuint vbo;
+    std::vector<VERTEX> vertices;
+} VERTEX_BUFFER_GROUP1;
+
 typedef struct _VOXC_WINDOW_CONTEXT
 {
     HANDLE hQuitEvent = 0;
@@ -68,7 +80,7 @@ typedef struct _VOXC_WINDOW_CONTEXT
     float elevation = 0.0f;
     float azimuth = 0.0f;
     int8_t* pBlockArray; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
-    std::vector<VERTEX> vertices4;
+    std::vector<VERTEX_BUFFER_GROUP1> groups;
     float viewportRatio = 0.0f;
     bool isFullscreen = 0;
     int screenWidth = 0;
@@ -114,4 +126,4 @@ extern PFNGLGENERATEMIPMAPPROC glGenerateMipmap;
 DWORD WINAPI RenderThread(LPVOID parm);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 BOOL loadExtensionFunctions();
-void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx);
+void CreateVertexBuffer(VOXC_WINDOW_CONTEXT*);

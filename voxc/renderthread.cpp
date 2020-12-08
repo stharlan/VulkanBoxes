@@ -149,6 +149,124 @@ BOOL LinkShader(GLuint prog, GLuint shader1, GLuint shader2)
 
 }
 
+#define noiseWidth 64
+#define noiseHeight 64
+double noise[noiseHeight][noiseWidth]; //the noise array
+
+void generateNoise()
+{
+    for (int y = 0; y < noiseHeight; y++)
+        for (int x = 0; x < noiseWidth; x++)
+        {
+            noise[y][x] = (rand() % 32768) / 32768.0;
+        }
+}
+
+double smoothNoise(double x, double y)
+{
+    //get fractional part of x and y
+    double fractX = x - int(x);
+    double fractY = y - int(y);
+
+    //wrap around
+    int x1 = (int(x) + noiseWidth) % noiseWidth;
+    int y1 = (int(y) + noiseHeight) % noiseHeight;
+
+    //neighbor values
+    int x2 = (x1 + noiseWidth - 1) % noiseWidth;
+    int y2 = (y1 + noiseHeight - 1) % noiseHeight;
+
+    //smooth the noise with bilinear interpolation
+    double value = 0.0;
+    value += fractX * fractY * noise[y1][x1];
+    value += (1 - fractX) * fractY * noise[y1][x2];
+    value += fractX * (1 - fractY) * noise[y2][x1];
+    value += (1 - fractX) * (1 - fractY) * noise[y2][x2];
+
+    return value;
+}
+
+double turbulence(double x, double y, double size)
+{
+    double value = 0.0, initialSize = size;
+
+    while (size >= 1)
+    {
+        value += smoothNoise(x / size, y / size) * size;
+        size /= 2.0;
+    }
+
+    return(128.0 * value / initialSize);
+}
+
+GLuint GenerateDirtTexture()
+{
+    srand((unsigned int)time(NULL));
+
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    // create pixels here
+    uint64_t npixels = 64 * 64;
+    uint64_t nbytes = npixels * 4;
+    BYTE* pixels = (BYTE*)malloc(nbytes);
+    memset(pixels, 0, nbytes);
+
+    uint32_t b1 = 0xff052940;
+    uint32_t bc[4] = {
+        0xff2b5576,
+        0xff28556b,
+        0xff659eb5,
+        0xffa9d1eb
+    };
+    //for (uint64_t i = 0; i < nbytes; i+=4)
+    //{
+    //    if (rand() % 10 == 1) {
+    //        memcpy(pixels + i, &bc[rand() % 4], 4);
+    //    }
+    //    else {
+    //        memcpy(pixels + i, &b1, 4);
+    //    }        
+    //}
+    generateNoise();
+    for (int y = 0; y < 64; y++) {
+        for (int x = 0; x < 64; x++) {
+            BYTE b = turbulence(x, y, 64);
+            uint32_t clr = 0xff000000 + (b << 16) + (b << 8) + b;
+            memcpy(pixels + (y * 64 * 4) + (x * 4), &clr, 4);
+        }
+    }
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+
+    free(pixels);
+
+    return textureID;
+}
+
+void LoadTextures(const char* filename[], int numFilenames, VOXC_WINDOW_CONTEXT* lpctx)
+{
+    std::vector<GLuint> texids(numFilenames);
+    lpctx->groups.resize(numFilenames);
+    glGenTextures(numFilenames, texids.data());
+    int texWidth, texHeight, texChannels;
+    for (int i = 0; i < numFilenames; i++) {
+        stbi_uc* pixels = stbi_load(filename[i], &texWidth, &texHeight,
+            &texChannels, STBI_rgb_alpha);
+        glBindTexture(GL_TEXTURE_2D, texids[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+        stbi_image_free(pixels);
+        lpctx->groups[i] = { texids[i], 0, {} };
+    }
+}
+
 DWORD WINAPI RenderThread(LPVOID parm)
 {
     HWND hwnd = (HWND)parm;
@@ -199,32 +317,50 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glDeleteProgram(shaderProg);
     }
 
+    const char* fnArray[] = {
+        "c:\\temp\\vocxdirt.png",
+        "c:\\temp\\vocxdirtgrass.png",
+        "c:\\temp\\vocxgrass.png"
+    };
+    LoadTextures(fnArray, 3, lpctx);
+
     CreateVertexBuffer(lpctx);
 
-    glUseProgram(shaderProg);
+    std::vector<GLuint> vbos(3);
+    glGenBuffers(3, vbos.data());
+    for(int i=0; i<3; i++)
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, vbos[i]);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(VERTEX) * lpctx->groups[i].vertices.size(),
+            lpctx->groups[i].vertices.data(), GL_STATIC_DRAW);
+        lpctx->groups[i].vbo = vbos[i];
+    }
 
-    GLuint vbo = 0;
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(VERTEX) * lpctx->vertices4.size(),
-        lpctx->vertices4.data(), GL_STATIC_DRAW);
+    //GLuint vbo = 0;
+    //glGenBuffers(1, &vbo);
+    //glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(VERTEX) * lpctx->vertices4.size(),
+        //lpctx->vertices4.data(), GL_STATIC_DRAW);
+
+    glUseProgram(shaderProg);
 
     GLuint modelm = glGetUniformLocation(shaderProg, "model");
     GLuint viewm = glGetUniformLocation(shaderProg, "view");
     GLuint projm = glGetUniformLocation(shaderProg, "proj");
 
-    int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load("c:\\temp\\grassbox512tg1.png", &texWidth, &texHeight,
-        &texChannels, STBI_rgb_alpha);
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+    //GLuint textureId = GenerateDirtTexture();
 
-    stbi_image_free(pixels);
+    //int texWidth, texHeight, texChannels;
+    //stbi_uc* pixels = stbi_load("c:\\temp\\grassbox512tg1.png", &texWidth, &texHeight,
+        //&texChannels, STBI_rgb_alpha);
+    //GLuint textureID;
+    //glGenTextures(1, &textureID);
+    //glBindTexture(GL_TEXTURE_2D, textureID);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    //glGenerateMipmap(GL_TEXTURE_2D);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+    //stbi_image_free(pixels);
 
     glClearColor(0, 0, 0, 1);
 
@@ -263,21 +399,27 @@ DWORD WINAPI RenderThread(LPVOID parm)
 
         glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        std::vector<VERTEX_BUFFER_GROUP1>::iterator iter = lpctx->groups.begin();
+        for (; iter != lpctx->groups.end(); ++iter)
+        {
+            glBindBuffer(GL_ARRAY_BUFFER, iter->vbo);
+            glBindTexture(GL_TEXTURE_2D, iter->tid);
 
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
+            glEnableVertexAttribArray(0);
+            glEnableVertexAttribArray(1);
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3) + sizeof(glm::vec2), 0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec3) + sizeof(glm::vec2),
-            (void*)sizeof(glm::vec3));
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3) + sizeof(glm::vec2), 0);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec3) + sizeof(glm::vec2),
+                (void*)sizeof(glm::vec3));
 
-        glDrawArrays(GL_TRIANGLES, 0, (GLsizei)lpctx->vertices4.size());
+            glDrawArrays(GL_TRIANGLES, 0, (GLsizei)iter->vertices.size());
 
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
+            glDisableVertexAttribArray(0);
+            glDisableVertexAttribArray(1);
 
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
 
         glFlush();
 

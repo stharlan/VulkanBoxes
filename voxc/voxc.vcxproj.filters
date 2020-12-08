@@ -16,6 +16,9 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{c68da8cc-dcd3-46e7-a34f-879fe7960403}</UniqueIdentifier>
     </Filter>
+    <Filter Include="textures">
+      <UniqueIdentifier>{3bb5f9b3-7c34-44f7-b888-c3504bfeb945}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -55,5 +58,16 @@
     <Text Include="fshader.txt">
       <Filter>Shaders</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="vocxdirt.png">
+      <Filter>textures</Filter>
+    </Image>
+    <Image Include="vocxdirtgrass.png">
+      <Filter>textures</Filter>
+    </Image>
+    <Image Include="vocxgrass.png">
+      <Filter>textures</Filter>
+    </Image>
   </ItemGroup>
 </Project>

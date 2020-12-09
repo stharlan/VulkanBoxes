@@ -349,6 +349,28 @@ DWORD WINAPI RenderThread(LPVOID parm)
         lpctx->groups[i].vbo = vbos[i];
     }
 
+    // create a frame buffer for shadows
+    GLuint depthMapFBO = 0;
+    glGenFramebuffers(1, &depthMapFBO);
+
+    const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+    GLuint depthMap = 0;
+    glGenTextures(1, &depthMap);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+        SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // end shadows
+
     glUseProgram(shaderProg);
     GLuint modelm = glGetUniformLocation(shaderProg, "model");
     GLuint viewm = glGetUniformLocation(shaderProg, "view");
@@ -415,6 +437,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
     }
 
     glUseProgram(0);
+   
+    glDeleteTextures(1, &depthMap);
+    glDeleteFramebuffers(1, &depthMapFBO);
 
     std::vector<VERTEX_BUFFER_GROUP1>::iterator iter = lpctx->groups.begin();
     for (; iter != lpctx->groups.end(); ++iter)

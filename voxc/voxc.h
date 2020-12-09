@@ -126,6 +126,7 @@ extern PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers;
 extern PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
 extern PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D;
 extern PFNGLDELETEBUFFERSPROC glDeleteBuffers;
+extern PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
 
 DWORD WINAPI RenderThread(LPVOID parm);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

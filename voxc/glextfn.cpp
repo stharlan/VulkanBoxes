@@ -40,6 +40,7 @@ PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers = NULL;
 PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
 PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
 PFNGLDELETEBUFFERSPROC glDeleteBuffers = NULL;
+PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = NULL;
 
 BOOL loadExtensionFunctions()
 {
@@ -82,6 +83,7 @@ BOOL loadExtensionFunctions()
     GETPROC(PFNGLBINDFRAMEBUFFERPROC, glBindFramebuffer, "glBindFramebuffer");
     GETPROC(PFNGLFRAMEBUFFERTEXTURE2DPROC, glFramebufferTexture2D, "glFramebufferTexture2D");
     GETPROC(PFNGLDELETEBUFFERSPROC, glDeleteBuffers, "glDeleteBuffers");
+    GETPROC(PFNGLDELETEFRAMEBUFFERSPROC, glDeleteFramebuffers, "glDeleteFramebuffers");
 
     return TRUE;
 cleanup:

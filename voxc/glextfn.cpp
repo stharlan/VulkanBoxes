@@ -36,6 +36,10 @@ PFNGLBINDATTRIBLOCATIONPROC glBindAttribLocation = NULL;
 PFNGLUNIFORMMATRIX4FVPROC glUniformMatrix4fv = NULL;
 PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray = NULL;
 PFNGLGENERATEMIPMAPPROC glGenerateMipmap = NULL;
+PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers = NULL;
+PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
+PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
+PFNGLDELETEBUFFERSPROC glDeleteBuffers = NULL;
 
 BOOL loadExtensionFunctions()
 {
@@ -74,6 +78,10 @@ BOOL loadExtensionFunctions()
     GETPROC(PFNGLUNIFORMMATRIX4FVPROC, glUniformMatrix4fv, "glUniformMatrix4fv");
     GETPROC(PFNGLDISABLEVERTEXATTRIBARRAYPROC, glDisableVertexAttribArray, "glDisableVertexAttribArray");
     GETPROC(PFNGLGENERATEMIPMAPPROC, glGenerateMipmap, "glGenerateMipmap");
+    GETPROC(PFNGLGENFRAMEBUFFERSPROC, glGenFramebuffers, "glGenFramebuffers");
+    GETPROC(PFNGLBINDFRAMEBUFFERPROC, glBindFramebuffer, "glBindFramebuffer");
+    GETPROC(PFNGLFRAMEBUFFERTEXTURE2DPROC, glFramebufferTexture2D, "glFramebufferTexture2D");
+    GETPROC(PFNGLDELETEBUFFERSPROC, glDeleteBuffers, "glDeleteBuffers");
 
     return TRUE;
 cleanup:

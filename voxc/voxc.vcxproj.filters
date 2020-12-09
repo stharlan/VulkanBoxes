@@ -58,6 +58,12 @@
     <Text Include="fshader.txt">
       <Filter>Shaders</Filter>
     </Text>
+    <Text Include="vshadow.txt">
+      <Filter>Shaders</Filter>
+    </Text>
+    <Text Include="fshadow.txt">
+      <Filter>Shaders</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="vocxdirt.png">

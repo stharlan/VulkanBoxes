@@ -8,5 +8,5 @@ uniform sampler2D texs;
 
 void main()
 {
-	outColor = texture( texs, UV ).rgba;
+	outColor = texture(texs, UV);
 }

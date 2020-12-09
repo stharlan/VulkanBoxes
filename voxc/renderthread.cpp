@@ -263,7 +263,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glEnable(GL_TEXTURE_2D);
 
-
     OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
     OpenGlProgram shadowProg("vshadow.txt", "fshadow.txt");
     OpenGlProgram ddProg("vsh2d.txt", "fsh2d.txt");
@@ -312,33 +311,33 @@ DWORD WINAPI RenderThread(LPVOID parm)
     // end vertex array
 
     // create a frame buffer for shadows
-    //GLuint depthMapFBO = 0;
-    //glGenFramebuffers(1, &depthMapFBO);
+    GLuint depthMapFBO = 0;
+    glGenFramebuffers(1, &depthMapFBO);
 
-    //const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
-    //GLuint depthMap = 0;
-    //glGenTextures(1, &depthMap);
-    //glBindTexture(GL_TEXTURE_2D, depthMap);
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-    //    SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+    GLuint depthMap = 0;
+    glGenTextures(1, &depthMap);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+        SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    //glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
-    //glDrawBuffer(GL_NONE);
-    //glReadBuffer(GL_NONE);
-    //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    //float near_plane = 0.1f, far_plane = 500.0f;
-    //glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-    //glm::mat4 lightView = glm::lookAt(
-    //    glm::vec3(0,0,Z_GRID_EXTENT / 2),
-    //    glm::vec3(1, 1, Z_GRID_EXTENT / 2),
-    //    glm::vec3(0.0f, 0.0f, 1.0f)); 
-    //glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+    float near_plane = 0.1f, far_plane = 500.0f;
+    glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+    glm::mat4 lightView = glm::lookAt(
+        glm::vec3(0,0,Z_GRID_EXTENT / 2),
+        glm::vec3(1, 1, 0),
+        glm::vec3(0.0f, 0.0f, 1.0f)); 
+    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
     // end shadows
 
     glClearColor(0.9f, 0.9f, 1.0f, 1.0f);
@@ -348,14 +347,31 @@ DWORD WINAPI RenderThread(LPVOID parm)
     while (TRUE)
     {
         if (WAIT_OBJECT_0 == WaitForSingleObject(lpctx->hQuitEvent, 0)) break;
-        
-        //shadowProg.Use();
-
-        voxcProgram.Use();
 
         float sinfElevation = sinf(DEG2RAD(lpctx->elevation));
         sinfElevation = FCLAMP(sinfElevation, -0.99f, 0.99f);
         float invSinfElevation = 1.0f - fabs(sinfElevation);
+
+        shadowProg.Use();
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        lightView = glm::lookAt(
+            glm::vec3(lpctx->ex, lpctx->ey, lpctx->ez),
+            glm::vec3(
+                lpctx->ex + (cosf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
+                lpctx->ey + (sinf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
+                lpctx->ez + sinfElevation),
+            glm::vec3(0, 0, 1));
+        lightSpaceMatrix = lightProjection * lightView;
+
+        shadowProg.SetUniform("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
+        shadowProg.SetUniform("model", &modelMatrix[0][0]);
+        RenderScene(lpctx);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        voxcProgram.Use();
 
         glm::mat4 viewMatrix = glm::lookAt(
             glm::vec3(lpctx->ex, lpctx->ey, lpctx->ez),
@@ -384,7 +400,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
 
         ddProg.Use();
         glVertexArrayVertexBuffer(lpctx->vao, 0, quadVbo1, 0, 5 * sizeof(GLfloat));
-        glBindTexture(GL_TEXTURE_2D, lpctx->groups[0].tid);
+        glBindTexture(GL_TEXTURE_2D, depthMap);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         glFlush();
@@ -399,8 +415,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
    
     glDeleteBuffers(1, &quadVbo1);
 
-    //glDeleteTextures(1, &depthMap);
-    //glDeleteFramebuffers(1, &depthMapFBO);
+    glDeleteTextures(1, &depthMap);
+    glDeleteFramebuffers(1, &depthMapFBO);
 
     std::vector<VERTEX_BUFFER_GROUP1>::iterator iter = lpctx->groups.begin();
     for (; iter != lpctx->groups.end(); ++iter)

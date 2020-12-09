@@ -172,32 +172,86 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
     std::vector<VERTEX_BUFFER_GROUP1>::iterator iter = lpctx->groups.begin();
     for (; iter != lpctx->groups.end(); ++iter)
     {
-        glBindBuffer(GL_ARRAY_BUFFER, iter->vbo);
+        glVertexArrayVertexBuffer(lpctx->vao, 0, iter->vbo, 0, 5 * sizeof(GLfloat));
         glBindTexture(GL_TEXTURE_2D, iter->tid);
-
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3) + sizeof(glm::vec2), 0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec3) + sizeof(glm::vec2),
-            (void*)sizeof(glm::vec3));
-
         glDrawArrays(GL_TRIANGLES, 0, (GLsizei)iter->vertices.size());
-
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindTexture(GL_TEXTURE_2D, 0);
     }
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
- 
+
+//DWORD WINAPI RenderThread(LPVOID parm)
+//{
+//    HWND hwnd = (HWND)parm;
+//    HDC hdc = GetDC(hwnd);
+//    HGLRC hglrc = createRenderingContext(hdc);
+//
+//    if (FALSE == loadExtensionFunctions())
+//    {
+//        printf("Failed to load opengl extension functions.\n");
+//        return 0;
+//    }
+//
+//    OpenGlProgram ddProg("vsh2d.txt", "fsh2d.txt");
+//
+//    GLuint quadVbo1 = 0;
+//    //std::vector<VERTEX> quadVerts = {
+//    //    { { -0.5, -0.5, 0 },{ 0, 0 } },
+//    //    { {  0.5, -0.5, 0 },{ 1, 0 } },
+//    //    { {  0.5,  0.5, 0 },{ 1, 1 } },
+//    //    { { -0.5, -0.5, 0 },{ 0, 0 } },
+//    //    { {  0.5,  0.5, 0 },{ 1, 1 } },
+//    //    { { -0.5,  0.5, 0 },{ 0, 1 } }
+//    //};
+//    std::vector<glm::vec3> quadVerts = {
+//        { -0.5, -0.5, 0 },
+//        {  0.5, -0.5, 0 },
+//        {  0.5,  0.5, 0 },
+//        { -0.5, -0.5, 0 },
+//        {  0.5,  0.5, 0 },
+//        { -0.5,  0.5, 0 }
+//    };
+//    glCreateBuffers(1, &quadVbo1);
+//    printf("%i\n", glGetError());
+//    glNamedBufferStorage(quadVbo1, sizeof(glm::vec3) * 6, quadVerts.data(), 0);
+//
+//    // create the vertex array
+//    GLuint vao = 0;
+//    glCreateVertexArrays(1, &vao);
+//    glVertexArrayAttribBinding(vao, 0, 0);
+//    //glVertexArrayAttribBinding(vao, 1, 0);
+//    glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, FALSE, 0);
+//    //glVertexArrayAttribFormat(vao, 1, 2, GL_FLOAT, FALSE, 3 * sizeof(GLfloat));
+//    glVertexArrayBindingDivisor(vao, 0, 0);
+//    glEnableVertexArrayAttrib(vao, 0);
+//    //glEnableVertexArrayAttrib(vao, 1);
+//    // end vertex array
+//    
+//    ddProg.Use();
+//    glClear(GL_COLOR_BUFFER_BIT);
+//    glBindVertexArray(vao);
+//    glVertexArrayVertexBuffer(vao, 0, quadVbo1, 0, 3 * sizeof(GLfloat));
+//    glDrawArrays(GL_TRIANGLES, 0, 6);
+//    //glBegin(GL_TRIANGLES);
+//    //glVertex3f(0, 0, 0);
+//    //glVertex3f(0, 1, 0);
+//    //glVertex3f(1, 1, 0);
+//    //glEnd();
+//    SwapBuffers(hdc);
+//    return 0;
+//}
+
 DWORD WINAPI RenderThread(LPVOID parm)
 {
     HWND hwnd = (HWND)parm;
     VOXC_WINDOW_CONTEXT* lpctx = (VOXC_WINDOW_CONTEXT*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     HDC hdc = GetDC(hwnd);
     HGLRC hglrc = createRenderingContext(hdc);
+
+    if (FALSE == loadExtensionFunctions())
+    {
+        printf("Failed to load opengl extension functions.\n");
+        return 0;
+    }
 
     glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
     glFrontFace(GL_CCW);
@@ -209,72 +263,94 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glEnable(GL_TEXTURE_2D);
 
-    if (FALSE == loadExtensionFunctions())
-    {
-        printf("Failed to load opengl extension functions.\n");
-        return 0;
-    }
 
     OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
+    OpenGlProgram shadowProg("vshadow.txt", "fshadow.txt");
+    OpenGlProgram ddProg("vsh2d.txt", "fsh2d.txt");
 
     const char* fnArray[] = {
         "c:\\temp\\vocxdirt.png",
         "c:\\temp\\vocxdirtgrass.png",
         "c:\\temp\\vocxgrass.png"
     };
-    LoadTextures(fnArray, 3, lpctx);
+    LoadTextures(fnArray, 3, lpctx); 
 
     CreateVertexBuffer(lpctx);
 
+    // vertex buffer
     std::vector<GLuint> vbos(3);
-    glGenBuffers(3, vbos.data());
+    glCreateBuffers(3, vbos.data());
     for(int i=0; i<3; i++)
     {
-        glBindBuffer(GL_ARRAY_BUFFER, vbos[i]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(VERTEX) * lpctx->groups[i].vertices.size(),
-            lpctx->groups[i].vertices.data(), GL_STATIC_DRAW);
+        glNamedBufferStorage(vbos[i], sizeof(VERTEX) * lpctx->groups[i].vertices.size(),
+            lpctx->groups[i].vertices.data(), 0);
         lpctx->groups[i].vbo = vbos[i];
     }
 
+    // vbo for 2d quad
+    GLuint quadVbo1 = 0;
+    std::vector<VERTEX> quadVerts = {
+        { { -0.5, -0.5, 0 },{ 0, 0 } },
+        { { 0.5, -0.5, 0 },{ 1, 0 } },
+        { { 0.5, 0.5, 0 },{ 1, 1 } },
+        { { -0.5, -0.5, 0 },{ 0, 0 } },
+        { { 0.5, 0.5, 0 },{ 1, 1 } },
+        { { -0.5, 0.5, 0 },{ 0, 1 } }
+    };
+    glCreateBuffers(1, &quadVbo1);
+    glNamedBufferStorage(quadVbo1, sizeof(VERTEX) * 6, quadVerts.data(), 0);
+
+    // create the vertex array
+    glCreateVertexArrays(1, &lpctx->vao);
+    glVertexArrayAttribBinding(lpctx->vao, 0, 0);
+    glVertexArrayAttribBinding(lpctx->vao, 1, 0);
+    glVertexArrayAttribFormat(lpctx->vao, 0, 3, GL_FLOAT, FALSE, 0);
+    glVertexArrayAttribFormat(lpctx->vao, 1, 2, GL_FLOAT, FALSE, 3 * sizeof(GLfloat));
+    glVertexArrayBindingDivisor(lpctx->vao, 0, 0);
+    glEnableVertexArrayAttrib(lpctx->vao, 0);
+    glEnableVertexArrayAttrib(lpctx->vao, 1);
+    // end vertex array
+
     // create a frame buffer for shadows
-    GLuint depthMapFBO = 0;
-    glGenFramebuffers(1, &depthMapFBO);
+    //GLuint depthMapFBO = 0;
+    //glGenFramebuffers(1, &depthMapFBO);
 
-    const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
-    GLuint depthMap = 0;
-    glGenTextures(1, &depthMap);
-    glBindTexture(GL_TEXTURE_2D, depthMap);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-        SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    //const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+    //GLuint depthMap = 0;
+    //glGenTextures(1, &depthMap);
+    //glBindTexture(GL_TEXTURE_2D, depthMap);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+    //    SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    //glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    //glDrawBuffer(GL_NONE);
+    //glReadBuffer(GL_NONE);
+    //glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    float near_plane = 0.1f, far_plane = 500.0f;
-    glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-    glm::mat4 lightView = glm::lookAt(
-        glm::vec3(0,0,Z_GRID_EXTENT / 2),
-        glm::vec3(1, 1, Z_GRID_EXTENT / 2),
-        glm::vec3(0.0f, 0.0f, 1.0f)); 
-    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+    //float near_plane = 0.1f, far_plane = 500.0f;
+    //glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+    //glm::mat4 lightView = glm::lookAt(
+    //    glm::vec3(0,0,Z_GRID_EXTENT / 2),
+    //    glm::vec3(1, 1, Z_GRID_EXTENT / 2),
+    //    glm::vec3(0.0f, 0.0f, 1.0f)); 
+    //glm::mat4 lightSpaceMatrix = lightProjection * lightView;
     // end shadows
 
-    glClearColor(0, 0, 0, 1);
+    glClearColor(0.9f, 0.9f, 1.0f, 1.0f);
 
     glm::mat4 modelMatrix = glm::mat4(1.0f);
 
     while (TRUE)
     {
         if (WAIT_OBJECT_0 == WaitForSingleObject(lpctx->hQuitEvent, 0)) break;
+        
+        //shadowProg.Use();
 
-        //glUseProgram(shaderProg);
         voxcProgram.Use();
 
         float sinfElevation = sinf(DEG2RAD(lpctx->elevation));
@@ -294,43 +370,37 @@ DWORD WINAPI RenderThread(LPVOID parm)
             lpctx->viewportRatio,
             0.01f,
             500.0f);
-
+        
         voxcProgram.SetUniform("model", &modelMatrix[0][0]);
         voxcProgram.SetUniform("view", &viewMatrix[0][0]);
         voxcProgram.SetUniform("proj", &projMatrix[0][0]);
 
         glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
         glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+        glBindVertexArray(lpctx->vao);
+
         RenderScene(lpctx);
 
-        //glUseProgram(0);
-
-        //glBegin(GL_TRIANGLES);
-        //glTexCoord2f(0, 0);
-        //glVertex2f(0, 0);
-        //glTexCoord2f(1, 0);
-        //glVertex2f(1, 0);
-        //glTexCoord2f(1, 1);
-        //glVertex2f(1, 1);
-        //glTexCoord2f(0, 0);
-        //glVertex2f(0, 0);
-        //glTexCoord2f(1, 1);
-        //glVertex2f(1, 1);
-        //glTexCoord2f(0, 1);
-        //glVertex2f(0, 1);
-        //glEnd();
-        //glBindTexture(GL_TEXTURE_2D, 0);
+        ddProg.Use();
+        glVertexArrayVertexBuffer(lpctx->vao, 0, quadVbo1, 0, 5 * sizeof(GLfloat));
+        glBindTexture(GL_TEXTURE_2D, lpctx->groups[0].tid);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
         glFlush();
 
         SwapBuffers(hdc);
 
+        glUseProgram(0);
+
     }
 
     glUseProgram(0);
    
-    glDeleteTextures(1, &depthMap);
-    glDeleteFramebuffers(1, &depthMapFBO);
+    glDeleteBuffers(1, &quadVbo1);
+
+    //glDeleteTextures(1, &depthMap);
+    //glDeleteFramebuffers(1, &depthMapFBO);
 
     std::vector<VERTEX_BUFFER_GROUP1>::iterator iter = lpctx->groups.begin();
     for (; iter != lpctx->groups.end(); ++iter)
@@ -338,6 +408,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glDeleteTextures(1, &iter->tid);
         glDeleteBuffers(1, &iter->vbo);
     }
+
+    glDeleteVertexArrays(1, &lpctx->vao);
 
     wglMakeCurrent(hdc, nullptr);
     ReleaseDC(hwnd, hdc);

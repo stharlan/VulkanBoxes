@@ -10,11 +10,11 @@ int WINAPI WinMain(
 )
 {   
 
-    //AllocConsole();
-    //FILE* f = nullptr;
-    //freopen_s(&f, "CONIN$", "r", stdin);
-    //freopen_s(&f, "CONOUT$", "w", stdout);
-    //freopen_s(&f, "CONOUT$", "w", stderr);
+    AllocConsole();
+    FILE* f = nullptr;
+    freopen_s(&f, "CONIN$", "r", stdin);
+    freopen_s(&f, "CONOUT$", "w", stdout);
+    freopen_s(&f, "CONOUT$", "w", stderr);
 
     const LPCWSTR WNDCLASS_VNAME = L"VOXC";
     WNDCLASS wc = {};
@@ -33,8 +33,8 @@ int WINAPI WinMain(
     RegisterClass(&wc);
 
     VOXC_WINDOW_CONTEXT* lpctx = new VOXC_WINDOW_CONTEXT();
-    lpctx->screenWidth = 1280;
-    lpctx->screenHeight = 1024;
+    lpctx->screenWidth = 1024;
+    lpctx->screenHeight = 768;
 
     DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;           // Window Extended Style
     DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE; // Windows Style
@@ -99,7 +99,7 @@ int WINAPI WinMain(
 
     delete lpctx;
 
-    //FreeConsole();
+    FreeConsole();
     ShowCursor(TRUE);
 
     return 0;

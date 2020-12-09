@@ -41,6 +41,15 @@ PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
 PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
 PFNGLDELETEBUFFERSPROC glDeleteBuffers = NULL;
 PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = NULL;
+PFNGLCREATEVERTEXARRAYSPROC glCreateVertexArrays = NULL;
+PFNGLENABLEVERTEXARRAYATTRIBPROC glEnableVertexArrayAttrib = NULL;
+PFNGLVERTEXARRAYATTRIBFORMATPROC glVertexArrayAttribFormat = NULL;
+PFNGLVERTEXARRAYATTRIBBINDINGPROC glVertexArrayAttribBinding = NULL;
+PFNGLVERTEXARRAYVERTEXBUFFERPROC glVertexArrayVertexBuffer = NULL;
+PFNGLCREATEBUFFERSPROC glCreateBuffers = NULL;
+PFNGLNAMEDBUFFERSTORAGEPROC glNamedBufferStorage = NULL;
+PFNGLVERTEXARRAYBINDINGDIVISORPROC glVertexArrayBindingDivisor = NULL;
+PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays = NULL;
 
 BOOL loadExtensionFunctions()
 {
@@ -67,9 +76,9 @@ BOOL loadExtensionFunctions()
     GETPROC(PFNGLUNIFORM3FVPROC, glUniform3fv, "glUniform3fv");
     GETPROC(PFNGLUNIFORM1IPROC, glUniform1i, "glUniform1i");
     GETPROC(PFNGLUNIFORM2FVPROC, glUniform2fv, "glUniform2fv");
-    GETPROC(PFNGLGENBUFFERSPROC, glGenBuffers, "glGenBuffers");
-    GETPROC(PFNGLBINDBUFFERPROC, glBindBuffer, "glBindBuffer");
-    GETPROC(PFNGLBUFFERDATAPROC, glBufferData, "glBufferData");
+    //GETPROC(PFNGLGENBUFFERSPROC, glGenBuffers, "glGenBuffers");
+    //GETPROC(PFNGLBINDBUFFERPROC, glBindBuffer, "glBindBuffer");
+    //GETPROC(PFNGLBUFFERDATAPROC, glBufferData, "glBufferData");
     GETPROC(PFNGLGETATTRIBLOCATIONPROC, glGetAttribLocation, "glGetAttribLocation");
     GETPROC(PFNGLVERTEXATTRIBPOINTERPROC, glVertexAttribPointer, "glVertexAttribPointer");
     GETPROC(PFNGLENABLEVERTEXATTRIBARRAYPROC, glEnableVertexAttribArray, "glEnableVertexAttribArray");
@@ -84,6 +93,15 @@ BOOL loadExtensionFunctions()
     GETPROC(PFNGLFRAMEBUFFERTEXTURE2DPROC, glFramebufferTexture2D, "glFramebufferTexture2D");
     GETPROC(PFNGLDELETEBUFFERSPROC, glDeleteBuffers, "glDeleteBuffers");
     GETPROC(PFNGLDELETEFRAMEBUFFERSPROC, glDeleteFramebuffers, "glDeleteFramebuffers");
+    GETPROC(PFNGLCREATEVERTEXARRAYSPROC, glCreateVertexArrays, "glCreateVertexArrays");
+    GETPROC(PFNGLENABLEVERTEXARRAYATTRIBPROC, glEnableVertexArrayAttrib, "glEnableVertexArrayAttrib");
+    GETPROC(PFNGLVERTEXARRAYATTRIBFORMATPROC, glVertexArrayAttribFormat, "glVertexArrayAttribFormat");
+    GETPROC(PFNGLVERTEXARRAYATTRIBBINDINGPROC, glVertexArrayAttribBinding, "glVertexArrayAttribBinding");
+    GETPROC(PFNGLVERTEXARRAYVERTEXBUFFERPROC, glVertexArrayVertexBuffer, "glVertexArrayVertexBuffer");
+    GETPROC(PFNGLCREATEBUFFERSPROC, glCreateBuffers, "glCreateBuffers");
+    GETPROC(PFNGLNAMEDBUFFERSTORAGEPROC, glNamedBufferStorage, "glNamedBufferStorage");
+    GETPROC(PFNGLVERTEXARRAYBINDINGDIVISORPROC, glVertexArrayBindingDivisor, "glVertexArrayBindingDivisor");
+    GETPROC(PFNGLDELETEVERTEXARRAYSPROC, glDeleteVertexArrays, "glDeleteVertexArrays");
 
     return TRUE;
 cleanup:

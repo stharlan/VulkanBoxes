@@ -84,6 +84,7 @@ typedef struct _VOXC_WINDOW_CONTEXT
     bool isFullscreen = 0;
     int screenWidth = 0;
     int screenHeight = 0;
+    GLuint vao = 0;
 } VOXC_WINDOW_CONTEXT;
 
 extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
@@ -109,9 +110,9 @@ extern PFNGLUNIFORM4FVPROC glUniform4fv;
 extern PFNGLUNIFORM3FVPROC glUniform3fv;
 extern PFNGLUNIFORM2FVPROC glUniform2fv;
 extern PFNGLUNIFORM1IPROC glUniform1i;
-extern PFNGLGENBUFFERSPROC glGenBuffers;
-extern PFNGLBINDBUFFERPROC glBindBuffer;
-extern PFNGLBUFFERDATAPROC glBufferData;
+//extern PFNGLGENBUFFERSPROC glGenBuffers;
+//extern PFNGLBINDBUFFERPROC glBindBuffer;
+//extern PFNGLBUFFERDATAPROC glBufferData;
 extern PFNGLGETATTRIBLOCATIONPROC glGetAttribLocation;
 extern PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer;
 extern PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray;
@@ -126,6 +127,15 @@ extern PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
 extern PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D;
 extern PFNGLDELETEBUFFERSPROC glDeleteBuffers;
 extern PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
+extern PFNGLCREATEVERTEXARRAYSPROC glCreateVertexArrays;
+extern PFNGLENABLEVERTEXARRAYATTRIBPROC glEnableVertexArrayAttrib;
+extern PFNGLVERTEXARRAYATTRIBFORMATPROC glVertexArrayAttribFormat;
+extern PFNGLVERTEXARRAYATTRIBBINDINGPROC glVertexArrayAttribBinding;
+extern PFNGLVERTEXARRAYVERTEXBUFFERPROC glVertexArrayVertexBuffer;
+extern PFNGLCREATEBUFFERSPROC glCreateBuffers;
+extern PFNGLNAMEDBUFFERSTORAGEPROC glNamedBufferStorage;
+extern PFNGLVERTEXARRAYBINDINGDIVISORPROC glVertexArrayBindingDivisor;
+extern PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
 
 DWORD WINAPI RenderThread(LPVOID parm);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

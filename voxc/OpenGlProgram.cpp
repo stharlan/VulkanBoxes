@@ -44,6 +44,12 @@ BOOL CreateAndCompile(const char* src, GLenum type, GLuint* pShader)
     glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
     if (isCompiled == GL_FALSE)
     {
+        if (type == GL_VERTEX_SHADER) {
+            printf("vertex shader\n");
+        }
+        else if(type == GL_FRAGMENT_SHADER) {
+            printf("fragment shader\n");
+        }
         printf("Error compiling shader\n");
 
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
@@ -107,7 +113,7 @@ OpenGlProgram::OpenGlProgram(const char* vfn, const char* ffn)
     this->prg = 0;
     this->fsh = 0;
 
-    char* vshaderSource = readShaderSource("vshader.txt");
+    char* vshaderSource = readShaderSource(vfn);
     if (FALSE == CreateAndCompile(vshaderSource, GL_VERTEX_SHADER, &this->vsh))
     {
         free(vshaderSource);
@@ -116,7 +122,7 @@ OpenGlProgram::OpenGlProgram(const char* vfn, const char* ffn)
     }
     free(vshaderSource);
 
-    char* fshaderSource = readShaderSource("fshader.txt");
+    char* fshaderSource = readShaderSource(ffn);
     if (FALSE == CreateAndCompile(fshaderSource, GL_FRAGMENT_SHADER, &this->fsh))
     {
         glDeleteShader(this->vsh);

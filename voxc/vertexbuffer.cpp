@@ -256,8 +256,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if (lpctx->pBlockArray[GRIDIDX(xc, yc, zc - 1)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 lpctx->groups[TEX_DIRT].vertices.push_back({
-                                    xlate * locs[bottomVertexIndices[v]],
-                                    {texcrds[bottomVertexIndices[v]].x, texcrds[bottomVertexIndices[v]].y}
+                                    glm::vec3(xlate * locs[bottomVertexIndices[v]]),
+                                    texcrds[bottomVertexIndices[v]]
                                     });
                                 
                             }
@@ -266,8 +266,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[TEX_DIRT].vertices.push_back({
-                                xlate * locs[bottomVertexIndices[v]],
-                                {texcrds[bottomVertexIndices[v]].x, texcrds[bottomVertexIndices[v]].y}
+                                glm::vec3(xlate * locs[bottomVertexIndices[v]]),
+                                texcrds[bottomVertexIndices[v]]
                                 });
                         }
                     }
@@ -278,8 +278,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if (lpctx->pBlockArray[GRIDIDX(xc, yc, zc + 1)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 lpctx->groups[TEX_GRASS].vertices.push_back({
-                                    xlate * locs[topVertexIndices[v]],
-                                    {texcrds[topVertexIndices[v]].x, texcrds[topVertexIndices[v]].y}
+                                    glm::vec3(xlate * locs[topVertexIndices[v]]),
+                                    texcrds[topVertexIndices[v]]
                                     });
                             }
                         }
@@ -287,8 +287,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[TEX_GRASS].vertices.push_back({
-                                xlate * locs[topVertexIndices[v]],
-                                {texcrds[topVertexIndices[v]].x, texcrds[topVertexIndices[v]].y}
+                                glm::vec3(xlate * locs[topVertexIndices[v]]),
+                                texcrds[topVertexIndices[v]]
                                 });
                         }
                     }
@@ -299,8 +299,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if (lpctx->pBlockArray[GRIDIDX(xc + 1, yc, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
-                                    xlate * locs[plusxVertexIndices[v]],
-                                    {texcrds[plusxVertexIndices[v]].x, texcrds[plusxVertexIndices[v]].y}
+                                    glm::vec3(xlate * locs[plusxVertexIndices[v]]),
+                                    texcrds[plusxVertexIndices[v]]
                                     });
                             }
                         }
@@ -308,8 +308,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
-                                xlate * locs[plusxVertexIndices[v]],
-                                {texcrds[plusxVertexIndices[v]].x, texcrds[plusxVertexIndices[v]].y}
+                                glm::vec3(xlate * locs[plusxVertexIndices[v]]),
+                                texcrds[plusxVertexIndices[v]]
                                 });
                         }
                     }
@@ -320,8 +320,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if (lpctx->pBlockArray[GRIDIDX(xc - 1, yc, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
-                                    xlate * locs[minusxVertexIndices[v]],
-                                    {texcrds[minusxVertexIndices[v]].x, texcrds[minusxVertexIndices[v]].y}
+                                    glm::vec3(xlate * locs[minusxVertexIndices[v]]),
+                                    texcrds[minusxVertexIndices[v]]
                                     });
                             }
                         }
@@ -329,8 +329,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
-                                xlate * locs[minusxVertexIndices[v]],
-                                {texcrds[minusxVertexIndices[v]].x, texcrds[minusxVertexIndices[v]].y}
+                                glm::vec3(xlate * locs[minusxVertexIndices[v]]),
+                                texcrds[minusxVertexIndices[v]]
                                 });
                         }
                     }
@@ -341,8 +341,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if (lpctx->pBlockArray[GRIDIDX(xc, yc + 1, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
-                                    xlate * locs[plusyVertexIndices[v]],
-                                    {texcrds[plusyVertexIndices[v]].x, texcrds[plusyVertexIndices[v]].y}
+                                    glm::vec3(xlate * locs[plusyVertexIndices[v]]),
+                                    texcrds[plusyVertexIndices[v]]
                                     });
                             }
                         }
@@ -350,8 +350,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
-                                xlate * locs[plusyVertexIndices[v]],
-                                {texcrds[plusyVertexIndices[v]].x, texcrds[plusyVertexIndices[v]].y}
+                                glm::vec3(xlate * locs[plusyVertexIndices[v]]),
+                                texcrds[plusyVertexIndices[v]]
                                 });
                         }
                     }
@@ -362,8 +362,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if (lpctx->pBlockArray[GRIDIDX(xc, yc - 1, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
                                 lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
-                                    xlate * locs[minusyVertexIndices[v]],
-                                    {texcrds[minusyVertexIndices[v]].x, texcrds[minusyVertexIndices[v]].y}
+                                    glm::vec3(xlate * locs[minusyVertexIndices[v]]),
+                                    texcrds[minusyVertexIndices[v]]
                                     });
                             }
                         }
@@ -371,8 +371,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     else {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
-                                xlate * locs[minusyVertexIndices[v]],
-                                {texcrds[minusyVertexIndices[v]].x, texcrds[minusyVertexIndices[v]].y}
+                                glm::vec3(xlate * locs[minusyVertexIndices[v]]),
+                                texcrds[minusyVertexIndices[v]]
                                 });
                         }
                     }

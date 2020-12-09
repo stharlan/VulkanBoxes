@@ -48,106 +48,6 @@ HGLRC createRenderingContext(HDC hdc)
     return hglrc;
 }
 
-char* readShaderSource(const char* filename)
-{
-    char* shaderSource = NULL;
-    FILE* f = NULL;
-    long l = 0;
-    fopen_s(&f, filename, "r");
-    if (f != NULL) {
-        fseek(f, 0, SEEK_END);
-        l = ftell(f);
-        fseek(f, 0, SEEK_SET);
-        shaderSource = (char*)malloc(l);
-        if (shaderSource != NULL) {
-            memset(shaderSource, 0, l);
-            fread(shaderSource, 1, l, f);
-            fclose(f);
-            f = NULL;
-        }
-        else {
-            printf("Failed to allocate memory for shader source code\n");
-            fclose(f);
-            f = NULL;
-            return NULL;
-        }
-    }
-    else {
-        printf("Failed to open shader source file\n");
-        return NULL;
-    }
-    return shaderSource;
-}
-
-BOOL CreateAndCompile(const char* src, GLenum type, GLuint* pShader)
-{
-    GLuint shader = glCreateShader(type);
-    GLint isCompiled = 0;
-    GLint maxLength = 0;
-    std::vector<GLchar> errorLog;
-
-    glShaderSource(shader, 1, &src, NULL);
-    glCompileShader(shader);
-    // check for compilation errors as per normal here
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
-    if (isCompiled == GL_FALSE)
-    {
-        printf("Error compiling shader\n");
-
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
-
-        // The maxLength includes the NULL character
-        errorLog.resize(maxLength);
-        glGetShaderInfoLog(shader, maxLength, &maxLength, &errorLog[0]);
-
-        for (size_t i = 0; i < errorLog.size(); i++) {
-            printf("%c", errorLog[i]);
-        }
-        printf("\n");
-
-        // Provide the infolog in whatever manor you deem best. 
-        // Exit with failure .
-        glDeleteShader(shader); // Don't leak the shader.
-        *pShader = 0;
-        return FALSE;
-    }
-    else {
-        *pShader = shader;
-        return TRUE;
-    }
-
-}
-
-BOOL LinkShader(GLuint prog, GLuint shader1, GLuint shader2)
-{
-    GLint isLinked = 0;
-    GLint maxLength = 0;
-    std::vector<GLchar> infoLog;
-
-    glAttachShader(prog, shader1);
-    if (shader2 > 0) glAttachShader(prog, shader2);
-    glLinkProgram(prog);
-    // check for linking errors and validate program as per normal here
-    glGetProgramiv(prog, GL_LINK_STATUS, &isLinked);
-    if (isLinked == GL_FALSE)
-    {
-        glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &maxLength);
-
-        // The maxLength includes the NULL character
-        infoLog.resize(maxLength);
-        glGetProgramInfoLog(prog, maxLength, &maxLength, &infoLog[0]);
-
-        for (size_t i = 0; i < infoLog.size(); i++) {
-            printf("%c", infoLog[i]);
-        }
-        printf("\n");
-        return FALSE;
-    }
-    else {
-        return TRUE;
-    }
-
-}
 
 //#define noiseWidth 64
 //#define noiseHeight 64
@@ -298,12 +198,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
     VOXC_WINDOW_CONTEXT* lpctx = (VOXC_WINDOW_CONTEXT*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     HDC hdc = GetDC(hwnd);
     HGLRC hglrc = createRenderingContext(hdc);
-    GLuint vertexShader = 0;
-    GLuint fragmentShader = 0;
-    GLuint shaderProg = 0;
-    GLuint vShadowShader = 0;
-    GLuint fShadowShader = 0;
-    GLuint shadowProg = 0;
 
     glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
     glFrontFace(GL_CCW);
@@ -321,14 +215,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
         return 0;
     }
 
-    char* vshaderSource = readShaderSource("vshader.txt");
-    CreateAndCompile(vshaderSource, GL_VERTEX_SHADER, &vertexShader);
-    free(vshaderSource);
-    char* fshaderSource = readShaderSource("fshader.txt");
-    CreateAndCompile(fshaderSource, GL_FRAGMENT_SHADER, &fragmentShader);
-    free(fshaderSource);
-    shaderProg = glCreateProgram();
-    LinkShader(shaderProg, vertexShader, fragmentShader);
+    OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
 
     const char* fnArray[] = {
         "c:\\temp\\vocxdirt.png",
@@ -369,12 +256,15 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    // end shadows
 
-    glUseProgram(shaderProg);
-    GLuint modelm = glGetUniformLocation(shaderProg, "model");
-    GLuint viewm = glGetUniformLocation(shaderProg, "view");
-    GLuint projm = glGetUniformLocation(shaderProg, "proj");
+    float near_plane = 0.1f, far_plane = 500.0f;
+    glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+    glm::mat4 lightView = glm::lookAt(
+        glm::vec3(0,0,Z_GRID_EXTENT / 2),
+        glm::vec3(1, 1, Z_GRID_EXTENT / 2),
+        glm::vec3(0.0f, 0.0f, 1.0f)); 
+    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+    // end shadows
 
     glClearColor(0, 0, 0, 1);
 
@@ -384,7 +274,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
     {
         if (WAIT_OBJECT_0 == WaitForSingleObject(lpctx->hQuitEvent, 0)) break;
 
-        glUseProgram(shaderProg);
+        //glUseProgram(shaderProg);
+        voxcProgram.Use();
 
         float sinfElevation = sinf(DEG2RAD(lpctx->elevation));
         sinfElevation = FCLAMP(sinfElevation, -0.99f, 0.99f);
@@ -404,9 +295,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
             0.01f,
             500.0f);
 
-        glUniformMatrix4fv(modelm, 1, false, &modelMatrix[0][0]);
-        glUniformMatrix4fv(viewm, 1, false, &viewMatrix[0][0]);
-        glUniformMatrix4fv(projm, 1, false, &projMatrix[0][0]);
+        voxcProgram.SetUniform("model", &modelMatrix[0][0]);
+        voxcProgram.SetUniform("view", &viewMatrix[0][0]);
+        voxcProgram.SetUniform("proj", &projMatrix[0][0]);
 
         glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
         glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -447,10 +338,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glDeleteTextures(1, &iter->tid);
         glDeleteBuffers(1, &iter->vbo);
     }
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    glDeleteProgram(shaderProg);
 
     wglMakeCurrent(hdc, nullptr);
     ReleaseDC(hwnd, hdc);

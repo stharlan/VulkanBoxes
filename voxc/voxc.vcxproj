@@ -147,6 +147,7 @@
   <ItemGroup>
     <ClCompile Include="glextfn.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="OpenGlProgram.cpp" />
     <ClCompile Include="renderthread.cpp" />
     <ClCompile Include="vertexbuffer.cpp" />
     <ClCompile Include="windowproc.cpp" />
@@ -154,6 +155,7 @@
   <ItemGroup>
     <ClInclude Include="glext.h" />
     <ClInclude Include="khrplatform.h" />
+    <ClInclude Include="OpenGlProgram.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="voxc.h" />
   </ItemGroup>

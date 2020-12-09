@@ -55,7 +55,6 @@
 #include "stb_image.h"
 #include "glext.h"
 
-
 typedef struct _VERTEX
 {
     glm::vec3 vertex;
@@ -132,3 +131,5 @@ DWORD WINAPI RenderThread(LPVOID parm);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 BOOL loadExtensionFunctions();
 void CreateVertexBuffer(VOXC_WINDOW_CONTEXT*);
+
+#include "OpenGlProgram.h"

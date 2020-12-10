@@ -1,6 +1,55 @@
  
 #include "voxc.h"
 
+void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64_t yint, int64_t zint)
+{
+
+    int64_t idx = 0;
+
+    // create all the rigid static actors
+    // as an array in the crate vertex buffer algo
+    // then, just pull them out of the array in this method
+
+    //printf("location has changed; add new actors\n");
+
+    // remove current actors
+    if (lpctx->blocksAroundMe.size() > (size_t)0) {
+        lpctx->mScene->removeActors(lpctx->blocksAroundMe.data(), (unsigned int)lpctx->blocksAroundMe.size());
+    }
+
+    // clear array
+    lpctx->blocksAroundMe.clear();
+
+    for (int64_t xbl = xint - 4; xbl < xint + 5; xbl++)
+    {
+        if (xbl >= 0 && xbl < X_GRID_EXTENT)
+        {
+            for (int64_t ybl = yint - 4; ybl < yint + 5; ybl++)
+            {
+                if (ybl >= 0 && ybl < Y_GRID_EXTENT)
+                {
+                    for (int64_t zbl = zint - 8; zbl < zint + 1; zbl++)
+                    {
+                        if (zbl >= 0 && zbl < Z_GRID_EXTENT)
+                        {
+                            idx = GRIDIDX(xbl, ybl, zbl);
+                            if (lpctx->pBlockArray[idx] == 1) {
+                                if (lpctx->pStaticBlockArray[idx]) lpctx->blocksAroundMe.push_back(lpctx->pStaticBlockArray[idx]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    lpctx->mScene->addActors(lpctx->blocksAroundMe.data(), (unsigned int)lpctx->blocksAroundMe.size());
+
+    lpctx->xblock = xint;
+    lpctx->yblock = yint;
+    lpctx->zblock = zint;
+}
+
 HGLRC createRenderingContext(HDC hdc)
 {
     HGLRC hglrc = NULL;
@@ -226,6 +275,10 @@ DWORD WINAPI RenderThread(LPVOID parm)
     // for each texture 
     LoadTextures(fnArray, 4, lpctx); 
 
+    // physics: must be done before create vertex buffer
+    initPhysics(lpctx);
+    // end physics
+
     CreateVertexBuffer(lpctx);
 
     // vertex buffer
@@ -304,6 +357,15 @@ DWORD WINAPI RenderThread(LPVOID parm)
     while (TRUE)
     {
         if (WAIT_OBJECT_0 == WaitForSingleObject(lpctx->hQuitEvent, 0)) break;
+
+        // physics here
+
+        if (lpctx->ActorsAdded == false) {
+            addActorsForCurrentLocation(lpctx, (int)lpctx->ex, (int)lpctx->ey, (int)lpctx->ez);
+            lpctx->ActorsAdded = true;
+        }
+
+        // physics done
 
         float sinfElevation = sinf(DEG2RAD(lpctx->elevation));
         sinfElevation = FCLAMP(sinfElevation, -0.99f, 0.99f);
@@ -397,6 +459,17 @@ DWORD WINAPI RenderThread(LPVOID parm)
     wglDeleteContext(hglrc);
 
     free(lpctx->pBlockArray);
+    for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
+        for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
+            for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
+                int64_t idx = GRIDIDX(xc, yc, zc);
+                if (lpctx->pStaticBlockArray[idx]) lpctx->pStaticBlockArray[idx]->release();
+            }
+        }
+    }
+    free(lpctx->pStaticBlockArray);
+
+    cleanupPhysics(lpctx);
 
     return 0;
 }

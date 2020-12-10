@@ -80,13 +80,30 @@ typedef struct _VOXC_WINDOW_CONTEXT
     float ez = 50.0f;
     float elevation = 0.0f;
     float azimuth = 0.0f;
-    int8_t* pBlockArray; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
+    int8_t* pBlockArray = NULL; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
+    physx::PxRigidStatic** pStaticBlockArray = NULL;
     std::vector<VERTEX_BUFFER_GROUP1> groups;
     float viewportRatio = 0.0f;
     bool isFullscreen = 0;
     int screenWidth = 0;
     int screenHeight = 0;
     GLuint vao = 0;
+
+    physx::PxFoundation* mFoundation = NULL;
+    physx::PxPvd* mPvd = NULL;
+    physx::PxPhysics* mPhysics = NULL;
+    physx::PxDefaultCpuDispatcher* mDispatcher = NULL;
+    physx::PxScene* mScene = NULL;
+    physx::PxMaterial* pMaterial = NULL;
+    physx::PxControllerManager* mManager = NULL;
+    physx::PxCapsuleController* mController = NULL; // don't release this
+    physx::PxRigidDynamic* mPlayerCapsuleActor = NULL; // released with manager?
+    physx::PxShape* mBlockShape = NULL;
+    std::vector<physx::PxActor*> blocksAroundMe;
+    int64_t xblock = 0;
+    int64_t yblock = 0;
+    int64_t zblock = 0;
+    bool ActorsAdded = false;
 } VOXC_WINDOW_CONTEXT;
 
 extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
@@ -143,5 +160,7 @@ DWORD WINAPI RenderThread(LPVOID parm);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 BOOL loadExtensionFunctions();
 void CreateVertexBuffer(VOXC_WINDOW_CONTEXT*);
+void initPhysics(VOXC_WINDOW_CONTEXT* lpctx);
+void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx);
 
 #include "OpenGlProgram.h"

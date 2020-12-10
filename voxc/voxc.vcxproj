@@ -148,6 +148,7 @@
     <ClCompile Include="glextfn.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OpenGlProgram.cpp" />
+    <ClCompile Include="physics.cpp" />
     <ClCompile Include="renderthread.cpp" />
     <ClCompile Include="vertexbuffer.cpp" />
     <ClCompile Include="windowproc.cpp" />

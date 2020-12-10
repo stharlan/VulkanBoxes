@@ -244,6 +244,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 
     lpctx->pBlockArray = (int8_t*)malloc(X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(int8_t));
     memset(lpctx->pBlockArray, 0, X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(int8_t));
+    lpctx->pStaticBlockArray = (physx::PxRigidStatic**)malloc(X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(physx::PxRigidStatic*));
+    memset(lpctx->pStaticBlockArray, 0, X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(physx::PxRigidStatic*));
 
     // assign blocks to level 0
     for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
@@ -304,10 +306,9 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         topGroupId = TEX_LEAVES;
                         sideGroupId = TEX_LEAVES;
                         bottomGroupId = TEX_LEAVES;
-                        printf("leaves\n");
                     }
 
-                    //size_t numVerts = lpctx->vertices4.size();
+                    uint64_t facesAdded = 0;
 
                     // check for block on bottom (-z)
                     if (zc > 0) {
@@ -317,7 +318,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                     glm::vec3(xlate * locs[bottomVertexIndices[v]]),
                                     texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]]
                                     });
-                                
+                                facesAdded++;
                             }
                         }
                     }
@@ -327,6 +328,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                 glm::vec3(xlate * locs[bottomVertexIndices[v]]),
                                 texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]]
                                 });
+                            facesAdded++;
                         }
                     }
 
@@ -339,6 +341,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                     glm::vec3(xlate * locs[topVertexIndices[v]]),
                                     texcrds[topVertexIndices[v]],normals[topVertexIndices[v]]
                                     });
+                                facesAdded++;
                             }
                         }
                     }
@@ -348,6 +351,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                 glm::vec3(xlate * locs[topVertexIndices[v]]),
                                 texcrds[topVertexIndices[v]],normals[topVertexIndices[v]]
                                 });
+                            facesAdded++;
                         }
                     }
 
@@ -360,6 +364,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                     glm::vec3(xlate * locs[plusxVertexIndices[v]]),
                                     texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]]
                                     });
+                                facesAdded++;
                             }
                         }
                     }
@@ -369,6 +374,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                 glm::vec3(xlate * locs[plusxVertexIndices[v]]),
                                 texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]]
                                 });
+                            facesAdded++;
                         }
                     }
 
@@ -381,6 +387,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                     glm::vec3(xlate * locs[minusxVertexIndices[v]]),
                                     texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]]
                                     });
+                                facesAdded++;
                             }
                         }
                     }
@@ -390,6 +397,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                 glm::vec3(xlate * locs[minusxVertexIndices[v]]),
                                 texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]]
                                 });
+                            facesAdded++;
                         }
                     }
 
@@ -402,6 +410,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                     glm::vec3(xlate * locs[plusyVertexIndices[v]]),
                                     texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]]
                                     });
+                                facesAdded++;
                             }
                         }
                     }
@@ -411,6 +420,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                 glm::vec3(xlate * locs[plusyVertexIndices[v]]),
                                 texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]]
                                 });
+                            facesAdded++;
                         }
                     }
 
@@ -423,6 +433,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                     glm::vec3(xlate * locs[minusyVertexIndices[v]]),
                                     texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]]
                                     });
+                                facesAdded++;
                             }
                         }
                     }
@@ -432,23 +443,24 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                 glm::vec3(xlate * locs[minusyVertexIndices[v]]),
                                 texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]]
                                 });
+                            facesAdded++;
                         }
                     }
 
-                    //if (lpctx->vertices4.size() > numVerts)
-                    //{
+                    if(facesAdded > 0)
+                    {
                         // create new actors
-                        //this->pStaticBlockArray[idx] = this->mPhysics->createRigidStatic(
-                            //physx::PxTransform(xc + 0.5f, yc + 0.5f, zc + 0.5f));
-                        //this->pStaticBlockArray[idx]->attachShape(*this->mBlockShape);
-                    //}
-                    //else {
-                        //this->pStaticBlockArray[idx] = NULL;
+                        lpctx->pStaticBlockArray[idx] = lpctx->mPhysics->createRigidStatic(
+                            physx::PxTransform(xc + 0.5f, yc + 0.5f, zc + 0.5f));
+                        lpctx->pStaticBlockArray[idx]->attachShape(*lpctx->mBlockShape);
+                    }
+                    else {
+                        lpctx->pStaticBlockArray[idx] = NULL;
 
-                    //}
+                    }
                 }
                 else {
-                    //this->pStaticBlockArray[idx] = NULL;
+                    lpctx->pStaticBlockArray[idx] = NULL;
                 }
             }
         }

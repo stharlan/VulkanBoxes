@@ -19,6 +19,9 @@
     <Filter Include="textures">
       <UniqueIdentifier>{3bb5f9b3-7c34-44f7-b888-c3504bfeb945}</UniqueIdentifier>
     </Filter>
+    <Filter Include="fonts">
+      <UniqueIdentifier>{ad868c0b-0677-4712-84d5-0c0dfa68b88c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -79,6 +82,12 @@
     <Text Include="fsh2d.txt">
       <Filter>Shaders</Filter>
     </Text>
+    <Text Include="vfont.txt">
+      <Filter>Shaders</Filter>
+    </Text>
+    <Text Include="ffont.txt">
+      <Filter>Shaders</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="vocxdirt.png">
@@ -93,5 +102,27 @@
     <Image Include="vocxleaves_t.png">
       <Filter>textures</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="FiraCode-Bold.ttf">
+      <Filter>fonts</Filter>
+    </Font>
+    <Font Include="FiraCode-Light.ttf">
+      <Filter>fonts</Filter>
+    </Font>
+    <Font Include="FiraCode-Medium.ttf">
+      <Filter>fonts</Filter>
+    </Font>
+    <Font Include="FiraCode-Regular.ttf">
+      <Filter>fonts</Filter>
+    </Font>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="selcube.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="selcube.frag">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

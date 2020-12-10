@@ -234,6 +234,29 @@ const glm::vec3 normals[40] = {
     {-1.0f, -1.0f, 0.0f}
 };
 
+GLuint CreateZeroCube()
+{
+    glm::mat4 xz = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, -0.5f, -0.5f));
+    glm::mat4 sc = glm::scale(glm::mat4(1.0f), glm::vec3(1.1f, 1.1f, 1.1f));
+    std::vector<VERTEX1> zeroCubeVerts;
+    for (int i = 0; i < 6; i++) 
+        zeroCubeVerts.push_back({ sc * (xz * locs[topVertexIndices[i]]), texcrds[topVertexIndices[i]], normals[topVertexIndices[i]], });
+    for (int i = 0; i < 6; i++)
+        zeroCubeVerts.push_back({ sc * (xz * locs[bottomVertexIndices[i]]), texcrds[bottomVertexIndices[i]], normals[bottomVertexIndices[i]], });
+    for (int i = 0; i < 6; i++)
+        zeroCubeVerts.push_back({ sc * (xz * locs[plusxVertexIndices[i]]), texcrds[plusxVertexIndices[i]], normals[plusxVertexIndices[i]], });
+    for (int i = 0; i < 6; i++)
+        zeroCubeVerts.push_back({ sc * (xz * locs[minusxVertexIndices[i]]), texcrds[minusxVertexIndices[i]], normals[minusxVertexIndices[i]], });
+    for (int i = 0; i < 6; i++)
+        zeroCubeVerts.push_back({ sc * (xz * locs[plusyVertexIndices[i]]), texcrds[plusyVertexIndices[i]], normals[plusyVertexIndices[i]], });
+    for (int i = 0; i < 6; i++)
+        zeroCubeVerts.push_back({ sc * (xz * locs[minusyVertexIndices[i]]), texcrds[minusyVertexIndices[i]], normals[minusyVertexIndices[i]], });
+    GLuint zeroCubeId = 0;
+    glCreateBuffers(1, &zeroCubeId);
+    glNamedBufferStorage(zeroCubeId, sizeof(VERTEX1) * 36, zeroCubeVerts.data(), 0);
+    return zeroCubeId;
+}
+
 void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 {
     int texWidth = 0;

@@ -9,6 +9,7 @@
 #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\profile\\PhysXExtensions_static_64.lib")
 #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\profile\\PhysXPvdSDK_static_64.lib")
 #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\profile\\PhysXCharacterKinematic_static_64.lib")
+#pragma comment(lib, "C:\\Library\\freetype-windows-binaries\\release dll\\win64\\freetype.lib")
 
 #define GETPROC(_t,_v,_vs) {_v = (_t)wglGetProcAddress(_vs);if(_v == NULL){printf("ERR: wglproc %s",_vs);goto cleanup;}}
 
@@ -34,6 +35,8 @@
 #include <string.h>
 #include <vector>
 #include <chrono>
+#include <map>
+#include <string>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -52,6 +55,8 @@
 #include <pvd/PxPvdTransport.h>
 #include <characterkinematic/PxControllerManager.h>
 #include <characterkinematic/PxCapsuleController.h>
+#include <ft2build.h>
+#include <freetype/freetype.h>
 
 #include "stb_image.h"
 #include "glext.h"
@@ -105,8 +110,14 @@ typedef struct _VOXC_WINDOW_CONTEXT
     int64_t xblock = 0;
     int64_t yblock = 0;
     int64_t zblock = 0;
-    bool ActorsAdded = false;
 } VOXC_WINDOW_CONTEXT;
+
+struct Character {
+    unsigned int TextureID;  // ID handle of the glyph texture
+    glm::ivec2   Size;       // Size of glyph
+    glm::ivec2   Bearing;    // Offset from baseline to left/top of glyph
+    unsigned int Advance;    // Offset to advance to next glyph
+};
 
 extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
 extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
@@ -131,9 +142,9 @@ extern PFNGLUNIFORM4FVPROC glUniform4fv;
 extern PFNGLUNIFORM3FVPROC glUniform3fv;
 extern PFNGLUNIFORM2FVPROC glUniform2fv;
 extern PFNGLUNIFORM1IPROC glUniform1i;
-//extern PFNGLGENBUFFERSPROC glGenBuffers;
-//extern PFNGLBINDBUFFERPROC glBindBuffer;
-//extern PFNGLBUFFERDATAPROC glBufferData;
+extern PFNGLGENBUFFERSPROC glGenBuffers;
+extern PFNGLBINDBUFFERPROC glBindBuffer;
+extern PFNGLBUFFERDATAPROC glBufferData;
 extern PFNGLGETATTRIBLOCATIONPROC glGetAttribLocation;
 extern PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer;
 extern PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray;
@@ -157,6 +168,8 @@ extern PFNGLCREATEBUFFERSPROC glCreateBuffers;
 extern PFNGLNAMEDBUFFERSTORAGEPROC glNamedBufferStorage;
 extern PFNGLVERTEXARRAYBINDINGDIVISORPROC glVertexArrayBindingDivisor;
 extern PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
+extern PFNGLUNIFORM3FPROC glUniform3f;
+extern PFNGLBUFFERSUBDATAPROC glBufferSubData;
 
 DWORD WINAPI RenderThread(LPVOID parm);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -164,5 +177,6 @@ BOOL loadExtensionFunctions();
 void CreateVertexBuffer(VOXC_WINDOW_CONTEXT*);
 void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition);
 void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx);
+GLuint CreateZeroCube();
 
 #include "OpenGlProgram.h"

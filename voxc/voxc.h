@@ -59,13 +59,14 @@ typedef struct _VERTEX
 {
     glm::vec3 vertex;
     glm::vec2 texc;
-} VERTEX;
+    glm::vec3 norm;
+} VERTEX1;
 
 typedef struct _VERTEX_BUFFER_GROUP1
 {
     GLuint tid;
     GLuint vbo;
-    std::vector<VERTEX> vertices;
+    std::vector<VERTEX1> vertices;
 } VERTEX_BUFFER_GROUP1;
 
 typedef struct _VOXC_WINDOW_CONTEXT

@@ -188,6 +188,52 @@ const glm::vec2 texcrds[40] = {
     //{0.874f, 0.124f,0,0}
 };
 
+// normals for cube sides
+const glm::vec3 normals[40] = {
+    {0.0f, 0.0f, 1.0f},
+    {0.0f, 0.0f, 1.0f},
+    {0.0f, 0.0f, 1.0f},
+    {0.0f, 0.0f, 1.0f},
+    {1.0f, 0.0f, 0.0f},
+    {1.0f, 0.0f, 0.0f},
+    {1.0f, 0.0f, 0.0f},
+    {1.0f, 0.0f, 0.0f},
+    {-1.0f, 0.0f, 0.0f},
+    {-1.0f, 0.0f, 0.0f},
+    {-1.0f, 0.0f, 0.0f},
+    {-1.0f, 0.0f, 0.0f},
+    {0.0f, 1.0f, 0.0f},
+    {0.0f, 1.0f, 0.0f},
+    {0.0f, 1.0f, 0.0f},
+    {0.0f, 1.0f, 0.0f},
+    {0.0f, -1.0f, 0.0f},
+    {0.0f, -1.0f, 0.0f},
+    {0.0f, -1.0f, 0.0f},
+    {0.0f, -1.0f, 0.0f},
+    {0.0f, 0.0f, -1.0f},
+    {0.0f, 0.0f, -1.0f},
+    {0.0f, 0.0f, -1.0f},
+    {0.0f, 0.0f, -1.0f},
+    {1.0f, -1.0f, 0.0f},
+    {1.0f, -1.0f, 0.0f},
+    {1.0f, -1.0f, 0.0f},
+    {1.0f, -1.0f, 0.0f},
+    {-1.0f, 1.0f, 0.0f},
+    {-1.0f, 1.0f, 0.0f},
+    {-1.0f, 1.0f, 0.0f},
+    {-1.0f, 1.0f, 0.0f},
+
+    {1.0f, 1.0f, 0.0f},
+    {1.0f, 1.0f, 0.0f},
+    {1.0f, 1.0f, 0.0f},
+    {1.0f, 1.0f, 0.0f},
+
+    {-1.0f, -1.0f, 0.0f},
+    {-1.0f, -1.0f, 0.0f},
+    {-1.0f, -1.0f, 0.0f},
+    {-1.0f, -1.0f, 0.0f}
+};
+
 void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 {
     int texWidth = 0;
@@ -257,7 +303,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                             for (int64_t v = 0; v < 6; v++) {
                                 lpctx->groups[TEX_DIRT].vertices.push_back({
                                     glm::vec3(xlate * locs[bottomVertexIndices[v]]),
-                                    texcrds[bottomVertexIndices[v]]
+                                    texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]]
                                     });
                                 
                             }
@@ -267,7 +313,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[TEX_DIRT].vertices.push_back({
                                 glm::vec3(xlate * locs[bottomVertexIndices[v]]),
-                                texcrds[bottomVertexIndices[v]]
+                                texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]]
                                 });
                         }
                     }
@@ -279,7 +325,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                             for (int64_t v = 0; v < 6; v++) {
                                 lpctx->groups[TEX_GRASS].vertices.push_back({
                                     glm::vec3(xlate * locs[topVertexIndices[v]]),
-                                    texcrds[topVertexIndices[v]]
+                                    texcrds[topVertexIndices[v]],normals[topVertexIndices[v]]
                                     });
                             }
                         }
@@ -288,7 +334,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[TEX_GRASS].vertices.push_back({
                                 glm::vec3(xlate * locs[topVertexIndices[v]]),
-                                texcrds[topVertexIndices[v]]
+                                texcrds[topVertexIndices[v]],normals[topVertexIndices[v]]
                                 });
                         }
                     }
@@ -300,7 +346,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                             for (int64_t v = 0; v < 6; v++) {
                                 lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
                                     glm::vec3(xlate * locs[plusxVertexIndices[v]]),
-                                    texcrds[plusxVertexIndices[v]]
+                                    texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]]
                                     });
                             }
                         }
@@ -309,7 +355,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
                                 glm::vec3(xlate * locs[plusxVertexIndices[v]]),
-                                texcrds[plusxVertexIndices[v]]
+                                texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]]
                                 });
                         }
                     }
@@ -321,7 +367,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                             for (int64_t v = 0; v < 6; v++) {
                                 lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
                                     glm::vec3(xlate * locs[minusxVertexIndices[v]]),
-                                    texcrds[minusxVertexIndices[v]]
+                                    texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]]
                                     });
                             }
                         }
@@ -330,7 +376,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
                                 glm::vec3(xlate * locs[minusxVertexIndices[v]]),
-                                texcrds[minusxVertexIndices[v]]
+                                texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]]
                                 });
                         }
                     }
@@ -342,7 +388,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                             for (int64_t v = 0; v < 6; v++) {
                                 lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
                                     glm::vec3(xlate * locs[plusyVertexIndices[v]]),
-                                    texcrds[plusyVertexIndices[v]]
+                                    texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]]
                                     });
                             }
                         }
@@ -351,7 +397,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
                                 glm::vec3(xlate * locs[plusyVertexIndices[v]]),
-                                texcrds[plusyVertexIndices[v]]
+                                texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]]
                                 });
                         }
                     }
@@ -363,7 +409,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                             for (int64_t v = 0; v < 6; v++) {
                                 lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
                                     glm::vec3(xlate * locs[minusyVertexIndices[v]]),
-                                    texcrds[minusyVertexIndices[v]]
+                                    texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]]
                                     });
                             }
                         }
@@ -372,7 +418,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
                                 glm::vec3(xlate * locs[minusyVertexIndices[v]]),
-                                texcrds[minusyVertexIndices[v]]
+                                texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]]
                                 });
                         }
                     }

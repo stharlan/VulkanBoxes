@@ -174,7 +174,7 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
     glActiveTexture(GL_TEXTURE0);
     for (; iter != lpctx->groups.end(); ++iter)
     {
-        glVertexArrayVertexBuffer(lpctx->vao, 0, iter->vbo, 0, 5 * sizeof(GLfloat));
+        glVertexArrayVertexBuffer(lpctx->vao, 0, iter->vbo, 0, 8 * sizeof(GLfloat));
         glBindTexture(GL_TEXTURE_2D, iter->tid);
         glDrawArrays(GL_TRIANGLES, 0, (GLsizei)iter->vertices.size());
     }
@@ -264,7 +264,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glEnable(GL_TEXTURE_2D);
-
+       
     OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
     voxcProgram.Use();
     voxcProgram.SetUniform1i("texs", 0);
@@ -286,36 +286,37 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glCreateBuffers(3, vbos.data());
     for(int i=0; i<3; i++)
     {
-        glNamedBufferStorage(vbos[i], sizeof(VERTEX) * lpctx->groups[i].vertices.size(),
+        glNamedBufferStorage(vbos[i], sizeof(VERTEX1) * lpctx->groups[i].vertices.size(),
             lpctx->groups[i].vertices.data(), 0);
         lpctx->groups[i].vbo = vbos[i];
     }
 
     // vbo for 2d quad
     GLuint quadVbo1 = 0;
-    std::vector<VERTEX> quadVerts = {
-        { { 0.5, 0.5, 0 },{ 0, 0 } },
-        { { 1, 0.5, 0 },{ 1, 0 } },
-        { { 1, 1, 0 },{ 1, 1 } },
-        { { 0.5, 0.5, 0 },{ 0, 0 } },
-        { { 1, 1, 0 },{ 1, 1 } },
-        { { 0.5, 1, 0 },{ 0, 1 } }
+    std::vector<VERTEX1> quadVerts = {
+        { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0} },
+        { { 1, 0.5, 0 },{ 1, 0 }, {0,0,0} },
+        { { 1, 1, 0 },{ 1, 1 }, {0,0,0} },
+        { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0} },
+        { { 1, 1, 0 },{ 1, 1 }, {0,0,0} },
+        { { 0.5, 1, 0 },{ 0, 1 }, {0,0,0} }
     };
 
-
-
     glCreateBuffers(1, &quadVbo1);
-    glNamedBufferStorage(quadVbo1, sizeof(VERTEX) * 6, quadVerts.data(), 0);
+    glNamedBufferStorage(quadVbo1, sizeof(VERTEX1) * 6, quadVerts.data(), 0);
 
     // create the vertex array
     glCreateVertexArrays(1, &lpctx->vao);
     glVertexArrayAttribBinding(lpctx->vao, 0, 0);
     glVertexArrayAttribBinding(lpctx->vao, 1, 0);
+    glVertexArrayAttribBinding(lpctx->vao, 2, 0);
     glVertexArrayAttribFormat(lpctx->vao, 0, 3, GL_FLOAT, FALSE, 0);
     glVertexArrayAttribFormat(lpctx->vao, 1, 2, GL_FLOAT, FALSE, 3 * sizeof(GLfloat));
+    glVertexArrayAttribFormat(lpctx->vao, 2, 3, GL_FLOAT, FALSE, 5 * sizeof(GLfloat));
     glVertexArrayBindingDivisor(lpctx->vao, 0, 0);
     glEnableVertexArrayAttrib(lpctx->vao, 0);
     glEnableVertexArrayAttrib(lpctx->vao, 1);
+    glEnableVertexArrayAttrib(lpctx->vao, 2);
     // end vertex array
 
     // create a frame buffer for shadows
@@ -339,15 +340,14 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
+     
     float near_plane = 0.1f, far_plane = 500.0f;
     glm::mat4 lightProjection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, near_plane, far_plane);
-    glm::mat4 lightView = glm::lookAt(
-        glm::vec3(0,0,100),
-        glm::vec3(X_GRID_EXTENT / 2, Y_GRID_EXTENT / 2, 50),
-        glm::vec3(0.0f, 0.0f, 1.0f)); 
+    glm::vec3 eye = glm::vec3(0, 0, 200);
+    glm::vec3 cntr = glm::vec3(X_GRID_EXTENT / 3, Y_GRID_EXTENT / 3, 50);
+    glm::mat4 lightView = glm::lookAt(eye, cntr, glm::vec3(0.0f, 0.0f, 1.0f)); 
     glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+    glm::vec3 lightDir = glm::normalize(cntr - eye);
     // end shadows
 
     glClearColor(0.9f, 0.9f, 1.0f, 1.0f);
@@ -366,14 +366,22 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
-         
-        lightSpaceMatrix = lightProjection * lightView;
+        
+        glm::vec3 eye = glm::vec3(lpctx->ex - 100, lpctx->ey - 100, lpctx->ez + 100);
+        glm::vec3 cntr = glm::vec3(lpctx->ex, lpctx->ey, lpctx->ez);
+        glm::mat4 lightView = glm::lookAt(eye, cntr, glm::vec3(0.0f, 0.0f, 1.0f));
+        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+        glm::vec3 lightDir = glm::normalize(cntr - eye);
+
+        //lightSpaceMatrix = lightProjection * lightView;
 
         shadowProg.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
         shadowProg.SetUniformMatrix4fv("model", &modelMatrix[0][0]);
+        glCullFace(GL_FRONT);
         RenderScene(lpctx);
+        glCullFace(GL_BACK); 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
+         
         voxcProgram.Use();
 
         glm::mat4 viewMatrix = glm::lookAt(
@@ -394,7 +402,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
         voxcProgram.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
         voxcProgram.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
         voxcProgram.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
-
+        voxcProgram.SetUniform3fv("lightDir", &lightDir[0]);
+         
         glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
         glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
@@ -404,12 +413,12 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glBindTexture(GL_TEXTURE_2D, depthMap);
 
         RenderScene(lpctx);
-
+          
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
-
+         
         ddProg.Use();
-        glVertexArrayVertexBuffer(lpctx->vao, 0, quadVbo1, 0, 5 * sizeof(GLfloat));
+        glVertexArrayVertexBuffer(lpctx->vao, 0, quadVbo1, 0, 8 * sizeof(GLfloat));
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, depthMap);
         glDrawArrays(GL_TRIANGLES, 0, 6);

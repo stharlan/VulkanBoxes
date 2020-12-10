@@ -169,3 +169,9 @@ void OpenGlProgram::SetUniform1i(const char* name, const GLint value)
     GLuint loc = glGetUniformLocation(this->prg, name);
     glUniform1i(loc, value);
 }
+
+void OpenGlProgram::SetUniform3fv(const char* name, const GLfloat* value)
+{
+    GLuint loc = glGetUniformLocation(this->prg, name);
+    glUniform3fv(loc, 1, value);
+}

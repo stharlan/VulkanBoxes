@@ -35,32 +35,51 @@ LRESULT CALLBACK WndProc(
                 switch (raw->data.keyboard.MakeCode)
                 {
                 case 17: // w
-                    lpctx->ex += cosf(DEG2RAD(lpctx->azimuth));
-                    lpctx->ey += sinf(DEG2RAD(lpctx->azimuth));
+                    lpctx->keys[0] = 1;
                     break;
                 case 30: // a
-                    lpctx->ex += sinf(DEG2RAD(lpctx->azimuth)) * -1.0f;
-                    lpctx->ey += cosf(DEG2RAD(lpctx->azimuth));
+                    lpctx->keys[1] = 1;
                     break;
                 case 31: // s
-                    lpctx->ex += cosf(DEG2RAD(lpctx->azimuth)) * -1.0f;
-                    lpctx->ey += sinf(DEG2RAD(lpctx->azimuth)) * -1.0f;
+                    lpctx->keys[2] = 1;
                     break;
                 case 32: // d
-                    lpctx->ex += sinf(DEG2RAD(lpctx->azimuth));
-                    lpctx->ey += cosf(DEG2RAD(lpctx->azimuth)) * -1.0f;
+                    lpctx->keys[3] = 1;
+                    break;
+                case 57:
+                    lpctx->keys[4] = 1;
                     break;
                 case 16: // q
-                    lpctx->ez += 1.0f;
+                    //lpctx->ez += 1.0f;
                     break;
                 case 44: // z
-                    lpctx->ez -= 1.0f;
+                    //lpctx->ez -= 1.0f;
                     break;
                 case 1:
                     DestroyWindow(hwnd);
                     break;
                 default:
                     printf("kb %i\n", raw->data.keyboard.MakeCode);
+                    break;
+                }
+            }
+            else if(raw->data.keyboard.Flags & 0x1) {
+                switch (raw->data.keyboard.MakeCode)
+                {
+                case 17: // w
+                    lpctx->keys[0] = 0;
+                    break;
+                case 30: // a
+                    lpctx->keys[1] = 0;
+                    break;
+                case 31: // s
+                    lpctx->keys[2] = 0;
+                    break;
+                case 32: // d
+                    lpctx->keys[3] = 0;
+                    break;
+                case 57:
+                    lpctx->keys[4] = 0;
                     break;
                 }
             }

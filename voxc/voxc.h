@@ -75,9 +75,11 @@ typedef struct _VOXC_WINDOW_CONTEXT
     HANDLE hQuitEvent = 0;
     HANDLE hRenderThread = 0;
     BYTE* rawBuffer[48];
-    float ex = 10.0f;
-    float ey = 10.0f;
-    float ez = 50.0f;
+    int keys[5] = { 0,0,0,0,0 };
+    //float ex = 10.0f;
+    //float ey = 10.0f;
+    //float ez = 50.0f;
+    float vz = 0.0f;
     float elevation = 0.0f;
     float azimuth = 0.0f;
     int8_t* pBlockArray = NULL; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
@@ -160,7 +162,7 @@ DWORD WINAPI RenderThread(LPVOID parm);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 BOOL loadExtensionFunctions();
 void CreateVertexBuffer(VOXC_WINDOW_CONTEXT*);
-void initPhysics(VOXC_WINDOW_CONTEXT* lpctx);
+void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition);
 void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx);
 
 #include "OpenGlProgram.h"

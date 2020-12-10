@@ -4,6 +4,8 @@
 void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64_t yint, int64_t zint)
 {
 
+    printf("add actors\n");
+
     int64_t idx = 0;
 
     // create all the rigid static actors
@@ -276,7 +278,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
     LoadTextures(fnArray, 4, lpctx); 
 
     // physics: must be done before create vertex buffer
-    initPhysics(lpctx);
+    glm::vec3 startingPosition(10, 10, 50);
+    initPhysics(lpctx, startingPosition);
     // end physics
 
     CreateVertexBuffer(lpctx);
@@ -343,26 +346,125 @@ DWORD WINAPI RenderThread(LPVOID parm)
      
     float near_plane = 0.1f, far_plane = 500.0f;
     glm::mat4 lightProjection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, near_plane, far_plane);
-    glm::vec3 eye = glm::vec3(0, 0, 200);
-    glm::vec3 cntr = glm::vec3(X_GRID_EXTENT / 3, Y_GRID_EXTENT / 3, 50);
-    glm::mat4 lightView = glm::lookAt(eye, cntr, glm::vec3(0.0f, 0.0f, 1.0f)); 
-    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-    glm::vec3 lightDir = glm::normalize(cntr - eye);
+    glm::vec3 eye1 = glm::vec3(0, 0, 200);
+    glm::vec3 cntr1 = glm::vec3(X_GRID_EXTENT / 3, Y_GRID_EXTENT / 3, 50);
+    glm::mat4 lightView1 = glm::lookAt(eye1, cntr1, glm::vec3(0.0f, 0.0f, 1.0f)); 
+    //glm::mat4 lightSpaceMatrix1 = lightProjection * lightView1;
+    //glm::vec3 lightDir = glm::normalize(cntr1 - eye1);
     // end shadows
 
     glClearColor(0.9f, 0.9f, 1.0f, 1.0f);
 
     glm::mat4 modelMatrix = glm::mat4(1.0f);
 
+    LARGE_INTEGER perfCount = { 0 };
+    LARGE_INTEGER perfFreq = { 0 };
+    LARGE_INTEGER lastCount = { 0 };
+    int64_t elapsedTicks = 0;
+
+    QueryPerformanceCounter(&perfCount);
+    lastCount = perfCount;
+    QueryPerformanceFrequency(&perfFreq); // counts per second
+
+    physx::PxControllerFilters mCCFilters = { 0 };
+    physx::PxExtendedVec3 pos;
+
     while (TRUE)
     {
         if (WAIT_OBJECT_0 == WaitForSingleObject(lpctx->hQuitEvent, 0)) break;
 
+        // calculate elapsed seconds
+        QueryPerformanceCounter(&perfCount);
+        elapsedTicks = perfCount.QuadPart - lastCount.QuadPart;
+        float elapsed = (float)elapsedTicks / (float)perfFreq.QuadPart;
+
         // physics here
 
         if (lpctx->ActorsAdded == false) {
-            addActorsForCurrentLocation(lpctx, (int)lpctx->ex, (int)lpctx->ey, (int)lpctx->ez);
+            addActorsForCurrentLocation(lpctx, 
+                (int64_t)startingPosition.x, 
+                (int64_t)startingPosition.y, 
+                (int64_t)startingPosition.z);
             lpctx->ActorsAdded = true;
+        }
+
+        // apply gravity to vz
+        if (lpctx->keys[4] == 1)
+        {
+            lpctx->vz = 0.5f;
+            lpctx->keys[4] = 0;
+        }
+        else {
+            lpctx->vz += (float)elapsed / -1000.0f;
+        }
+
+        //case 17: // w
+        ////lpctx->mx += cosf(DEG2RAD(lpctx->azimuth));
+        ////lpctx->my += sinf(DEG2RAD(lpctx->azimuth));
+        //lpctx->keys[0] = 1;
+        //break;
+        //case 30: // a
+        ////lpctx->mx += sinf(DEG2RAD(lpctx->azimuth)) * -1.0f;
+        ////lpctx->my += cosf(DEG2RAD(lpctx->azimuth));
+        //lpctx->keys[1] = 1;
+        //break;
+        //case 31: // s
+        ////lpctx->mx += cosf(DEG2RAD(lpctx->azimuth)) * -1.0f;
+        ////lpctx->my += sinf(DEG2RAD(lpctx->azimuth)) * -1.0f;
+        //lpctx->keys[2] = 1;
+        //break;
+        //case 32: // d
+        ////lpctx->mx += sinf(DEG2RAD(lpctx->azimuth));
+        ////lpctx->my += cosf(DEG2RAD(lpctx->azimuth)) * -1.0f;
+        //lpctx->keys[3] = 1;
+        //break;
+
+        float speed = elapsed / 20.0f;
+        float mx = 0.0f, my = 0.0f;
+        if (lpctx->keys[0] == 1) { // w
+            mx += cosf(DEG2RAD(lpctx->azimuth)) * speed;
+            my += sinf(DEG2RAD(lpctx->azimuth)) * speed;
+        }
+        else if (lpctx->keys[1] == 1) // a
+        {
+            mx += cosf(DEG2RAD(lpctx->azimuth)) * -speed;
+            my += sinf(DEG2RAD(lpctx->azimuth)) * -speed;
+        }
+        if (lpctx->keys[2] == 1) // s
+        {
+            mx += sinf(DEG2RAD(lpctx->azimuth)) * -speed;
+            my += cosf(DEG2RAD(lpctx->azimuth)) * speed;
+        }
+        else if (lpctx->keys[3] == 1) // d
+        {
+            mx += sinf(DEG2RAD(lpctx->azimuth)) * speed;
+            my += cosf(DEG2RAD(lpctx->azimuth)) * -speed;
+        }
+
+        physx::PxExtendedVec3 posb = lpctx->mController->getPosition();
+        physx::PxControllerCollisionFlags cflags = lpctx->mController->move(
+            physx::PxVec3(mx, my, lpctx->vz * elapsed),
+            0.00f, // min dist
+            elapsed, mCCFilters);
+
+        if (cflags.isSet(physx::PxControllerCollisionFlag::eCOLLISION_DOWN))
+        {
+            lpctx->vz = 0.0f;
+        }
+        lpctx->mScene->simulate(elapsed);
+        lpctx->mScene->fetchResults(true);
+
+        pos = lpctx->mController->getPosition();
+
+        if (abs(lpctx->xblock - (int64_t)pos.x) > 4) {
+            addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+        }
+        else if (abs(lpctx->yblock - (int64_t)pos.y) > 4) {
+            addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+        }
+        else if (abs(lpctx->zblock - (int64_t)pos.z) > 4)
+        {
+            addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
         }
 
         // physics done
@@ -376,11 +478,13 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
         
-        glm::vec3 eye = glm::vec3(lpctx->ex - 100, lpctx->ey - 100, lpctx->ez + 100);
-        glm::vec3 cntr = glm::vec3(lpctx->ex, lpctx->ey, lpctx->ez);
-        glm::mat4 lightView = glm::lookAt(eye, cntr, glm::vec3(0.0f, 0.0f, 1.0f));
+        //glm::vec3 eye = glm::vec3(lpctx->ex - 100, lpctx->ey - 100, lpctx->ez + 100);
+        glm::vec3 lightLooking = glm::vec3(pos.x - 100, pos.y - 100, pos.z + 100);
+        //glm::vec3 cntr = glm::vec3(lpctx->ex, lpctx->ey, lpctx->ez);
+        glm::vec3 posLocation3 = glm::vec3(pos.x, pos.y, pos.z);
+        glm::mat4 lightView = glm::lookAt(lightLooking, posLocation3, glm::vec3(0.0f, 0.0f, 1.0f));
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-        glm::vec3 lightDir = glm::normalize(cntr - eye);
+        glm::vec3 lightDir = glm::normalize(posLocation3 - lightLooking);
 
         shadowProg.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
         shadowProg.SetUniformMatrix4fv("model", &modelMatrix[0][0]);
@@ -390,11 +494,12 @@ DWORD WINAPI RenderThread(LPVOID parm)
         voxcProgram.Use();
 
         glm::mat4 viewMatrix = glm::lookAt(
-            glm::vec3(lpctx->ex, lpctx->ey, lpctx->ez),
+            //glm::vec3(lpctx->ex, lpctx->ey, lpctx->ez),
+            posLocation3,
             glm::vec3(
-                lpctx->ex + (cosf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
-                lpctx->ey + (sinf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
-                lpctx->ez + sinfElevation),
+                pos.x + (cosf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
+                pos.y + (sinf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
+                pos.z + sinfElevation),
             glm::vec3(0, 0, 1)
         );
         glm::mat4 projMatrix = glm::perspective(

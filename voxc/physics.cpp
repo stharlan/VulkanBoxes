@@ -3,7 +3,7 @@
 
 using namespace physx;
 
-void initPhysics(VOXC_WINDOW_CONTEXT* lpctx)
+void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition)
 {
 
     static PxDefaultErrorCallback gDefaultErrorCallback;
@@ -64,7 +64,7 @@ void initPhysics(VOXC_WINDOW_CONTEXT* lpctx)
 
     PxCapsuleControllerDesc cDesc;
     cDesc.material = lpctx->pMaterial;
-    cDesc.position = physx::PxExtendedVec3(lpctx->ex, lpctx->ey, lpctx->ez);
+    cDesc.position = physx::PxExtendedVec3(startingPosition.x, startingPosition.y, startingPosition.z);
     cDesc.height = 2.0f;
     cDesc.radius = 1.0f;
     cDesc.slopeLimit = 0.0f;
@@ -83,9 +83,9 @@ void initPhysics(VOXC_WINDOW_CONTEXT* lpctx)
     lpctx->mBlockShape->setRestOffset(0.1f);
     lpctx->mBlockShape->setContactOffset(0.2f);
 
-    lpctx->xblock = (int64_t)lpctx->ex;
-    lpctx->yblock = (int64_t)lpctx->ey;
-    lpctx->zblock = (int64_t)lpctx->ez;
+    lpctx->xblock = (int64_t)startingPosition.x;
+    lpctx->yblock = (int64_t)startingPosition.y;
+    lpctx->zblock = (int64_t)startingPosition.z;
 
 }
 

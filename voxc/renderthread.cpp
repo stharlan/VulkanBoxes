@@ -317,9 +317,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glEnableVertexArrayAttrib(lpctx->vao, 0);
     glEnableVertexArrayAttrib(lpctx->vao, 1);
     glEnableVertexArrayAttrib(lpctx->vao, 2);
-    // end vertex array
+    // end vertex array 
 
-    // create a frame buffer for shadows
+    // create a frame buffer for shadows 
     GLuint depthMapFBO = 0;
     glGenFramebuffers(1, &depthMapFBO);
 
@@ -330,8 +330,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glBindTexture(GL_TEXTURE_2D, depthMap);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
         SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 

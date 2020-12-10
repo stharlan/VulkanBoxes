@@ -181,67 +181,6 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-//DWORD WINAPI RenderThread(LPVOID parm)
-//{
-//    HWND hwnd = (HWND)parm;
-//    HDC hdc = GetDC(hwnd);
-//    HGLRC hglrc = createRenderingContext(hdc);
-//
-//    if (FALSE == loadExtensionFunctions())
-//    {
-//        printf("Failed to load opengl extension functions.\n");
-//        return 0;
-//    }
-//
-//    OpenGlProgram ddProg("vsh2d.txt", "fsh2d.txt");
-//
-//    GLuint quadVbo1 = 0;
-//    //std::vector<VERTEX> quadVerts = {
-//    //    { { -0.5, -0.5, 0 },{ 0, 0 } },
-//    //    { {  0.5, -0.5, 0 },{ 1, 0 } },
-//    //    { {  0.5,  0.5, 0 },{ 1, 1 } },
-//    //    { { -0.5, -0.5, 0 },{ 0, 0 } },
-//    //    { {  0.5,  0.5, 0 },{ 1, 1 } },
-//    //    { { -0.5,  0.5, 0 },{ 0, 1 } }
-//    //};
-//    std::vector<glm::vec3> quadVerts = {
-//        { -0.5, -0.5, 0 },
-//        {  0.5, -0.5, 0 },
-//        {  0.5,  0.5, 0 },
-//        { -0.5, -0.5, 0 },
-//        {  0.5,  0.5, 0 },
-//        { -0.5,  0.5, 0 }
-//    };
-//    glCreateBuffers(1, &quadVbo1);
-//    printf("%i\n", glGetError());
-//    glNamedBufferStorage(quadVbo1, sizeof(glm::vec3) * 6, quadVerts.data(), 0);
-//
-//    // create the vertex array
-//    GLuint vao = 0;
-//    glCreateVertexArrays(1, &vao);
-//    glVertexArrayAttribBinding(vao, 0, 0);
-//    //glVertexArrayAttribBinding(vao, 1, 0);
-//    glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, FALSE, 0);
-//    //glVertexArrayAttribFormat(vao, 1, 2, GL_FLOAT, FALSE, 3 * sizeof(GLfloat));
-//    glVertexArrayBindingDivisor(vao, 0, 0);
-//    glEnableVertexArrayAttrib(vao, 0);
-//    //glEnableVertexArrayAttrib(vao, 1);
-//    // end vertex array
-//    
-//    ddProg.Use();
-//    glClear(GL_COLOR_BUFFER_BIT);
-//    glBindVertexArray(vao);
-//    glVertexArrayVertexBuffer(vao, 0, quadVbo1, 0, 3 * sizeof(GLfloat));
-//    glDrawArrays(GL_TRIANGLES, 0, 6);
-//    //glBegin(GL_TRIANGLES);
-//    //glVertex3f(0, 0, 0);
-//    //glVertex3f(0, 1, 0);
-//    //glVertex3f(1, 1, 0);
-//    //glEnd();
-//    SwapBuffers(hdc);
-//    return 0;
-//}
-
 DWORD WINAPI RenderThread(LPVOID parm)
 {
     HWND hwnd = (HWND)parm;
@@ -272,19 +211,27 @@ DWORD WINAPI RenderThread(LPVOID parm)
     OpenGlProgram shadowProg("vshadow.txt", "fshadow.txt");
     OpenGlProgram ddProg("vsh2d.txt", "fsh2d.txt");
 
+    // if adding a new texture
+    // increase the cound in load textures
+    // also, go to voxc.h and add another define
+    // also, in vertex buffer creation below, increase count
     const char* fnArray[] = {
-        "c:\\temp\\vocxdirt.png",
-        "c:\\temp\\vocxdirtgrass.png",
-        "c:\\temp\\vocxgrass.png"
+        "vocxdirt.png",
+        "vocxdirtgrass.png",
+        "vocxgrass.png",
+        "vocxleaves_t.png"
+
     };
-    LoadTextures(fnArray, 3, lpctx); 
+    // after this, there will be one block group
+    // for each texture 
+    LoadTextures(fnArray, 4, lpctx); 
 
     CreateVertexBuffer(lpctx);
 
     // vertex buffer
-    std::vector<GLuint> vbos(3);
-    glCreateBuffers(3, vbos.data());
-    for(int i=0; i<3; i++)
+    std::vector<GLuint> vbos(4);
+    glCreateBuffers(4, vbos.data());
+    for(int i=0; i<4; i++)
     {
         glNamedBufferStorage(vbos[i], sizeof(VERTEX1) * lpctx->groups[i].vertices.size(),
             lpctx->groups[i].vertices.data(), 0);
@@ -373,13 +320,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;
         glm::vec3 lightDir = glm::normalize(cntr - eye);
 
-        //lightSpaceMatrix = lightProjection * lightView;
-
         shadowProg.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
         shadowProg.SetUniformMatrix4fv("model", &modelMatrix[0][0]);
-        glCullFace(GL_FRONT);
         RenderScene(lpctx);
-        glCullFace(GL_BACK); 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
          
         voxcProgram.Use();

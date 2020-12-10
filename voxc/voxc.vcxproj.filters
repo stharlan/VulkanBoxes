@@ -87,5 +87,8 @@
     <Image Include="vocxgrass.png">
       <Filter>textures</Filter>
     </Image>
+    <Image Include="vocxleaves_t.png">
+      <Filter>textures</Filter>
+    </Image>
   </ItemGroup>
 </Project>

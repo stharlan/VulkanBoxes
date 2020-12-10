@@ -269,9 +269,11 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     for (uint64_t th = 0; th < 6; th++) {
                         if ((h + th) < Z_GRID_EXTENT) {
                             if (th == 5) {
+                                // the top of the tree (leaves)
                                 lpctx->pBlockArray[GRIDIDX(xc, yc, h + th)] = 4;
                             }
                             else {
+                                // the trunk of the tree
                                 lpctx->pBlockArray[GRIDIDX(xc, yc, h + th)] = 3;
                             }
                         }
@@ -295,13 +297,23 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     || lpctx->pBlockArray[idx] == 3
                     || lpctx->pBlockArray[idx] == 4) {
 
+                    int64_t topGroupId = TEX_GRASS;
+                    int64_t sideGroupId = TEX_DIRTGRASS;
+                    int64_t bottomGroupId = TEX_DIRT;
+                    if (lpctx->pBlockArray[idx] == 4) {
+                        topGroupId = TEX_LEAVES;
+                        sideGroupId = TEX_LEAVES;
+                        bottomGroupId = TEX_LEAVES;
+                        printf("leaves\n");
+                    }
+
                     //size_t numVerts = lpctx->vertices4.size();
 
                     // check for block on bottom (-z)
                     if (zc > 0) {
                         if (lpctx->pBlockArray[GRIDIDX(xc, yc, zc - 1)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
-                                lpctx->groups[TEX_DIRT].vertices.push_back({
+                                lpctx->groups[bottomGroupId].vertices.push_back({
                                     glm::vec3(xlate * locs[bottomVertexIndices[v]]),
                                     texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]]
                                     });
@@ -311,7 +323,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[TEX_DIRT].vertices.push_back({
+                            lpctx->groups[bottomGroupId].vertices.push_back({
                                 glm::vec3(xlate * locs[bottomVertexIndices[v]]),
                                 texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]]
                                 });
@@ -323,7 +335,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     {
                         if (lpctx->pBlockArray[GRIDIDX(xc, yc, zc + 1)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
-                                lpctx->groups[TEX_GRASS].vertices.push_back({
+                                lpctx->groups[topGroupId].vertices.push_back({
                                     glm::vec3(xlate * locs[topVertexIndices[v]]),
                                     texcrds[topVertexIndices[v]],normals[topVertexIndices[v]]
                                     });
@@ -332,7 +344,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[TEX_GRASS].vertices.push_back({
+                            lpctx->groups[topGroupId].vertices.push_back({
                                 glm::vec3(xlate * locs[topVertexIndices[v]]),
                                 texcrds[topVertexIndices[v]],normals[topVertexIndices[v]]
                                 });
@@ -344,7 +356,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     {
                         if (lpctx->pBlockArray[GRIDIDX(xc + 1, yc, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
-                                lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
+                                lpctx->groups[sideGroupId].vertices.push_back({
                                     glm::vec3(xlate * locs[plusxVertexIndices[v]]),
                                     texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]]
                                     });
@@ -353,7 +365,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
+                            lpctx->groups[sideGroupId].vertices.push_back({
                                 glm::vec3(xlate * locs[plusxVertexIndices[v]]),
                                 texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]]
                                 });
@@ -365,7 +377,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     {
                         if (lpctx->pBlockArray[GRIDIDX(xc - 1, yc, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
-                                lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
+                                lpctx->groups[sideGroupId].vertices.push_back({
                                     glm::vec3(xlate * locs[minusxVertexIndices[v]]),
                                     texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]]
                                     });
@@ -374,7 +386,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
+                            lpctx->groups[sideGroupId].vertices.push_back({
                                 glm::vec3(xlate * locs[minusxVertexIndices[v]]),
                                 texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]]
                                 });
@@ -386,7 +398,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     {
                         if (lpctx->pBlockArray[GRIDIDX(xc, yc + 1, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
-                                lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
+                                lpctx->groups[sideGroupId].vertices.push_back({
                                     glm::vec3(xlate * locs[plusyVertexIndices[v]]),
                                     texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]]
                                     });
@@ -395,7 +407,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
+                            lpctx->groups[sideGroupId].vertices.push_back({
                                 glm::vec3(xlate * locs[plusyVertexIndices[v]]),
                                 texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]]
                                 });
@@ -407,7 +419,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     {
                         if (lpctx->pBlockArray[GRIDIDX(xc, yc - 1, zc)] != 1) {
                             for (int64_t v = 0; v < 6; v++) {
-                                lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
+                                lpctx->groups[sideGroupId].vertices.push_back({
                                     glm::vec3(xlate * locs[minusyVertexIndices[v]]),
                                     texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]]
                                     });
@@ -416,7 +428,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
                     else {
                         for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[TEX_DIRTGRASS].vertices.push_back({
+                            lpctx->groups[sideGroupId].vertices.push_back({
                                 glm::vec3(xlate * locs[minusyVertexIndices[v]]),
                                 texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]]
                                 });

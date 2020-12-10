@@ -25,6 +25,7 @@
 #define TEX_DIRT 0
 #define TEX_DIRTGRASS 1
 #define TEX_GRASS 2
+#define TEX_LEAVES 3
 
 #include <Windows.h>
 #include <gl/GL.h>

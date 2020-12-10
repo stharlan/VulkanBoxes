@@ -37,7 +37,9 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 
 void main()
 {
-    vec3 color = texture( texs, UV ).rgb;
+    vec4 c4 = texture( texs, UV );
+    if(c4.a < 0.5f) discard;
+    vec3 color = c4.rgb;
     vec3 ambient = vec3(0.8, 0.8, 0.8);
     float shadow = ShadowCalculation(FragPosLightSpace);   
     outColor = vec4((ambient * shadow) * color,1.0f);

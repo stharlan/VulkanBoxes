@@ -32,12 +32,16 @@ int WINAPI WinMain(
     wc.style = CS_HREDRAW | CS_VREDRAW;
     RegisterClass(&wc);
 
-    VOXC_WINDOW_CONTEXT* lpctx = new VOXC_WINDOW_CONTEXT();
-    lpctx->screenWidth = 1024;
-    lpctx->screenHeight = 768;
-
     DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;           // Window Extended Style
     DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE; // Windows Style
+
+    RECT wr = {0,0,1024,768};
+
+    AdjustWindowRect(&wr, dwStyle, FALSE);
+
+    VOXC_WINDOW_CONTEXT* lpctx = new VOXC_WINDOW_CONTEXT();
+    lpctx->screenWidth = wr.right;
+    lpctx->screenHeight = wr.bottom;
 
     HWND hwnd = CreateWindowEx(
         dwExStyle,
@@ -45,8 +49,8 @@ int WINAPI WinMain(
         L"GLCS View",
         dwStyle,
         CW_USEDEFAULT, CW_USEDEFAULT,
-        lpctx->screenWidth,
-        lpctx->screenHeight,
+        wr.right,
+        wr.bottom,
         NULL,
         NULL,
         hInstance,

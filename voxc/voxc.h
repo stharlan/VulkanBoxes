@@ -75,7 +75,7 @@ typedef struct _VOXC_WINDOW_CONTEXT
     HANDLE hQuitEvent = 0;
     HANDLE hRenderThread = 0;
     BYTE* rawBuffer[48];
-    int keys[5] = { 0,0,0,0,0 };
+    int keys[6] = { 0,0,0,0,0,0 };
     //float ex = 10.0f;
     //float ey = 10.0f;
     //float ez = 50.0f;

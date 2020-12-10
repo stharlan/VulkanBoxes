@@ -103,6 +103,8 @@ int WINAPI WinMain(
 
     delete lpctx;
 
+    getchar();
+
     FreeConsole();
     ShowCursor(TRUE);
 

@@ -55,6 +55,9 @@ LRESULT CALLBACK WndProc(
                 case 44: // z
                     //lpctx->ez -= 1.0f;
                     break;
+                case 42: // shift
+                    lpctx->keys[5] = 1;
+                    break;
                 case 1:
                     DestroyWindow(hwnd);
                     break;
@@ -80,6 +83,9 @@ LRESULT CALLBACK WndProc(
                     break;
                 case 57:
                     lpctx->keys[4] = 0;
+                    break;
+                case 42: // shift
+                    lpctx->keys[5] = 0;
                     break;
                 }
             }

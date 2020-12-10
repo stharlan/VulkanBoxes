@@ -4,7 +4,7 @@
 void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64_t yint, int64_t zint)
 {
 
-    printf("add actors\n");
+    //printf("add actors\n");
 
     int64_t idx = 0;
 
@@ -361,6 +361,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
     LARGE_INTEGER perfFreq = { 0 };
     LARGE_INTEGER lastCount = { 0 };
     int64_t elapsedTicks = 0;
+    float elps[10];
+    int64_t elpsCtr = 0;
 
     QueryPerformanceCounter(&perfCount);
     lastCount = perfCount;
@@ -376,7 +378,12 @@ DWORD WINAPI RenderThread(LPVOID parm)
         // calculate elapsed seconds
         QueryPerformanceCounter(&perfCount);
         elapsedTicks = perfCount.QuadPart - lastCount.QuadPart;
-        float elapsed = (float)elapsedTicks / (float)perfFreq.QuadPart;
+        lastCount = perfCount;
+        elps[elpsCtr] = (float)elapsedTicks / (float)perfFreq.QuadPart;
+        elpsCtr++;
+        if (elpsCtr > 9) elpsCtr = 0;
+        float elapsed = (elps[0] + elps[1] + elps[2] + elps[3] + elps[4]
+            + elps[5] + elps[6] + elps[7] + elps[8] + elps[9]) / 10.0f;
 
         // physics here
 
@@ -391,12 +398,14 @@ DWORD WINAPI RenderThread(LPVOID parm)
         // apply gravity to vz
         if (lpctx->keys[4] == 1)
         {
-            lpctx->vz = 0.5f;
+            lpctx->vz = 8.0f;
             lpctx->keys[4] = 0;
         }
         else {
-            lpctx->vz += (float)elapsed / -1000.0f;
+            lpctx->vz += (float)elapsed * -15.0f; // accel due to gravity
         }
+
+        //printf("elps %.6f velz = %.3f\n", elapsed, lpctx->vz);
 
         //case 17: // w
         ////lpctx->mx += cosf(DEG2RAD(lpctx->azimuth));
@@ -419,18 +428,19 @@ DWORD WINAPI RenderThread(LPVOID parm)
         //lpctx->keys[3] = 1;
         //break;
 
-        float speed = elapsed / 20.0f;
+        float speed = elapsed * 10.0f;
+        if (lpctx->keys[5] == 1) speed *= 2.0f;
         float mx = 0.0f, my = 0.0f;
         if (lpctx->keys[0] == 1) { // w
             mx += cosf(DEG2RAD(lpctx->azimuth)) * speed;
             my += sinf(DEG2RAD(lpctx->azimuth)) * speed;
         }
-        else if (lpctx->keys[1] == 1) // a
+        else if (lpctx->keys[2] == 1) // s
         {
             mx += cosf(DEG2RAD(lpctx->azimuth)) * -speed;
             my += sinf(DEG2RAD(lpctx->azimuth)) * -speed;
         }
-        if (lpctx->keys[2] == 1) // s
+        if (lpctx->keys[1] == 1) // a
         {
             mx += sinf(DEG2RAD(lpctx->azimuth)) * -speed;
             my += cosf(DEG2RAD(lpctx->azimuth)) * speed;

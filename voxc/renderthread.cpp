@@ -226,12 +226,12 @@ void LoadTextures(const char* filename[], int numFilenames, VOXC_WINDOW_CONTEXT*
     }
 }
 
-void RenderText(OpenGlProgram& prog, std::string text, float x, float y, float scale, glm::vec3 color,
+void RenderText(VOXC_WINDOW_CONTEXT* lpctx, OpenGlProgram& prog, std::string text, float x, float y, float scale, glm::vec3 color,
     GLuint VAO, GLuint VBO, std::map<char, Character>& Characters)
 {
     // activate corresponding render state	
     prog.Use();
-    glm::mat4 fontProjection = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
+    glm::mat4 fontProjection = glm::ortho(0.0f, (float)lpctx->screenWidth, 0.0f, (float)lpctx->screenHeight);
     prog.SetUniform3f("textColor", color.x, color.y, color.z);
     prog.SetUniformMatrix4fv("projection", &fontProjection[0][0]);
     glActiveTexture(GL_TEXTURE0);
@@ -377,8 +377,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glEnable(GL_TEXTURE_2D);
-    //glEnable(GL_BLEND);
-    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
        
     OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
     voxcProgram.Use();
@@ -515,6 +513,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
     setupFreeType(Characters, &fontVAO, &fontVBO);
     printf("%i %i\n", fontVAO, fontVBO);
     // end freetype
+
+    char* textBuffer = (char*)malloc(256);
 
     while (TRUE)
     {
@@ -690,7 +690,12 @@ DWORD WINAPI RenderThread(LPVOID parm)
         // render text
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        RenderText(fontProg, "This is sample text", 25.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+        memset(textBuffer, 0, 256);
+        sprintf_s(textBuffer, 256, "FPS: %i", (int)floorf(1 / elapsed));
+        RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - 55.0f, 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+        memset(textBuffer, 0, 256);
+        sprintf_s(textBuffer, 256, "POS: %.1f %.1f %.1f  AZ %.1f  EL %.1f", pos.x, pos.y, pos.z, lpctx->azimuth, lpctx->elevation);
+        RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (1.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
         glDisable(GL_BLEND);
 
         // render depth map
@@ -708,6 +713,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glUseProgram(0);
 
     }
+
+    free(textBuffer);
 
     glUseProgram(0);
    

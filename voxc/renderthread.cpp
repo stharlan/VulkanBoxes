@@ -1,4 +1,3 @@
- 
 #include "voxc.h"
 
 void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64_t yint, int64_t zint)
@@ -406,7 +405,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     LoadTextures(fnArray, 4, lpctx); 
 
     // physics: must be done before create vertex buffer
-    glm::vec3 startingPosition(10, 10, 50);
+    glm::vec3 startingPosition(265, 249, 110);
     initPhysics(lpctx, startingPosition);
     // end physics
 

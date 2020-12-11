@@ -28,6 +28,13 @@
 #define TEX_GRASS 2
 #define TEX_LEAVES 3
 
+#define SURR_ON_TOP    0x01
+#define SURR_PLUS_X    0x02
+#define SURR_MINUS_X   0x04
+#define SURR_PLUS_Y    0x08
+#define SURR_MINUS_Y   0x10
+#define SURR_ON_BOTTOM 0x20
+
 #include <Windows.h>
 #include <gl/GL.h>
 #include <stdio.h>
@@ -192,5 +199,6 @@ void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx);
 
 typedef void(*CALLBACK_BLOCKS_FOREACH)(BLOCK_ENTITY*);
 void blocks_foreach(VOXC_WINDOW_CONTEXT*, CALLBACK_BLOCKS_FOREACH);
+uint8_t block_get_surround_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 
 #include "OpenGlProgram.h"

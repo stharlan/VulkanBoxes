@@ -265,11 +265,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
     stbi_uc* pixels = stbi_load("c:\\temp\\height8.png", &texWidth, &texHeight,
         &texChannels, 1);
 
-    //lpctx->pBlockArray = (int8_t*)malloc(X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(int8_t));
-    //memset(lpctx->pBlockArray, 0, X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(int8_t));
-    //lpctx->pStaticBlockArray = (physx::PxRigidStatic**)malloc(X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(physx::PxRigidStatic*));
-    //memset(lpctx->pStaticBlockArray, 0, X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT * sizeof(physx::PxRigidStatic*));
-
+    printf("assigning block types\n");
     // assign blocks to level 0
     for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
         for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
@@ -278,7 +274,6 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 
             if (h < 1) h = 1;
             for (int64_t zc = 0; zc < h; zc++) {
-                //lpctx->pBlockArray[GRIDIDX(xc, yc, zc)] = 1;
                 block_set_type(lpctx, xc, yc, zc, 1);
             }
 
@@ -288,7 +283,6 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                 if (rand() % 100 == 1)
                 {
                     // flower
-                    //lpctx->pBlockArray[GRIDIDX(xc, yc, h)] = 2;
                     block_set_type(lpctx, xc, yc, h, 2);
                 }
                 else if (rand() % 1000 == 1) {
@@ -297,12 +291,10 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if ((h + th) < Z_GRID_EXTENT) {
                             if (th == 5) {
                                 // the top of the tree (leaves)
-                                //lpctx->pBlockArray[GRIDIDX(xc, yc, h + th)] = 4;
                                 block_set_type(lpctx, xc, yc, h + th, 4);
                             }
                             else {
                                 // the trunk of the tree
-                                //lpctx->pBlockArray[GRIDIDX(xc, yc, h + th)] = 3;
                                 block_set_type(lpctx, xc, yc, h + th, 3);
                             }
                         }
@@ -312,12 +304,45 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
         }
     }
 
-    blocks_foreach(lpctx, [](BLOCK_ENTITY* pBlock) {
-        printf("%i", pBlock->type);
-    });
-
     stbi_image_free(pixels);
 
+    printf("assigning surround values\n");
+    for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
+        for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
+            for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
+                int64_t idx = GRIDIDX(xc, yc, zc);
+                if (zc < (Z_GRID_EXTENT - 1))
+                {
+                    int8_t t = block_get_type(lpctx, xc, yc, zc + 1);
+                    if (t == 1 || t == 3 || t == 4) lpctx->blockEntities[idx].surround |= SURR_ON_TOP;
+                }
+                if (zc > 0) {
+                    int8_t t = block_get_type(lpctx, xc, yc, zc - 1);
+                    if (t == 1 || t == 3 || t == 4) lpctx->blockEntities[idx].surround |= SURR_ON_BOTTOM;
+                }
+                if (xc < (X_GRID_EXTENT - 1))
+                {
+                    int8_t t = block_get_type(lpctx, xc + 1, yc, zc);
+                    if (t == 1 || t == 3 || t == 4) lpctx->blockEntities[idx].surround |= SURR_PLUS_X;
+                }
+                if (xc > 0) {
+                    int8_t t = block_get_type(lpctx, xc - 1, yc, zc);
+                    if (t == 1 || t == 3 || t == 4) lpctx->blockEntities[idx].surround |= SURR_MINUS_X;
+                }
+                if (yc < (Y_GRID_EXTENT - 1))
+                {
+                    int8_t t = block_get_type(lpctx, xc, yc + 1, zc);
+                    if (t == 1 || t == 3 || t == 4) lpctx->blockEntities[idx].surround |= SURR_PLUS_Y;
+                }
+                if (yc > 0) {
+                    int8_t t = block_get_type(lpctx, xc, yc - 1, zc);
+                    if (t == 1 || t == 3 || t == 4) lpctx->blockEntities[idx].surround |= SURR_MINUS_Y;
+                }
+            }
+        }
+    }
+
+    printf("creating vertex array and physics actors\n");
     for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
         for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
             for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
@@ -327,6 +352,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                 int64_t idx = GRIDIDX(xc, yc, zc);
 
                 int8_t blockType = block_get_type(lpctx, idx);
+                uint8_t mask = block_get_surround_mask(lpctx, idx);
                 if (blockType == 1 || blockType == 3 || blockType == 4) 
                 {
 
@@ -342,18 +368,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     uint64_t facesAdded = 0;
 
                     // check for block on bottom (-z)
-                    if (zc > 0) {
-                        if (block_get_type(lpctx, xc, yc, zc - 1) != 1) {
-                            for (int64_t v = 0; v < 6; v++) {
-                                lpctx->groups[bottomGroupId].vertices.push_back({
-                                    glm::vec3(xlate * locs[bottomVertexIndices[v]]),
-                                    texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]]
-                                    });
-                                facesAdded++;
-                            }
-                        }
-                    }
-                    else {
+                    if ((mask & SURR_ON_BOTTOM) == 0) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[bottomGroupId].vertices.push_back({
                                 glm::vec3(xlate * locs[bottomVertexIndices[v]]),
@@ -364,19 +379,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
 
                     // check for block on top (+z)
-                    if (zc < Z_GRID_EXTENT - 1)
-                    {
-                        if (block_get_type(lpctx, xc, yc, zc + 1) != 1) {
-                            for (int64_t v = 0; v < 6; v++) {
-                                lpctx->groups[topGroupId].vertices.push_back({
-                                    glm::vec3(xlate * locs[topVertexIndices[v]]),
-                                    texcrds[topVertexIndices[v]],normals[topVertexIndices[v]]
-                                    });
-                                facesAdded++;
-                            }
-                        }
-                    }
-                    else {
+                    if ((mask & SURR_ON_TOP) == 0) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[topGroupId].vertices.push_back({
                                 glm::vec3(xlate * locs[topVertexIndices[v]]),
@@ -387,19 +390,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
 
                     // check for block on +x
-                    if (xc < X_GRID_EXTENT - 1)
-                    {
-                        if (block_get_type(lpctx, xc + 1, yc, zc) != 1) {
-                            for (int64_t v = 0; v < 6; v++) {
-                                lpctx->groups[sideGroupId].vertices.push_back({
-                                    glm::vec3(xlate * locs[plusxVertexIndices[v]]),
-                                    texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]]
-                                    });
-                                facesAdded++;
-                            }
-                        }
-                    }
-                    else {
+                    if ((mask & SURR_PLUS_X) == 0) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[sideGroupId].vertices.push_back({
                                 glm::vec3(xlate * locs[plusxVertexIndices[v]]),
@@ -410,19 +401,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
 
                     // check for block on -x
-                    if (xc > 0)
-                    {
-                        if (block_get_type(lpctx, xc - 1, yc, zc) != 1) {
-                            for (int64_t v = 0; v < 6; v++) {
-                                lpctx->groups[sideGroupId].vertices.push_back({
-                                    glm::vec3(xlate * locs[minusxVertexIndices[v]]),
-                                    texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]]
-                                    });
-                                facesAdded++;
-                            }
-                        }
-                    }
-                    else {
+                    if ((mask & SURR_MINUS_X) == 0) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[sideGroupId].vertices.push_back({
                                 glm::vec3(xlate * locs[minusxVertexIndices[v]]),
@@ -433,19 +412,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
 
                     // check for block on +y
-                    if (yc < Y_GRID_EXTENT - 1)
-                    {
-                        if (block_get_type(lpctx, xc, yc + 1, zc) != 1) {
-                            for (int64_t v = 0; v < 6; v++) {
-                                lpctx->groups[sideGroupId].vertices.push_back({
-                                    glm::vec3(xlate * locs[plusyVertexIndices[v]]),
-                                    texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]]
-                                    });
-                                facesAdded++;
-                            }
-                        }
-                    }
-                    else {
+                    if ((mask & SURR_PLUS_Y) == 0) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[sideGroupId].vertices.push_back({
                                 glm::vec3(xlate * locs[plusyVertexIndices[v]]),
@@ -456,19 +423,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
 
                     // check for block on -y
-                    if (yc > 0)
-                    {
-                        if (block_get_type(lpctx, xc, yc - 1, zc) != 1) {
-                            for (int64_t v = 0; v < 6; v++) {
-                                lpctx->groups[sideGroupId].vertices.push_back({
-                                    glm::vec3(xlate * locs[minusyVertexIndices[v]]),
-                                    texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]]
-                                    });
-                                facesAdded++;
-                            }
-                        }
-                    }
-                    else {
+                    if ((mask & SURR_MINUS_Y) == 0) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[sideGroupId].vertices.push_back({
                                 glm::vec3(xlate * locs[minusyVertexIndices[v]]),
@@ -481,26 +436,10 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     if(facesAdded > 0)
                     {
                         // create new actors
-                        //lpctx->pStaticBlockArray[idx] = lpctx->mPhysics->createRigidStatic(
-                            //physx::PxTransform(xc + 0.5f, yc + 0.5f, zc + 0.5f));
-                        //lpctx->pStaticBlockArray[idx]->attachShape(*lpctx->mBlockShape);
                         block_create_new_actor(lpctx, idx, xc, yc, zc);
                     }
-                    //else {
-                        //lpctx->pStaticBlockArray[idx] = NULL;
-
-                    //}
                 }
-                //else {
-                   // lpctx->pStaticBlockArray[idx] = NULL;
-                //}
             }
         }
-    }
-
-    std::vector<VERTEX_BUFFER_GROUP1>::iterator i = lpctx->groups.begin();
-    for (; i != lpctx->groups.end(); ++i)
-    {
-        i->vertices.shrink_to_fit();
     }
 }

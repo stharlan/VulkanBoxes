@@ -1,13 +1,6 @@
 
 #include "voxc.h"
 
-#define ON_TOP    0x01
-#define PLUS_X    0x02
-#define MINUS_X   0x04
-#define PLUS_Y    0x08
-#define MINUS_Y   0x10
-#define ON_BOTTOM 0x20
-
 void block_set_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type)
 {
 	lpctx->blockEntities[GRIDIDX(x, y, z)].type = type;
@@ -50,8 +43,10 @@ void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx)
 void blocks_foreach(VOXC_WINDOW_CONTEXT* lpctx, CALLBACK_BLOCKS_FOREACH fn)
 {
 	std::vector<BLOCK_ENTITY>::iterator iter = lpctx->blockEntities.begin();
-	for (; iter != lpctx->blockEntities.end(); ++iter)
-	{
-		fn(&*iter);
-	}
+	for (; iter != lpctx->blockEntities.end(); ++iter) fn(&*iter);
+}
+
+uint8_t block_get_surround_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
+{
+	return lpctx->blockEntities[index].surround;
 }

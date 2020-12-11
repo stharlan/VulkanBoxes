@@ -339,6 +339,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
     // end physics
 
     CreateVertexBuffer(lpctx);
+    for (int i = 0; i < 4; i++) {
+        printf("vb %i contains %i vertices\n", i, lpctx->groups[i].vertices.size());
+    }
 
     // vertex buffer
     std::vector<GLuint> vbos(4);

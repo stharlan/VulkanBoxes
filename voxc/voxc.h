@@ -90,6 +90,30 @@ typedef struct _BLOCK_ENTITY
     uint8_t surround;
 } BLOCK_ENTITY, * PBLOCK_ENTITY;
 
+#define TEXTURE_INDEX_TOP 0
+#define TEXTURE_INDEX_BOTTOM 1
+#define TEXTURE_INDEX_PLUSX 2
+#define TEXTURE_INDEX_MINUSX 3
+#define TEXTURE_INDEX_PLUSY 4
+#define TEXTURE_INDEX_MINUSY 5
+
+#define TEXTURE_IMG_DIRT 0
+#define TEXTURE_IMG_DIRTGRASS 1
+#define TEXTURE_IMG_GRASS 2
+#define TEXTURE_IMG_LEAVES 3
+
+#define REG_AIR 0
+#define REG_DIRT 1
+#define REG_DIRTGRASS 2
+#define REG_TREETRUNK 3
+#define REG_TREELEAVES 4
+
+typedef struct _BLOCK_REG
+{
+    int64_t regType = 0;
+    int64_t textureIndex[6] = { 0,0,0,0,0,0 };
+} BLOCK_REG, * PBLOCK_REG;
+
 typedef struct _VOXC_WINDOW_CONTEXT
 {
     HANDLE hQuitEvent = 0;

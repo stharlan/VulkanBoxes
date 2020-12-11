@@ -1,6 +1,63 @@
 
 #include "voxc.h"
 
+//extern const GLuint topVertexIndices[];
+//extern const GLuint plusxVertexIndices[];
+//extern const GLuint minusxVertexIndices[];
+//extern const GLuint plusyVertexIndices[];
+//extern const GLuint minusyVertexIndices[];
+//extern const GLuint bottomVertexIndices[];
+//
+//extern const glm::vec4 locs[];
+//extern const glm::vec2 texcrds[];
+//extern const glm::vec3 normals[];
+
+BLOCK_REG blockRegistry[4] = {
+	{ REG_DIRT, {TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT}},
+	{ REG_DIRTGRASS, {TEXTURE_IMG_GRASS, TEXTURE_IMG_DIRT, TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS}},
+	{ REG_TREETRUNK, {TEXTURE_IMG_GRASS, TEXTURE_IMG_DIRT, TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS}},
+	{ REG_TREELEAVES, {TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES} }
+};
+
+//void block_add_block_geometry(VOXC_WINDOW_CONTEXT* lpctx, int64_t regType, int64_t x, int64_t y, int64_t z)
+//{
+//	glm::mat4 xlate = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+//	int64_t idx = GRIDIDX(x, y, z);
+//	for (int i = 0; i < 4; i++) {
+//		if (blockRegistry[i].regType == regType) {
+//
+//			uint64_t facesAdded = 0;
+//
+//			if ((lpctx->blockEntities[idx].surround & SURR_ON_TOP) == 0)
+//			{
+//				int64_t groupId = blockRegistry[i].textureIndex[TEXTURE_INDEX_TOP];
+//				for (int64_t v = 0; v < 6; v++) {
+//					lpctx->groups[groupId].vertices.push_back({
+//						glm::vec3(xlate * locs[topVertexIndices[v]]),
+//						texcrds[topVertexIndices[v]],
+//						normals[topVertexIndices[v]]
+//					});
+//					facesAdded++;
+//				}
+//			}
+//			if ((lpctx->blockEntities[idx].surround & SURR_ON_BOTTOM) == 0)
+//			{
+//				int64_t groupId = blockRegistry[i].textureIndex[TEXTURE_INDEX_BOTTOM];
+//				for (int64_t v = 0; v < 6; v++) {
+//					lpctx->groups[groupId].vertices.push_back({
+//						glm::vec3(xlate * locs[bottomVertexIndices[v]]),
+//						texcrds[bottomVertexIndices[v]],
+//						normals[bottomVertexIndices[v]]
+//					});
+//					facesAdded++;
+//				}
+//			}
+//
+//			return;
+//		}
+//	}
+//}
+
 void block_set_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type)
 {
 	lpctx->blockEntities[GRIDIDX(x, y, z)].type = type;

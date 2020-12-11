@@ -42,6 +42,7 @@ int WINAPI WinMain(
     VOXC_WINDOW_CONTEXT* lpctx = new VOXC_WINDOW_CONTEXT();
     lpctx->screenWidth = wr.right;
     lpctx->screenHeight = wr.bottom;
+    lpctx->blockEntities.resize(X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT);
 
     HWND hwnd = CreateWindowEx(
         dwExStyle,

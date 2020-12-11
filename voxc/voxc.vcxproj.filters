@@ -45,6 +45,9 @@
     <ClCompile Include="physics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="blocks.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="voxc.h">
@@ -88,6 +91,8 @@
     <Text Include="ffont.txt">
       <Filter>Shaders</Filter>
     </Text>
+    <Text Include="selcube.frag" />
+    <Text Include="selcube.vert" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="vocxdirt.png">
@@ -116,13 +121,5 @@
     <Font Include="FiraCode-Regular.ttf">
       <Filter>fonts</Filter>
     </Font>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="selcube.vert">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="selcube.frag">
-      <Filter>Shaders</Filter>
-    </None>
   </ItemGroup>
 </Project>

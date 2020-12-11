@@ -17,9 +17,9 @@
 
 #define FCLAMP(v,i,x) (v < i ? i : (v > x ? x : v))
 
-#define X_GRID_EXTENT 512
-#define Y_GRID_EXTENT 512
-#define Z_GRID_EXTENT 256
+#define X_GRID_EXTENT 512ll
+#define Y_GRID_EXTENT 512ll
+#define Z_GRID_EXTENT 256ll
 
 #define GRIDIDX(ix,iy,iz) (((iz) * X_GRID_EXTENT * Y_GRID_EXTENT) + ((iy) * X_GRID_EXTENT) + (ix))
 
@@ -75,20 +75,24 @@ typedef struct _VERTEX_BUFFER_GROUP1
     std::vector<VERTEX1> vertices;
 } VERTEX_BUFFER_GROUP1;
 
+// [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
+typedef struct _BLOCK_ENTITY
+{
+    int8_t type = 0; 
+    physx::PxRigidStatic* rigidStatic = NULL;
+    uint8_t surround;
+} BLOCK_ENTITY, * PBLOCK_ENTITY;
+
 typedef struct _VOXC_WINDOW_CONTEXT
 {
     HANDLE hQuitEvent = 0;
     HANDLE hRenderThread = 0;
     BYTE* rawBuffer[48];
     int keys[6] = { 0,0,0,0,0,0 };
-    //float ex = 10.0f;
-    //float ey = 10.0f;
-    //float ez = 50.0f;
     float vz = 0.0f;
     float elevation = 0.0f;
     float azimuth = 0.0f;
-    int8_t* pBlockArray = NULL; // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
-    physx::PxRigidStatic** pStaticBlockArray = NULL;
+    std::vector<BLOCK_ENTITY> blockEntities;
     std::vector<VERTEX_BUFFER_GROUP1> groups;
     float viewportRatio = 0.0f;
     bool isFullscreen = 0;
@@ -178,5 +182,15 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT*);
 void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition);
 void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx);
 GLuint CreateZeroCube();
+
+void block_set_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type);
+int8_t block_get_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z);
+int8_t block_get_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
+void block_create_new_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t xc, int64_t yc, int64_t zc);
+physx::PxRigidStatic* block_get_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
+void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx);
+
+typedef void(*CALLBACK_BLOCKS_FOREACH)(BLOCK_ENTITY*);
+void blocks_foreach(VOXC_WINDOW_CONTEXT*, CALLBACK_BLOCKS_FOREACH);
 
 #include "OpenGlProgram.h"

@@ -35,8 +35,15 @@ void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64
                         if (zbl >= 0 && zbl < Z_GRID_EXTENT)
                         {
                             idx = GRIDIDX(xbl, ybl, zbl);
-                            if (lpctx->pBlockArray[idx] == 1) {
-                                if (lpctx->pStaticBlockArray[idx]) lpctx->blocksAroundMe.push_back(lpctx->pStaticBlockArray[idx]);
+                            //if (lpctx->pBlockArray[idx] == 1) {
+                                //if (lpctx->pStaticBlockArray[idx]) lpctx->blocksAroundMe.push_back(lpctx->pStaticBlockArray[idx]);
+                            //}
+                            if (block_get_type(lpctx, idx) == 1) {
+                                physx::PxRigidStatic* lpActor = block_get_actor(lpctx, idx);
+                                if (lpActor != NULL)
+                                {
+                                    lpctx->blocksAroundMe.push_back(lpActor);
+                                }
                             }
                         }
                     }
@@ -470,7 +477,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
             texture,
             glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
             glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-            face->glyph->advance.x
+            (unsigned int)face->glyph->advance.x
         };
         Characters.insert(std::pair<char, Character>(c, character));
     }
@@ -649,7 +656,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
            
         glm::vec3 xlatevec = glm::vec3(floorf(xpos.x) + 0.5f, floorf(xpos.y) + 0.5f, floorf(xpos.z) - 1.5f);
         glm::mat4 zeroCubeModelt = glm::translate(glm::mat4(1.0f), xlatevec);
-        printf("az %.1f; pos %.1f, %.1f, %.1f\n", lpctx->azimuth, pos.x, pos.y, pos.z);
+        //printf("az %.1f; pos %.1f, %.1f, %.1f\n", lpctx->azimuth, pos.x, pos.y, pos.z);
          
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -701,16 +708,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     ReleaseDC(hwnd, hdc);
     wglDeleteContext(hglrc);
 
-    free(lpctx->pBlockArray);
-    for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
-        for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
-            for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
-                int64_t idx = GRIDIDX(xc, yc, zc);
-                if (lpctx->pStaticBlockArray[idx]) lpctx->pStaticBlockArray[idx]->release();
-            }
-        }
-    }
-    free(lpctx->pStaticBlockArray);
+    block_release_all_actors(lpctx);
 
     cleanupPhysics(lpctx);
 

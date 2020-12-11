@@ -289,7 +289,6 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
 void setupFreeType(std::map<char, Character>& Characters, GLuint* pfontVAO, GLuint* pfontVBO)
 {
 
-    printf("Configuring freetype...\n");
     GLenum err = glGetError();
     if (err != GL_NO_ERROR) printf("gl err %i\n", err);
 
@@ -357,17 +356,20 @@ void setupFreeType(std::map<char, Character>& Characters, GLuint* pfontVAO, GLui
 
 DWORD WINAPI RenderThread(LPVOID parm)
 {
+    // create the rendering contxt
     HWND hwnd = (HWND)parm;
     VOXC_WINDOW_CONTEXT* lpctx = (VOXC_WINDOW_CONTEXT*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     HDC hdc = GetDC(hwnd);
     HGLRC hglrc = createRenderingContext(hdc);
 
+    // load all the xtension functions
     if (FALSE == loadExtensionFunctions())
     {
         printf("Failed to load opengl extension functions.\n");
         return 0;
     }
 
+    // opengl configuration
     glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
     glFrontFace(GL_CCW);
     glClearDepth(1.0f);
@@ -378,10 +380,11 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glEnable(GL_TEXTURE_2D);
        
+    // load programs
     OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
     voxcProgram.Use();
-    voxcProgram.SetUniform1i("texs", 0);
-    voxcProgram.SetUniform1i("shadowMap", 1);
+    voxcProgram.SetUniform1i("texs", 0);        // one-time setup
+    voxcProgram.SetUniform1i("shadowMap", 1);   // one-time setup
     OpenGlProgram shadowProg("vshadow.txt", "fshadow.txt");
     OpenGlProgram ddProg("vsh2d.txt", "fsh2d.txt");
     OpenGlProgram fontProg("vfont.txt", "ffont.txt");
@@ -409,7 +412,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
 
     CreateVertexBuffer(lpctx);
     for (int i = 0; i < 4; i++) {
-        printf("vb %i contains %i vertices\n", i, lpctx->groups[i].vertices.size());
+        printf("vb %i contains %zi vertices\n", i, lpctx->groups[i].vertices.size());
     }
 
     // vertex buffer
@@ -432,7 +435,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
         { { 1, 1, 0 },{ 1, 1 }, {0,0,0} },
         { { 0.5, 1, 0 },{ 0, 1 }, {0,0,0} }
     };
-
     glCreateBuffers(1, &quadVbo1);
     glNamedBufferStorage(quadVbo1, sizeof(VERTEX1) * 6, quadVerts.data(), 0);
 
@@ -479,48 +481,45 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glm::vec3 eye1 = glm::vec3(0, 0, 200);
     glm::vec3 cntr1 = glm::vec3(X_GRID_EXTENT / 3, Y_GRID_EXTENT / 3, 50);
     glm::mat4 lightView1 = glm::lookAt(eye1, cntr1, glm::vec3(0.0f, 0.0f, 1.0f)); 
-    //glm::mat4 lightSpaceMatrix1 = lightProjection * lightView1;
-    //glm::vec3 lightDir = glm::normalize(cntr1 - eye1);
     // end shadows
 
-    glClearColor(0.9f, 0.9f, 1.0f, 1.0f);
-
-    glm::mat4 modelMatrix = glm::mat4(1.0f);
-
+    // performance monitoring
     LARGE_INTEGER perfCount = { 0 };
     LARGE_INTEGER perfFreq = { 0 };
     LARGE_INTEGER lastCount = { 0 };
     int64_t elapsedTicks = 0;
     float elps[10];
     int64_t elpsCtr = 0;
-
     QueryPerformanceCounter(&perfCount);
     lastCount = perfCount;
     QueryPerformanceFrequency(&perfFreq); // counts per second
 
+    // physx position
     physx::PxControllerFilters mCCFilters = { 0 };
     physx::PxExtendedVec3 pos;
 
+    // add initial set of actors based on starting location
     addActorsForCurrentLocation(lpctx,
         (int64_t)startingPosition.x,
         (int64_t)startingPosition.y,
         (int64_t)startingPosition.z);
 
-    // freetype
+    // freetype init
     GLuint fontVAO = 0;
     GLuint fontVBO = 0;
     std::map<char, Character> Characters;
     setupFreeType(Characters, &fontVAO, &fontVBO);
-    printf("%i %i\n", fontVAO, fontVBO);
-    // end freetype
-
     char* textBuffer = (char*)malloc(256);
 
+    // final prep
+    glClearColor(0.9f, 0.9f, 1.0f, 1.0f);
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+
+    // GO!
     while (TRUE)
     {
+        // check if done
         if (WAIT_OBJECT_0 == WaitForSingleObject(lpctx->hQuitEvent, 0)) break;
-
-        //
 
         // calculate elapsed seconds
         QueryPerformanceCounter(&perfCount);
@@ -532,8 +531,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
         float elapsed = (elps[0] + elps[1] + elps[2] + elps[3] + elps[4]
             + elps[5] + elps[6] + elps[7] + elps[8] + elps[9]) / 10.0f;
 
-        // physics here
-
         // apply gravity to vz
         if (lpctx->keys[4] == 1)
         {
@@ -544,6 +541,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
             lpctx->vz += (float)elapsed * -15.0f; // accel due to gravity
         }
 
+        // process walking/running
         float speed = elapsed * 10.0f;
         if (lpctx->keys[5] == 1) speed *= 2.0f;
         float mx = 0.0f, my = 0.0f;
@@ -567,21 +565,25 @@ DWORD WINAPI RenderThread(LPVOID parm)
             my += cosf(DEG2RAD(lpctx->azimuth)) * -speed;
         }
 
+        // move player
         physx::PxExtendedVec3 posb = lpctx->mController->getPosition();
         physx::PxControllerCollisionFlags cflags = lpctx->mController->move(
             physx::PxVec3(mx, my, lpctx->vz * elapsed),
             0.00f, // min dist
             elapsed, mCCFilters);
 
+        // if on ground, stop falling
         if (cflags.isSet(physx::PxControllerCollisionFlag::eCOLLISION_DOWN))
         {
             lpctx->vz = 0.0f;
         }
+
+        // simulate physics and get results
         lpctx->mScene->simulate(elapsed);
         lpctx->mScene->fetchResults(true);
-
         pos = lpctx->mController->getPosition();
 
+        // refresh physics actors based on location
         if (abs(lpctx->xblock - (int64_t)pos.x) > 4) {
             addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
         }
@@ -593,30 +595,30 @@ DWORD WINAPI RenderThread(LPVOID parm)
             addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
         }
 
-        // physics done
-
+        // render the shadow buffer
+        glm::vec3 lightLooking = glm::vec3(pos.x - 100, pos.y - 100, pos.z + 100);
+        glm::vec3 posLocation3 = glm::vec3(pos.x, pos.y, pos.z);
+        glm::vec3 lightDir = glm::normalize(posLocation3 - lightLooking);
+        glm::mat4 lightView = glm::lookAt(lightLooking, posLocation3, glm::vec3(0.0f, 0.0f, 1.0f));
+        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+        {
+            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+            glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            shadowProg.Use();
+            shadowProg.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
+            shadowProg.SetUniformMatrix4fv("model", &modelMatrix[0][0]);
+            RenderScene(lpctx);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+         
+        // process elevation to radians
         float sinfElevation = sinf(DEG2RAD(lpctx->elevation));
         sinfElevation = FCLAMP(sinfElevation, -0.99f, 0.99f);
         float invSinfElevation = 1.0f - fabs(sinfElevation);
 
-        shadowProg.Use();
-        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        
-        glm::vec3 lightLooking = glm::vec3(pos.x - 100, pos.y - 100, pos.z + 100);
-        glm::vec3 posLocation3 = glm::vec3(pos.x, pos.y, pos.z);
-        glm::mat4 lightView = glm::lookAt(lightLooking, posLocation3, glm::vec3(0.0f, 0.0f, 1.0f));
-        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-        glm::vec3 lightDir = glm::normalize(posLocation3 - lightLooking);
-
-        shadowProg.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
-        shadowProg.SetUniformMatrix4fv("model", &modelMatrix[0][0]);
-        RenderScene(lpctx);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-         
-        voxcProgram.Use();
-
+        // configure player matrices (view and projection)
+        // based on current location
         glm::mat4 viewMatrix = glm::lookAt(
             posLocation3,
             glm::vec3(
@@ -631,80 +633,91 @@ DWORD WINAPI RenderThread(LPVOID parm)
             0.01f,
             500.0f);
         
-        voxcProgram.SetUniformMatrix4fv("model", &modelMatrix[0][0]);
-        voxcProgram.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
-        voxcProgram.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
-        voxcProgram.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
-        voxcProgram.SetUniform3fv("lightDir", &lightDir[0]);
-         
-        glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
-        glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+        // render the main scene (the voxels)
+        {
+            glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
+            glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+            voxcProgram.Use();
+            voxcProgram.SetUniformMatrix4fv("model", &modelMatrix[0][0]);
+            voxcProgram.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
+            voxcProgram.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
+            voxcProgram.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
+            voxcProgram.SetUniform3fv("lightDir", &lightDir[0]);
+            glBindVertexArray(lpctx->vao);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, depthMap);
+            RenderScene(lpctx);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
 
-        glBindVertexArray(lpctx->vao);
-        
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, depthMap);
-
-        RenderScene(lpctx);
-        
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        // need alpha blending for next two items
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         // render selection cube
         // player is as pos.xyz
         // direction is azimuth
-        glm::vec3 xpos(pos.x, pos.y, pos.z);
-        int azmod = abs((int)lpctx->azimuth % 360);
-        if (azmod <= 45) {
-            xpos.x += 2.0f;
+        {
+            // offset the cube from the player
+            glm::vec3 xpos(pos.x, pos.y, pos.z);
+            int azmod = abs((int)lpctx->azimuth % 360);
+            if (azmod <= 45) {
+                xpos.x += 2.0f;
+            }
+            else if (azmod <= 135) {
+                xpos.y += 2.0f;
+            }
+            else if (azmod <= 225) {
+                xpos.x -= 2.0f;
+            }
+            else if (azmod <= 315) {
+                xpos.y -= 2.0f;
+            }
+            else {
+                xpos.x += 1.0f;
+            }
+            glm::vec3 xlatevec = glm::vec3(floorf(xpos.x) + 0.5f, floorf(xpos.y) + 0.5f, floorf(xpos.z) - 1.5f);
+            glm::mat4 zeroCubeModelt = glm::translate(glm::mat4(1.0f), xlatevec);
+
+            // draw selection cube
+            selCubeProg.Use();
+            selCubeProg.SetUniformMatrix4fv("model", &zeroCubeModelt[0][0]);
+            selCubeProg.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
+            selCubeProg.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
+            glBindVertexArray(lpctx->vao);
+            glVertexArrayVertexBuffer(lpctx->vao, 0, zeroCube, 0, 8 * sizeof(GLfloat));
+            glDrawArrays(GL_TRIANGLES, 0, (GLsizei)36);
+            // end sel cube
         }
-        else if (azmod <= 135) {
-            xpos.y += 2.0f;
-        }
-        else if (azmod <= 225) {
-            xpos.x -= 2.0f;
-        }
-        else if (azmod <= 315) {
-            xpos.y -= 2.0f;
-        }
-        else {
-            xpos.x += 1.0f;
-        }
-           
-        glm::vec3 xlatevec = glm::vec3(floorf(xpos.x) + 0.5f, floorf(xpos.y) + 0.5f, floorf(xpos.z) - 1.5f);
-        glm::mat4 zeroCubeModelt = glm::translate(glm::mat4(1.0f), xlatevec);
-        //printf("az %.1f; pos %.1f, %.1f, %.1f\n", lpctx->azimuth, pos.x, pos.y, pos.z);
-         
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        selCubeProg.Use();
-        selCubeProg.SetUniformMatrix4fv("model", &zeroCubeModelt[0][0]);
-        selCubeProg.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
-        selCubeProg.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
-        glBindVertexArray(lpctx->vao);
-        glVertexArrayVertexBuffer(lpctx->vao, 0, zeroCube, 0, 8 * sizeof(GLfloat));
-        glDrawArrays(GL_TRIANGLES, 0, (GLsizei)36);
-        glDisable(GL_BLEND);
-        // end sel cube
 
         // render text
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        memset(textBuffer, 0, 256);
-        sprintf_s(textBuffer, 256, "FPS: %i", (int)floorf(1 / elapsed));
-        RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - 55.0f, 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
-        memset(textBuffer, 0, 256);
-        sprintf_s(textBuffer, 256, "POS: %.1f %.1f %.1f  AZ %.1f  EL %.1f", pos.x, pos.y, pos.z, lpctx->azimuth, lpctx->elevation);
-        RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (1.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+        {
+            SYSTEMTIME systime = { 0 };
+            GetSystemTime(&systime);
+            memset(textBuffer, 0, 256);
+            sprintf_s(textBuffer, 256, "%02i:%02i:%02i %03i", systime.wHour, systime.wMinute, systime.wSecond, systime.wMilliseconds);
+            RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - 55.0f, 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+            memset(textBuffer, 0, 256);
+            sprintf_s(textBuffer, 256, "FPS: %i", (int)floorf(1 / elapsed));
+            RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (1.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+            memset(textBuffer, 0, 256);
+            sprintf_s(textBuffer, 256, "POS: %.1f %.1f %.1f  AZ %.1f  EL %.1f", pos.x, pos.y, pos.z, lpctx->azimuth, lpctx->elevation);
+            RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (2.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+        }
+
+        // disable blend
         glDisable(GL_BLEND);
 
         // render depth map
-        ddProg.Use();
-        glBindVertexArray(lpctx->vao);
-        glVertexArrayVertexBuffer(lpctx->vao, 0, quadVbo1, 0, 8 * sizeof(GLfloat));
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, depthMap);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        {
+            ddProg.Use();
+            glBindVertexArray(lpctx->vao);
+            glVertexArrayVertexBuffer(lpctx->vao, 0, quadVbo1, 0, 8 * sizeof(GLfloat));
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, depthMap);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
 
         glFlush();
 

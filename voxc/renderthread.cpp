@@ -231,9 +231,12 @@ void RenderText(OpenGlProgram& prog, std::string text, float x, float y, float s
 {
     // activate corresponding render state	
     prog.Use();
+    glm::mat4 fontProjection = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
     prog.SetUniform3f("textColor", color.x, color.y, color.z);
+    prog.SetUniformMatrix4fv("projection", &fontProjection[0][0]);
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(VAO);
+    glVertexArrayVertexBuffer(VAO, 0, VBO, 0, 4 * sizeof(GLfloat));
 
     // iterate through all characters
     std::string::const_iterator c;
@@ -259,9 +262,7 @@ void RenderText(OpenGlProgram& prog, std::string text, float x, float y, float s
         // render glyph texture over quad
         glBindTexture(GL_TEXTURE_2D, ch.TextureID);
         // update content of VBO memory
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glNamedBufferSubData(VBO, 0, sizeof(vertices), vertices);
         // render quad
         glDrawArrays(GL_TRIANGLES, 0, 6);
         // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
@@ -269,6 +270,7 @@ void RenderText(OpenGlProgram& prog, std::string text, float x, float y, float s
     }
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
+    glUseProgram(0);
 }
 
 void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
@@ -282,6 +284,75 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
         glDrawArrays(GL_TRIANGLES, 0, (GLsizei)iter->vertices.size());
     }
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void setupFreeType(std::map<char, Character>& Characters, GLuint* pfontVAO, GLuint* pfontVBO)
+{
+
+    printf("Configuring freetype...\n");
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) printf("gl err %i\n", err);
+
+    FT_Library ft;
+    FT_Init_FreeType(&ft);
+    FT_Face face;
+    FT_New_Face(ft, "FiraCode-Regular.ttf", 0, &face);
+    FT_Set_Pixel_Sizes(face, 0, 48);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // disable byte-alignment restriction
+
+    for (unsigned char c = 0; c < 128; c++)
+    {
+        // load character glyph 
+        if (FT_Load_Char(face, c, FT_LOAD_RENDER))
+        {
+            printf("load char err\n");
+            continue;
+        }
+        // generate texture
+        GLuint texId;
+        glGenTextures(1, &texId);
+        glBindTexture(GL_TEXTURE_2D, texId);
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RED,
+            face->glyph->bitmap.width,
+            face->glyph->bitmap.rows,
+            0,
+            GL_RED,
+            GL_UNSIGNED_BYTE,
+            face->glyph->bitmap.buffer
+        );
+        // set texture options
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // now store character for later use
+        Character character = {
+            texId,
+            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+            glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+            (unsigned int)face->glyph->advance.x
+        };
+        Characters.insert(std::pair<char, Character>(c, character));
+    }
+
+    FT_Done_Face(face);
+    FT_Done_FreeType(ft);
+
+    glCreateVertexArrays(1, pfontVAO);
+    glVertexArrayAttribBinding(*pfontVAO, 0, 0);
+    glVertexArrayAttribFormat(*pfontVAO, 0, 4, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayBindingDivisor(*pfontVAO, 0, 0);
+    glEnableVertexArrayAttrib(*pfontVAO, 0);
+
+    glCreateBuffers(1, pfontVBO);
+    glNamedBufferStorage(*pfontVBO, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_STORAGE_BIT);
+
+    err = glGetError();
+    if (err != GL_NO_ERROR) printf("gl err %i\n", err);
 }
 
 DWORD WINAPI RenderThread(LPVOID parm)
@@ -306,8 +377,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glEnable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
        
     OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
     voxcProgram.Use();
@@ -438,68 +509,11 @@ DWORD WINAPI RenderThread(LPVOID parm)
         (int64_t)startingPosition.z);
 
     // freetype
-    std::map<char, Character> Characters;    
-
-    FT_Library ft;
-    FT_Init_FreeType(&ft);
-    FT_Face face;
-    FT_New_Face(ft, "FiraCode-Regular.ttf", 0, &face);
-    FT_Set_Pixel_Sizes(face, 0, 48);
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // disable byte-alignment restriction
-
-    for (unsigned char c = 0; c < 128; c++)
-    {
-        // load character glyph 
-        if (FT_Load_Char(face, c, FT_LOAD_RENDER))
-        {
-            continue;
-        }
-        // generate texture
-        unsigned int texture;
-        glGenTextures(1, &texture);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RED,
-            face->glyph->bitmap.width,
-            face->glyph->bitmap.rows,
-            0,
-            GL_RED,
-            GL_UNSIGNED_BYTE,
-            face->glyph->bitmap.buffer
-        );
-        // set texture options
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        // now store character for later use
-        Character character = {
-            texture,
-            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-            glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-            (unsigned int)face->glyph->advance.x
-        };
-        Characters.insert(std::pair<char, Character>(c, character));
-    }
-
-    FT_Done_Face(face);
-    FT_Done_FreeType(ft);
-
-    glm::mat4 fontProjection = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
-
-    unsigned int fontVAO, fontVBO;
-    glGenVertexArrays(1, &fontVAO);
-    glGenBuffers(1, &fontVBO);
-    glBindVertexArray(fontVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, fontVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);  
+    GLuint fontVAO = 0;
+    GLuint fontVBO = 0;
+    std::map<char, Character> Characters;
+    setupFreeType(Characters, &fontVAO, &fontVBO);
+    printf("%i %i\n", fontVAO, fontVBO);
     // end freetype
 
     while (TRUE)
@@ -636,7 +650,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
 
-        // render sel cube
+        // render selection cube
         // player is as pos.xyz
         // direction is azimuth
         glm::vec3 xpos(pos.x, pos.y, pos.z);
@@ -673,15 +687,19 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glDisable(GL_BLEND);
         // end sel cube
 
+        // render text
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        RenderText(fontProg, "This is sample text", 25.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+        glDisable(GL_BLEND);
+
+        // render depth map
         ddProg.Use();
+        glBindVertexArray(lpctx->vao);
         glVertexArrayVertexBuffer(lpctx->vao, 0, quadVbo1, 0, 8 * sizeof(GLfloat));
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, depthMap);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        glBindTexture(GL_TEXTURE_2D, 0);
-
-        //RenderText(fontProg, "This is sample text", 25.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
 
         glFlush();
 
@@ -693,16 +711,26 @@ DWORD WINAPI RenderThread(LPVOID parm)
 
     glUseProgram(0);
    
+    glDeleteBuffers(1, &fontVBO);
+    glDeleteVertexArrays(1, &fontVAO);
+
+    //std::map<char, Character> Characters;
+    std::map<char, Character>::iterator citer = Characters.begin();
+    for (; citer != Characters.end(); ++citer)
+    {
+        glDeleteTextures(1, &citer->second.TextureID);
+    }
+
     glDeleteBuffers(1, &quadVbo1);
 
     glDeleteTextures(1, &depthMap);
     glDeleteFramebuffers(1, &depthMapFBO);
 
-    std::vector<VERTEX_BUFFER_GROUP1>::iterator iter = lpctx->groups.begin();
-    for (; iter != lpctx->groups.end(); ++iter)
+    std::vector<VERTEX_BUFFER_GROUP1>::iterator titer = lpctx->groups.begin();
+    for (; titer != lpctx->groups.end(); ++titer)
     {
-        glDeleteTextures(1, &iter->tid);
-        glDeleteBuffers(1, &iter->vbo);
+        glDeleteTextures(1, &titer->tid);
+        glDeleteBuffers(1, &titer->vbo);
     }
 
     glDeleteVertexArrays(1, &lpctx->vao);

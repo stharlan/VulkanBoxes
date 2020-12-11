@@ -24,9 +24,9 @@ PFNGLUNIFORM4FVPROC glUniform4fv = NULL;
 PFNGLUNIFORM3FVPROC glUniform3fv = NULL;
 PFNGLUNIFORM2FVPROC glUniform2fv = NULL;
 PFNGLUNIFORM1IPROC glUniform1i = NULL;
-PFNGLGENBUFFERSPROC glGenBuffers = NULL;
-PFNGLBINDBUFFERPROC glBindBuffer = NULL;
-PFNGLBUFFERDATAPROC glBufferData = NULL;
+//PFNGLGENBUFFERSPROC glGenBuffers = NULL;
+//PFNGLBINDBUFFERPROC glBindBuffer = NULL;
+//PFNGLBUFFERDATAPROC glBufferData = NULL;
 PFNGLGETATTRIBLOCATIONPROC glGetAttribLocation = NULL;
 PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer = NULL;
 PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray = NULL;
@@ -52,6 +52,7 @@ PFNGLVERTEXARRAYBINDINGDIVISORPROC glVertexArrayBindingDivisor = NULL;
 PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays = NULL;
 PFNGLUNIFORM3FPROC glUniform3f = NULL;
 PFNGLBUFFERSUBDATAPROC glBufferSubData = NULL;
+PFNGLNAMEDBUFFERSUBDATAPROC glNamedBufferSubData = NULL;
 
 BOOL loadExtensionFunctions()
 {
@@ -78,9 +79,9 @@ BOOL loadExtensionFunctions()
     GETPROC(PFNGLUNIFORM3FVPROC, glUniform3fv, "glUniform3fv");
     GETPROC(PFNGLUNIFORM1IPROC, glUniform1i, "glUniform1i");
     GETPROC(PFNGLUNIFORM2FVPROC, glUniform2fv, "glUniform2fv");
-    GETPROC(PFNGLGENBUFFERSPROC, glGenBuffers, "glGenBuffers");
-    GETPROC(PFNGLBINDBUFFERPROC, glBindBuffer, "glBindBuffer");
-    GETPROC(PFNGLBUFFERDATAPROC, glBufferData, "glBufferData");
+    //GETPROC(PFNGLGENBUFFERSPROC, glGenBuffers, "glGenBuffers");
+    //GETPROC(PFNGLBINDBUFFERPROC, glBindBuffer, "glBindBuffer");
+    //GETPROC(PFNGLBUFFERDATAPROC, glBufferData, "glBufferData");
     GETPROC(PFNGLGETATTRIBLOCATIONPROC, glGetAttribLocation, "glGetAttribLocation");
     GETPROC(PFNGLVERTEXATTRIBPOINTERPROC, glVertexAttribPointer, "glVertexAttribPointer");
     GETPROC(PFNGLENABLEVERTEXATTRIBARRAYPROC, glEnableVertexAttribArray, "glEnableVertexAttribArray");
@@ -106,6 +107,7 @@ BOOL loadExtensionFunctions()
     GETPROC(PFNGLDELETEVERTEXARRAYSPROC, glDeleteVertexArrays, "glDeleteVertexArrays");
     GETPROC(PFNGLUNIFORM3FPROC, glUniform3f, "glUniform3f");
     GETPROC(PFNGLBUFFERSUBDATAPROC, glBufferSubData, "glBufferSubData");
+    GETPROC(PFNGLNAMEDBUFFERSUBDATAPROC, glNamedBufferSubData, "glNamedBufferSubData");
 
     return TRUE;
 cleanup:

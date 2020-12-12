@@ -139,13 +139,14 @@ typedef struct _VERTEX
     glm::vec3 vertex;
     glm::vec2 texc;
     glm::vec3 norm;
-} VERTEX1;
+    int64_t userData[2];
+} VERTEX2;
 
 typedef struct _VERTEX_BUFFER_GROUP1
 {
     GLuint tid;
     GLuint vbo;
-    std::vector<VERTEX1> vertices;
+    std::vector<VERTEX2> vertices;
     int64_t vsize;
 } VERTEX_BUFFER_GROUP1;
 
@@ -157,6 +158,7 @@ typedef struct _BLOCK_ENTITY
     uint8_t surroundExistsMask = 0;
     uint8_t surroundAlphaMask = 0;
     uint8_t faceMask = 0;
+    int64_t hashCode = 0;
 } BLOCK_ENTITY, * PBLOCK_ENTITY;
 
 #define TEXTURE_INDEX_TOP 0
@@ -191,7 +193,7 @@ typedef struct _VOXC_WINDOW_CONTEXT
     HANDLE hQuitEvent = 0;
     HANDLE hRenderThread = 0;
     BYTE* rawBuffer[48];
-    int keys[6] = { 0,0,0,0,0,0 };
+    int keys[8] = { 0,0,0,0,0,0,0,0 };
     float vz = 0.0f;
     float elevation = 0.0f;
     float azimuth = 0.0f;
@@ -305,5 +307,6 @@ void blocks_foreach(VOXC_WINDOW_CONTEXT*, CALLBACK_BLOCKS_FOREACH);
 uint8_t block_get_surround_exists_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 uint8_t block_get_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 void block_set_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value);
+void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode);
 
 #include "OpenGlProgram.h"

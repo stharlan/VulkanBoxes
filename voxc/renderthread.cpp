@@ -342,7 +342,7 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
     {
         if(iter->vsize > 0) 
         {
-            glVertexArrayVertexBuffer(lpctx->vao, 0, iter->vbo, 0, 8 * sizeof(GLfloat));
+            glVertexArrayVertexBuffer(lpctx->vao, 0, iter->vbo, 0, 12 * sizeof(GLfloat));
             glBindTexture(GL_TEXTURE_2D, iter->tid);
             glDrawArrays(GL_TRIANGLES, 0, (GLsizei)iter->vsize);
         }
@@ -456,7 +456,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
 
         for(int i=0; i<materials.size(); i++)
         {
-            std::vector<VERTEX1> vertices;
+            std::vector<VERTEX2> vertices;
             for (const auto& shape : shapes)
             {
                 int64_t f = 0;
@@ -471,7 +471,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
                         //    materials[current_material_id].diffuse[1],
                         //    materials[current_material_id].diffuse[2]);
 
-                        VERTEX1 v;
+                        VERTEX2 v;
                         v.vertex = tr * glm::vec4(
                             attrib.vertices[3 * index.vertex_index + 0],
                             attrib.vertices[3 * index.vertex_index + 1],
@@ -488,6 +488,8 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
                             attrib.normals[3 * index.normal_index + 2],
                             1.0f
                         );
+                        v.userData[0] = 0;
+                        v.userData[1] = 0;
                         vertices.push_back(v);
                     }
                     f++;
@@ -496,7 +498,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
             if (vertices.size() > 0) {
                 VBO_DATA vboObject;
                 glCreateBuffers(1, &vboObject.vboId);
-                glNamedBufferStorage(vboObject.vboId, sizeof(VERTEX1) * vertices.size(), vertices.data(), 0);
+                glNamedBufferStorage(vboObject.vboId, sizeof(VERTEX2) * vertices.size(), vertices.data(), 0);
                 vboObject.numVerts = vertices.size();
                 vboObject.diffuseColor = glm::vec4(materials[i].diffuse[0], materials[i].diffuse[1], materials[i].diffuse[2], 1.0f);
                 printf("this material has %i vertices\n", vboObject.numVerts);
@@ -582,7 +584,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     {
         if (lpctx->groups[i].vertices.size() > 0) {
             lpctx->groups[i].vsize = lpctx->groups[i].vertices.size();
-            glNamedBufferStorage(vbos[i], sizeof(VERTEX1) * lpctx->groups[i].vertices.size(),
+            glNamedBufferStorage(vbos[i], sizeof(VERTEX2) * lpctx->groups[i].vertices.size(),
                 lpctx->groups[i].vertices.data(), 0);
             lpctx->groups[i].vertices.clear();
         }
@@ -598,16 +600,16 @@ DWORD WINAPI RenderThread(LPVOID parm)
 
     // vbo for 2d quad
     GLuint quadVbo1 = 0;
-    std::vector<VERTEX1> quadVerts = {
-        { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0} },
-        { { 1, 0.5, 0 },{ 1, 0 }, {0,0,0} },
-        { { 1, 1, 0 },{ 1, 1 }, {0,0,0} },
-        { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0} },
-        { { 1, 1, 0 },{ 1, 1 }, {0,0,0} },
-        { { 0.5, 1, 0 },{ 0, 1 }, {0,0,0} }
+    std::vector<VERTEX2> quadVerts = {
+        { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0, 0 } },
+        { { 1, 0.5, 0 },{ 1, 0 }, {0,0,0}, { 0, 0 } },
+        { { 1, 1, 0 },{ 1, 1 }, {0,0,0}, { 0, 0 } },
+        { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0, 0 } },
+        { { 1, 1, 0 },{ 1, 1 }, {0,0,0}, { 0, 0 } },
+        { { 0.5, 1, 0 },{ 0, 1 }, {0,0,0}, { 0, 0 } }
     };
     glCreateBuffers(1, &quadVbo1);
-    glNamedBufferStorage(quadVbo1, sizeof(VERTEX1) * 6, quadVerts.data(), 0);
+    glNamedBufferStorage(quadVbo1, sizeof(VERTEX2) * 6, quadVerts.data(), 0);
 
     GLuint zeroCube = CreateZeroCube();
 
@@ -792,7 +794,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
             // render model
             for (const auto& modelVboItem : modelVboData)
             {
-                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 8 * sizeof(GLfloat));
+                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 12 * sizeof(GLfloat));
                 glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
             }
 
@@ -845,7 +847,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
             for (const auto& modelVboItem : modelVboData)
             {
                 voxcProgram.SetUniform4fv("diffuseColor", &modelVboItem.diffuseColor[0]);
-                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 8 * sizeof(GLfloat));
+                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 12 * sizeof(GLfloat));
                 glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
             }
 
@@ -863,6 +865,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
         // direction is azimuth
         bool hitStatus = FALSE;
         physx::PxTransform gp;
+        BLOCK_ENTITY* hitBlock = NULL;
         {
             // offset the cube from the player
             //glm::vec3 xpos(pos.x, pos.y, pos.z);
@@ -896,9 +899,16 @@ DWORD WINAPI RenderThread(LPVOID parm)
                 physx::PxRaycastBuffer hit;
                 hitStatus = lpctx->mScene->raycast(origin + unitDir, unitDir, 5, hit);
                 if (hitStatus) {
+
                     gp = hit.block.actor->getGlobalPose();
-                    //printf("HIT! %i %.1f %.1f %.1f\n", timeGetTime(),
-                        //gp.p[0], gp.p[1], gp.p[2]);
+                    hitBlock = (BLOCK_ENTITY*)hit.block.actor->userData;
+
+                    // keys 6 left button destroys block
+                    // hitBlock is the block to update
+                    //hitBlock->type = 0;
+
+                    // keys 7 right button
+
 
                     glm::mat4 zeroCubeModelt = glm::translate(
                         glm::mat4(1.0f), 
@@ -907,27 +917,20 @@ DWORD WINAPI RenderThread(LPVOID parm)
                             floorf(gp.p[1]) + 0.5f,
                             floorf(gp.p[2]) + 0.5f));
 
+
+
                     // draw selection cube
                     selCubeProg.Use();
                     selCubeProg.SetUniformMatrix4fv("model", &zeroCubeModelt[0][0]);
                     selCubeProg.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
                     selCubeProg.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
                     glBindVertexArray(lpctx->vao);
-                    glVertexArrayVertexBuffer(lpctx->vao, 0, zeroCube, 0, 8 * sizeof(GLfloat));
+                    glVertexArrayVertexBuffer(lpctx->vao, 0, zeroCube, 0, 12 * sizeof(GLfloat));
                     glDrawArrays(GL_TRIANGLES, 0, (GLsizei)36);
                     glBindVertexArray(0);
                     // end sel cube
-
-                    //glUseProgram(0);
-                    //glBegin(GL_POINTS);
-                    //glColor3f(1, 0, 0);
-                    //glPointSize(10.0f);
-                    //glVertex3f(origin.x + unitDir.x, origin.y + unitDir.y, origin.z + unitDir.z);
-                    //glEnd();
                 }
-
             }
-
         }
 
         // render text
@@ -948,6 +951,13 @@ DWORD WINAPI RenderThread(LPVOID parm)
                 memset(textBuffer, 0, 256);
                 sprintf_s(textBuffer, 256, "HIT POS: %.1f %.1f %.1f", gp.p[0], gp.p[1], gp.p[2]);
                 RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (3.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+                if (hitBlock != NULL)
+                {
+                    memset(textBuffer, 0, 256);
+                    sprintf_s(textBuffer, 256, "T: %i F: %i A: %i S: %i H: 0x%08x", hitBlock->type, hitBlock->faceMask, hitBlock->surroundAlphaMask, hitBlock->surroundExistsMask,
+                        hitBlock->hashCode);
+                    RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (4.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+                }
             }
         }
 
@@ -958,7 +968,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
         {
             ddProg.Use();
             glBindVertexArray(lpctx->vao);
-            glVertexArrayVertexBuffer(lpctx->vao, 0, quadVbo1, 0, 8 * sizeof(GLfloat));
+            glVertexArrayVertexBuffer(lpctx->vao, 0, quadVbo1, 0, 12 * sizeof(GLfloat));
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, depthMap);
             glDrawArrays(GL_TRIANGLES, 0, 6);

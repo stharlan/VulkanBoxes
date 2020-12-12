@@ -76,6 +76,7 @@ void block_create_new_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t x
 	lpctx->blockEntities[index].rigidStatic = lpctx->mPhysics->createRigidStatic(
 		physx::PxTransform(xc + 0.5f, yc + 0.5f, zc + 0.5f));
 	lpctx->blockEntities[index].rigidStatic->attachShape(*lpctx->mBlockShape);
+	lpctx->blockEntities[index].rigidStatic->userData = (void*)&lpctx->blockEntities[GRIDIDX(xc, yc, zc)];
 }
 
 physx::PxRigidStatic* block_get_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
@@ -114,4 +115,9 @@ uint8_t block_get_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
 void block_set_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value)
 {
 	lpctx->blockEntities[index].faceMask = value;
+}
+
+void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode)
+{
+	lpctx->blockEntities[index].hashCode = hashCode;
 }

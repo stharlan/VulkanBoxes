@@ -302,23 +302,32 @@ GLuint CreateZeroCube()
 {
     glm::mat4 xz = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, -0.5f, -0.5f));
     glm::mat4 sc = glm::scale(glm::mat4(1.0f), glm::vec3(1.1f, 1.1f, 1.1f));
-    std::vector<VERTEX1> zeroCubeVerts;
+    std::vector<VERTEX2> zeroCubeVerts;
     for (int i = 0; i < 6; i++) 
-        zeroCubeVerts.push_back({ sc * (xz * locs[topVertexIndices[i]]), texcrds[topVertexIndices[i]], normals[topVertexIndices[i]], });
+        zeroCubeVerts.push_back({ sc * (xz * locs[topVertexIndices[i]]), texcrds[topVertexIndices[i]], normals[topVertexIndices[i]], {0,0} });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[bottomVertexIndices[i]]), texcrds[bottomVertexIndices[i]], normals[bottomVertexIndices[i]], });
+        zeroCubeVerts.push_back({ sc * (xz * locs[bottomVertexIndices[i]]), texcrds[bottomVertexIndices[i]], normals[bottomVertexIndices[i]], {0,0} });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[plusxVertexIndices[i]]), texcrds[plusxVertexIndices[i]], normals[plusxVertexIndices[i]], });
+        zeroCubeVerts.push_back({ sc * (xz * locs[plusxVertexIndices[i]]), texcrds[plusxVertexIndices[i]], normals[plusxVertexIndices[i]], {0,0} });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[minusxVertexIndices[i]]), texcrds[minusxVertexIndices[i]], normals[minusxVertexIndices[i]], });
+        zeroCubeVerts.push_back({ sc * (xz * locs[minusxVertexIndices[i]]), texcrds[minusxVertexIndices[i]], normals[minusxVertexIndices[i]], {0,0} });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[plusyVertexIndices[i]]), texcrds[plusyVertexIndices[i]], normals[plusyVertexIndices[i]], });
+        zeroCubeVerts.push_back({ sc * (xz * locs[plusyVertexIndices[i]]), texcrds[plusyVertexIndices[i]], normals[plusyVertexIndices[i]], {0,0} });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[minusyVertexIndices[i]]), texcrds[minusyVertexIndices[i]], normals[minusyVertexIndices[i]], });
+        zeroCubeVerts.push_back({ sc * (xz * locs[minusyVertexIndices[i]]), texcrds[minusyVertexIndices[i]], normals[minusyVertexIndices[i]], {0,0} });
     GLuint zeroCubeId = 0;
     glCreateBuffers(1, &zeroCubeId);
-    glNamedBufferStorage(zeroCubeId, sizeof(VERTEX1) * 36, zeroCubeVerts.data(), 0);
+    glNamedBufferStorage(zeroCubeId, sizeof(VERTEX2) * 36, zeroCubeVerts.data(), 0);
     return zeroCubeId;
+}
+
+static unsigned long
+sdbm(unsigned char* data, unsigned int length)
+{
+    unsigned long hash = 0;
+    for(int i=0; i<length; i++) 
+        hash = data[i] + (hash << 6) + (hash << 16) - hash;
+    return hash;
 }
 
 void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
@@ -494,17 +503,19 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
         for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
             for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
 
-                glm::mat4 xlate = glm::translate(glm::mat4(1.0f), glm::vec3(xc, yc, zc));
-
                 int64_t idx = GRIDIDX(xc, yc, zc);
 
                 int8_t blockType = block_get_type(lpctx, idx);
-                uint8_t existsMask = block_get_surround_exists_mask(lpctx, idx);
-                uint8_t alphaMask = block_get_surround_alpha_mask(lpctx, idx);
-                uint8_t faceMask = 0;
 
                 if(blockType)
                 {
+
+                    glm::vec3 translateVector = glm::vec3(xc, yc, zc);
+                    glm::mat4 xlate = glm::translate(glm::mat4(1.0f), translateVector);
+
+                    uint8_t existsMask = block_get_surround_exists_mask(lpctx, idx);
+                    uint8_t alphaMask = block_get_surround_alpha_mask(lpctx, idx);
+                    uint8_t faceMask = 0;
 
                     std::vector<BLOCK_REG>::iterator ifoundBlock = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
                     if (ifoundBlock == vBlockRegistry.end())
@@ -517,12 +528,15 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 
                     uint64_t facesAdded = 0;
 
+                    unsigned long hashCode = sdbm((unsigned char*)&translateVector[0], sizeof(glm::vec3));
+                    block_set_hash_code(lpctx, idx, hashCode);
+
                     // check for block on bottom (-z)
                     if ((existsMask & SURR_ON_BOTTOM) == 0 || (alphaMask & SURR_ON_BOTTOM)) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_BOTTOM]].vertices.push_back({
                                 glm::vec3(xlate * locs[bottomVertexIndices[v]]),
-                                texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]]
+                                texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]], {hashCode,0}
                                 });
                             facesAdded++;
                             faceMask |= SURR_ON_BOTTOM;
@@ -534,7 +548,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_TOP]].vertices.push_back({
                                 glm::vec3(xlate * locs[topVertexIndices[v]]),
-                                texcrds[topVertexIndices[v]],normals[topVertexIndices[v]]
+                                texcrds[topVertexIndices[v]],normals[topVertexIndices[v]], {hashCode,0}
                                 });
                             facesAdded++;
                             faceMask |= SURR_ON_TOP;
@@ -546,7 +560,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSX]].vertices.push_back({
                                 glm::vec3(xlate * locs[plusxVertexIndices[v]]),
-                                texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]]
+                                texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]], {hashCode,0}
                                 });
                             facesAdded++;
                             faceMask |= SURR_PLUS_X;
@@ -558,7 +572,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSX]].vertices.push_back({
                                 glm::vec3(xlate * locs[minusxVertexIndices[v]]),
-                                texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]]
+                                texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]], {hashCode,0}
                                 });
                             facesAdded++;
                             faceMask |= SURR_MINUS_X;
@@ -570,7 +584,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSY]].vertices.push_back({
                                 glm::vec3(xlate * locs[plusyVertexIndices[v]]),
-                                texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]]
+                                texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]], {hashCode,0}
                                 });
                             facesAdded++;
                             faceMask |= SURR_PLUS_Y;
@@ -582,7 +596,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSY]].vertices.push_back({
                                 glm::vec3(xlate * locs[minusyVertexIndices[v]]),
-                                texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]]
+                                texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]], {hashCode,0}
                                 });
                             facesAdded++;
                             faceMask |= SURR_MINUS_Y;

@@ -95,6 +95,10 @@ LRESULT CALLBACK WndProc(
             lpctx->elevation -= (raw->data.mouse.lLastY / 20.0f);
             lpctx->elevation = FCLAMP(lpctx->elevation, -90.0f, 90.0f);
             lpctx->azimuth -= (raw->data.mouse.lLastX / 20.0f);
+            if (raw->data.mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) lpctx->keys[6] = 1;
+            if (raw->data.mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP) lpctx->keys[6] = 0;
+            if (raw->data.mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) lpctx->keys[7] = 1;
+            if (raw->data.mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP) lpctx->keys[7] = 0;
         }
         return 0;
     case WM_CREATE:

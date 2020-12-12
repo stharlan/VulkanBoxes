@@ -34,10 +34,9 @@ void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64
                         if (zbl >= 0 && zbl < Z_GRID_EXTENT)
                         {
                             idx = GRIDIDX(xbl, ybl, zbl);
-                            //if (lpctx->pBlockArray[idx] == 1) {
-                                //if (lpctx->pStaticBlockArray[idx]) lpctx->blocksAroundMe.push_back(lpctx->pStaticBlockArray[idx]);
-                            //}
-                            if (block_get_type(lpctx, idx) == 1) {
+                            int64_t blockType = block_get_type(lpctx, idx);
+                            if (blockType == REG_DIRT || blockType == REG_DIRTGRASS) 
+                            {
                                 physx::PxRigidStatic* lpActor = block_get_actor(lpctx, idx);
                                 if (lpActor != NULL)
                                 {
@@ -278,9 +277,11 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
     glActiveTexture(GL_TEXTURE0);
     for (; iter != lpctx->groups.end(); ++iter)
     {
-        glVertexArrayVertexBuffer(lpctx->vao, 0, iter->vbo, 0, 8 * sizeof(GLfloat));
-        glBindTexture(GL_TEXTURE_2D, iter->tid);
-        glDrawArrays(GL_TRIANGLES, 0, (GLsizei)iter->vertices.size());
+        if (iter->vertices.size() > 0) {
+            glVertexArrayVertexBuffer(lpctx->vao, 0, iter->vbo, 0, 8 * sizeof(GLfloat));
+            glBindTexture(GL_TEXTURE_2D, iter->tid);
+            glDrawArrays(GL_TRIANGLES, 0, (GLsizei)iter->vertices.size());
+        }
     }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
@@ -288,8 +289,8 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
 void setupFreeType(std::map<char, Character>& Characters, GLuint* pfontVAO, GLuint* pfontVBO)
 {
 
-    GLenum err = glGetError();
-    if (err != GL_NO_ERROR) printf("gl err %i\n", err);
+    //GLenum err = glGetError();
+    //if (err != GL_NO_ERROR) printf("gl err %i\n", err);
 
     FT_Library ft;
     FT_Init_FreeType(&ft);
@@ -349,8 +350,8 @@ void setupFreeType(std::map<char, Character>& Characters, GLuint* pfontVAO, GLui
     glCreateBuffers(1, pfontVBO);
     glNamedBufferStorage(*pfontVBO, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_STORAGE_BIT);
 
-    err = glGetError();
-    if (err != GL_NO_ERROR) printf("gl err %i\n", err);
+    //err = glGetError();
+    //if (err != GL_NO_ERROR) printf("gl err %i\n", err);
 }
 
 DWORD WINAPI RenderThread(LPVOID parm)
@@ -390,19 +391,20 @@ DWORD WINAPI RenderThread(LPVOID parm)
     OpenGlProgram selCubeProg("selcube.vert", "selcube.frag");
 
     // if adding a new texture
-    // increase the cound in load textures
+    // increase the count in load textures
     // also, go to voxc.h and add another define
     // also, in vertex buffer creation below, increase count
-    const char* fnArray[] = {
-        "vocxdirt.png",
-        "vocxdirtgrass.png",
-        "vocxgrass.png",
-        "vocxleaves_t.png"
-
-    };
+    // also, createbuffers and loop below it
+    const char* fnArray[6];
+    fnArray[0] = "vocxdirt.png";    
+    fnArray[1] = "vocxdirtgrass.png";
+    fnArray[2] = "vocxgrass.png";
+    fnArray[3] = "vocxleaves_t.png";
+    fnArray[4] = "vocxwoodbark.png";
+    fnArray[5] = "vocxwoodrings.png";
     // after this, there will be one block group
     // for each texture 
-    LoadTextures(fnArray, 4, lpctx); 
+    LoadTextures(fnArray, 6, lpctx); 
 
     // physics: must be done before create vertex buffer
     glm::vec3 startingPosition(265, 249, 110);
@@ -410,18 +412,20 @@ DWORD WINAPI RenderThread(LPVOID parm)
     // end physics
 
     CreateVertexBuffer(lpctx);
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 6; i++) {
         printf("vb %i contains %zi vertices\n", i, lpctx->groups[i].vertices.size());
     }
 
     // vertex buffer
-    std::vector<GLuint> vbos(4);
-    glCreateBuffers(4, vbos.data());
-    for(int i=0; i<4; i++)
+    std::vector<GLuint> vbos(6);
+    glCreateBuffers(6, vbos.data());
+    for(int i=0; i<6; i++)
     {
-        glNamedBufferStorage(vbos[i], sizeof(VERTEX1) * lpctx->groups[i].vertices.size(),
-            lpctx->groups[i].vertices.data(), 0);
-        lpctx->groups[i].vbo = vbos[i];
+        if (lpctx->groups[i].vertices.size() > 0) {
+            glNamedBufferStorage(vbos[i], sizeof(VERTEX1) * lpctx->groups[i].vertices.size(),
+                lpctx->groups[i].vertices.data(), 0);
+            lpctx->groups[i].vbo = vbos[i];
+        }
     }
 
     // vbo for 2d quad
@@ -519,6 +523,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
     {
         // check if done
         if (WAIT_OBJECT_0 == WaitForSingleObject(lpctx->hQuitEvent, 0)) break;
+
+        
 
         // calculate elapsed seconds
         QueryPerformanceCounter(&perfCount);
@@ -753,6 +759,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
     }
 
     glDeleteVertexArrays(1, &lpctx->vao);
+
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) printf("gl err %i\n", err);
 
     wglMakeCurrent(hdc, nullptr);
     ReleaseDC(hwnd, hdc);

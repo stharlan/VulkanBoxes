@@ -107,6 +107,12 @@
     <Image Include="vocxleaves_t.png">
       <Filter>textures</Filter>
     </Image>
+    <Image Include="vocxwoodrings.png">
+      <Filter>textures</Filter>
+    </Image>
+    <Image Include="vocxwoodbark.png">
+      <Filter>textures</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="FiraCode-Bold.ttf">

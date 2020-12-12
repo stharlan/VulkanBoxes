@@ -1,6 +1,20 @@
 
 #include "voxc.h"
 
+std::vector<BLOCK_REG> vBlockRegistry = {
+    { REG_DIRT, {TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT}},
+    { REG_DIRTGRASS, {TEXTURE_IMG_GRASS, TEXTURE_IMG_DIRT, TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS}},
+    { REG_TREETRUNK, {TEXTURE_IMG_WOODRINGS,TEXTURE_IMG_WOODRINGS,TEXTURE_IMG_WOODBARK,TEXTURE_IMG_WOODBARK,TEXTURE_IMG_WOODBARK,TEXTURE_IMG_WOODBARK}},
+    { REG_TREELEAVES, {TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES} }
+};
+
+class BlockRegFindById : public std::unary_function<BLOCK_REG, bool> {
+    int64_t regtype;
+public:
+    explicit BlockRegFindById(const int64_t type) : regtype(type) {}
+    bool operator() (const BLOCK_REG &item) const { return item.regType == regtype; }
+};
+
 const GLuint topVertexIndices[6] = { 0, 1, 2, 2, 3, 0 };
 const GLuint plusxVertexIndices[6] = { 4, 5, 6, 6, 7, 4 };
 const GLuint minusxVertexIndices[6] = { 8, 9, 10, 10, 11, 8 };
@@ -274,7 +288,13 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 
             if (h < 1) h = 1;
             for (int64_t zc = 0; zc < h; zc++) {
-                block_set_type(lpctx, xc, yc, zc, 1);
+                if(zc == (h  - 1))
+                {
+                    block_set_type(lpctx, xc, yc, zc, REG_DIRTGRASS);
+                }
+                else {
+                    block_set_type(lpctx, xc, yc, zc, REG_DIRT);
+                }
             }
 
             // if the block is less than the z extent
@@ -282,8 +302,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
             if (h < Z_GRID_EXTENT) {
                 if (rand() % 100 == 1)
                 {
-                    // flower
-                    block_set_type(lpctx, xc, yc, h, 2);
+            //        // flower
+            //        block_set_type(lpctx, xc, yc, h, 2);
                 }
                 else if (rand() % 1000 == 1) {
                     // tree trunk
@@ -291,11 +311,11 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if ((h + th) < Z_GRID_EXTENT) {
                             if (th == 5) {
                                 // the top of the tree (leaves)
-                                block_set_type(lpctx, xc, yc, h + th, 4);
+                                block_set_type(lpctx, xc, yc, h + th, REG_TREELEAVES);
                             }
                             else {
                                 // the trunk of the tree
-                                block_set_type(lpctx, xc, yc, h + th, 3);
+                                block_set_type(lpctx, xc, yc, h + th, REG_TREETRUNK);
                             }
                         }
                     }
@@ -313,30 +333,24 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                 int64_t idx = GRIDIDX(xc, yc, zc);
                 if (zc < (Z_GRID_EXTENT - 1))
                 {
-                    int8_t t = block_get_type(lpctx, xc, yc, zc + 1);
-                    if (t == 1 || t == 3 || t == 4) lpctx->blockEntities[idx].surround |= SURR_ON_TOP;
+                    if(block_get_type(lpctx, xc, yc, zc + 1)) lpctx->blockEntities[idx].surround |= SURR_ON_TOP;
                 }
                 if (zc > 0) {
-                    int8_t t = block_get_type(lpctx, xc, yc, zc - 1);
-                    if (t == 1 || t == 3 || t == 4) lpctx->blockEntities[idx].surround |= SURR_ON_BOTTOM;
+                    if(block_get_type(lpctx, xc, yc, zc - 1)) lpctx->blockEntities[idx].surround |= SURR_ON_BOTTOM;
                 }
                 if (xc < (X_GRID_EXTENT - 1))
                 {
-                    int8_t t = block_get_type(lpctx, xc + 1, yc, zc);
-                    if (t == 1 || t == 3 || t == 4) lpctx->blockEntities[idx].surround |= SURR_PLUS_X;
+                    if(block_get_type(lpctx, xc + 1, yc, zc))  lpctx->blockEntities[idx].surround |= SURR_PLUS_X;
                 }
                 if (xc > 0) {
-                    int8_t t = block_get_type(lpctx, xc - 1, yc, zc);
-                    if (t == 1 || t == 3 || t == 4) lpctx->blockEntities[idx].surround |= SURR_MINUS_X;
+                    if(block_get_type(lpctx, xc - 1, yc, zc)) lpctx->blockEntities[idx].surround |= SURR_MINUS_X;
                 }
                 if (yc < (Y_GRID_EXTENT - 1))
                 {
-                    int8_t t = block_get_type(lpctx, xc, yc + 1, zc);
-                    if (t == 1 || t == 3 || t == 4) lpctx->blockEntities[idx].surround |= SURR_PLUS_Y;
+                    if(block_get_type(lpctx, xc, yc + 1, zc)) lpctx->blockEntities[idx].surround |= SURR_PLUS_Y;
                 }
                 if (yc > 0) {
-                    int8_t t = block_get_type(lpctx, xc, yc - 1, zc);
-                    if (t == 1 || t == 3 || t == 4) lpctx->blockEntities[idx].surround |= SURR_MINUS_Y;
+                    if(block_get_type(lpctx, xc, yc - 1, zc)) lpctx->blockEntities[idx].surround |= SURR_MINUS_Y;
                 }
             }
         }
@@ -353,24 +367,24 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 
                 int8_t blockType = block_get_type(lpctx, idx);
                 uint8_t mask = block_get_surround_mask(lpctx, idx);
-                if (blockType == 1 || blockType == 3 || blockType == 4) 
+                if(blockType)
                 {
 
-                    int64_t topGroupId = TEX_GRASS;
-                    int64_t sideGroupId = TEX_DIRTGRASS;
-                    int64_t bottomGroupId = TEX_DIRT;
-                    if (blockType == 4) {
-                        topGroupId = TEX_LEAVES;
-                        sideGroupId = TEX_LEAVES;
-                        bottomGroupId = TEX_LEAVES;
+                    std::vector<BLOCK_REG>::iterator ifoundBlock = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                    if (ifoundBlock == vBlockRegistry.end())
+                    {
+                        printf("block reg not found %i\n", blockType);
+                        continue;
                     }
+
+                    BLOCK_REG& fndBlock = *ifoundBlock;
 
                     uint64_t facesAdded = 0;
 
                     // check for block on bottom (-z)
                     if ((mask & SURR_ON_BOTTOM) == 0) {
                         for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[bottomGroupId].vertices.push_back({
+                            lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_BOTTOM]].vertices.push_back({
                                 glm::vec3(xlate * locs[bottomVertexIndices[v]]),
                                 texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]]
                                 });
@@ -381,7 +395,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     // check for block on top (+z)
                     if ((mask & SURR_ON_TOP) == 0) {
                         for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[topGroupId].vertices.push_back({
+                            lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_TOP]].vertices.push_back({
                                 glm::vec3(xlate * locs[topVertexIndices[v]]),
                                 texcrds[topVertexIndices[v]],normals[topVertexIndices[v]]
                                 });
@@ -392,7 +406,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     // check for block on +x
                     if ((mask & SURR_PLUS_X) == 0) {
                         for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[sideGroupId].vertices.push_back({
+                            lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSX]].vertices.push_back({
                                 glm::vec3(xlate * locs[plusxVertexIndices[v]]),
                                 texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]]
                                 });
@@ -403,7 +417,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     // check for block on -x
                     if ((mask & SURR_MINUS_X) == 0) {
                         for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[sideGroupId].vertices.push_back({
+                            lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSX]].vertices.push_back({
                                 glm::vec3(xlate * locs[minusxVertexIndices[v]]),
                                 texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]]
                                 });
@@ -414,7 +428,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     // check for block on +y
                     if ((mask & SURR_PLUS_Y) == 0) {
                         for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[sideGroupId].vertices.push_back({
+                            lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSY]].vertices.push_back({
                                 glm::vec3(xlate * locs[plusyVertexIndices[v]]),
                                 texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]]
                                 });
@@ -425,7 +439,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     // check for block on -y
                     if ((mask & SURR_MINUS_Y) == 0) {
                         for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[sideGroupId].vertices.push_back({
+                            lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSY]].vertices.push_back({
                                 glm::vec3(xlate * locs[minusyVertexIndices[v]]),
                                 texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]]
                                 });

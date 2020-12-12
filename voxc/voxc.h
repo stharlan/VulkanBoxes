@@ -23,11 +23,6 @@
 
 #define GRIDIDX(ix,iy,iz) (((iz) * X_GRID_EXTENT * Y_GRID_EXTENT) + ((iy) * X_GRID_EXTENT) + (ix))
 
-#define TEX_DIRT 0
-#define TEX_DIRTGRASS 1
-#define TEX_GRASS 2
-#define TEX_LEAVES 3
-
 #define SURR_ON_TOP    0x01
 #define SURR_PLUS_X    0x02
 #define SURR_MINUS_X   0x04
@@ -101,6 +96,8 @@ typedef struct _BLOCK_ENTITY
 #define TEXTURE_IMG_DIRTGRASS 1
 #define TEXTURE_IMG_GRASS 2
 #define TEXTURE_IMG_LEAVES 3
+#define TEXTURE_IMG_WOODBARK 4
+#define TEXTURE_IMG_WOODRINGS 5
 
 #define REG_AIR 0
 #define REG_DIRT 1

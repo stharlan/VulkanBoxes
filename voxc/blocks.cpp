@@ -101,7 +101,12 @@ void blocks_foreach(VOXC_WINDOW_CONTEXT* lpctx, CALLBACK_BLOCKS_FOREACH fn)
 	for (; iter != lpctx->blockEntities.end(); ++iter) fn(&*iter);
 }
 
-uint8_t block_get_surround_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
+uint8_t block_get_surround_exists_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
 {
-	return lpctx->blockEntities[index].surround;
+	return lpctx->blockEntities[index].surroundExistsMask;
+}
+
+uint8_t block_get_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
+{
+	return lpctx->blockEntities[index].surroundAlphaMask;
 }

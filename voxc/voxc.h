@@ -120,6 +120,12 @@
 #include "stb_image.h"
 #include "glext.h"
 
+typedef struct _TEXTURE_SPEC
+{
+    const char* name;
+    BOOL isTransparent;
+} TEXTURE_SPEC;
+
 typedef struct _VERTEX
 {
     glm::vec3 vertex;
@@ -132,6 +138,7 @@ typedef struct _VERTEX_BUFFER_GROUP1
     GLuint tid;
     GLuint vbo;
     std::vector<VERTEX1> vertices;
+    int64_t vsize;
 } VERTEX_BUFFER_GROUP1;
 
 // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
@@ -139,7 +146,8 @@ typedef struct _BLOCK_ENTITY
 {
     int8_t type = 0; 
     physx::PxRigidStatic* rigidStatic = NULL;
-    uint8_t surround;
+    uint8_t surroundExistsMask;
+    uint8_t surroundAlphaMask;
 } BLOCK_ENTITY, * PBLOCK_ENTITY;
 
 #define TEXTURE_INDEX_TOP 0
@@ -166,6 +174,7 @@ typedef struct _BLOCK_REG
 {
     int64_t regType = 0;
     int64_t textureIndex[6] = { 0,0,0,0,0,0 };
+    BOOL isTransparent = FALSE;
 } BLOCK_REG, * PBLOCK_REG;
 
 typedef struct _VOXC_WINDOW_CONTEXT
@@ -284,6 +293,7 @@ void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx);
 
 typedef void(*CALLBACK_BLOCKS_FOREACH)(BLOCK_ENTITY*);
 void blocks_foreach(VOXC_WINDOW_CONTEXT*, CALLBACK_BLOCKS_FOREACH);
-uint8_t block_get_surround_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
+uint8_t block_get_surround_exists_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
+uint8_t block_get_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 
 #include "OpenGlProgram.h"

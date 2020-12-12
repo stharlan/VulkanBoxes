@@ -2,10 +2,10 @@
 #include "voxc.h"
 
 std::vector<BLOCK_REG> vBlockRegistry = {
-    { REG_DIRT, {TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT}},
-    { REG_DIRTGRASS, {TEXTURE_IMG_GRASS, TEXTURE_IMG_DIRT, TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS}},
-    { REG_TREETRUNK, {TEXTURE_IMG_WOODRINGS,TEXTURE_IMG_WOODRINGS,TEXTURE_IMG_WOODBARK,TEXTURE_IMG_WOODBARK,TEXTURE_IMG_WOODBARK,TEXTURE_IMG_WOODBARK}},
-    { REG_TREELEAVES, {TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES} }
+    { REG_DIRT, {TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT,TEXTURE_IMG_DIRT}, FALSE},
+    { REG_DIRTGRASS, {TEXTURE_IMG_GRASS, TEXTURE_IMG_DIRT, TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS,TEXTURE_IMG_DIRTGRASS}, FALSE},
+    { REG_TREETRUNK, {TEXTURE_IMG_WOODRINGS,TEXTURE_IMG_WOODRINGS,TEXTURE_IMG_WOODBARK,TEXTURE_IMG_WOODBARK,TEXTURE_IMG_WOODBARK,TEXTURE_IMG_WOODBARK}, FALSE},
+    { REG_TREELEAVES, {TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES}, TRUE}
 };
 
 class BlockRegFindById : public std::unary_function<BLOCK_REG, bool> {
@@ -424,24 +424,66 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                 int64_t idx = GRIDIDX(xc, yc, zc);
                 if (zc < (Z_GRID_EXTENT - 1))
                 {
-                    if(block_get_type(lpctx, xc, yc, zc + 1)) lpctx->blockEntities[idx].surround |= SURR_ON_TOP;
+                    int8_t blockType = block_get_type(lpctx, xc, yc, zc + 1);
+                    if (blockType) {
+                        lpctx->blockEntities[idx].surroundExistsMask |= SURR_ON_TOP;
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        if (ifb != vBlockRegistry.end()) {
+                            if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_ON_TOP;
+                        }
+                    }
                 }
                 if (zc > 0) {
-                    if(block_get_type(lpctx, xc, yc, zc - 1)) lpctx->blockEntities[idx].surround |= SURR_ON_BOTTOM;
+                    int8_t blockType = block_get_type(lpctx, xc, yc, zc - 1);
+                    if (blockType) {
+                        lpctx->blockEntities[idx].surroundExistsMask |= SURR_ON_BOTTOM;
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        if (ifb != vBlockRegistry.end()) {
+                            if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_ON_BOTTOM;
+                        }
+                    }
                 }
                 if (xc < (X_GRID_EXTENT - 1))
                 {
-                    if(block_get_type(lpctx, xc + 1, yc, zc))  lpctx->blockEntities[idx].surround |= SURR_PLUS_X;
+                    int8_t blockType = block_get_type(lpctx, xc + 1, yc, zc);
+                    if (blockType) {
+                        lpctx->blockEntities[idx].surroundExistsMask |= SURR_PLUS_X;
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        if (ifb != vBlockRegistry.end()) {
+                            if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_PLUS_X;
+                        }
+                    }
                 }
                 if (xc > 0) {
-                    if(block_get_type(lpctx, xc - 1, yc, zc)) lpctx->blockEntities[idx].surround |= SURR_MINUS_X;
+                    int8_t blockType = block_get_type(lpctx, xc - 1, yc, zc);
+                    if (blockType) {
+                        lpctx->blockEntities[idx].surroundExistsMask |= SURR_MINUS_X;
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        if (ifb != vBlockRegistry.end()) {
+                            if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_MINUS_X;
+                        }
+                    }
                 }
                 if (yc < (Y_GRID_EXTENT - 1))
                 {
-                    if(block_get_type(lpctx, xc, yc + 1, zc)) lpctx->blockEntities[idx].surround |= SURR_PLUS_Y;
+                    int8_t blockType = block_get_type(lpctx, xc, yc + 1, zc);
+                    if (blockType) {
+                        lpctx->blockEntities[idx].surroundExistsMask |= SURR_PLUS_Y;
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        if (ifb != vBlockRegistry.end()) {
+                            if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_PLUS_Y;
+                        }
+                    }
                 }
                 if (yc > 0) {
-                    if(block_get_type(lpctx, xc, yc - 1, zc)) lpctx->blockEntities[idx].surround |= SURR_MINUS_Y;
+                    int8_t blockType = block_get_type(lpctx, xc, yc - 1, zc);
+                    if (blockType) {
+                        lpctx->blockEntities[idx].surroundExistsMask |= SURR_MINUS_Y;
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        if (ifb != vBlockRegistry.end()) {
+                            if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_MINUS_Y;
+                        }
+                    }
                 }
             }
         }
@@ -457,7 +499,9 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                 int64_t idx = GRIDIDX(xc, yc, zc);
 
                 int8_t blockType = block_get_type(lpctx, idx);
-                uint8_t mask = block_get_surround_mask(lpctx, idx);
+                uint8_t existsMask = block_get_surround_exists_mask(lpctx, idx);
+                uint8_t alphaMask = block_get_surround_alpha_mask(lpctx, idx);
+
                 if(blockType)
                 {
 
@@ -473,7 +517,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     uint64_t facesAdded = 0;
 
                     // check for block on bottom (-z)
-                    if ((mask & SURR_ON_BOTTOM) == 0) {
+                    if ((existsMask & SURR_ON_BOTTOM) == 0 || (alphaMask & SURR_ON_BOTTOM)) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_BOTTOM]].vertices.push_back({
                                 glm::vec3(xlate * locs[bottomVertexIndices[v]]),
@@ -484,7 +528,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
 
                     // check for block on top (+z)
-                    if ((mask & SURR_ON_TOP) == 0) {
+                    if ((existsMask & SURR_ON_TOP) == 0 || (alphaMask & SURR_ON_TOP)) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_TOP]].vertices.push_back({
                                 glm::vec3(xlate * locs[topVertexIndices[v]]),
@@ -495,7 +539,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
 
                     // check for block on +x
-                    if ((mask & SURR_PLUS_X) == 0) {
+                    if ((existsMask & SURR_PLUS_X) == 0 || (alphaMask & SURR_PLUS_X)) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSX]].vertices.push_back({
                                 glm::vec3(xlate * locs[plusxVertexIndices[v]]),
@@ -506,7 +550,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
 
                     // check for block on -x
-                    if ((mask & SURR_MINUS_X) == 0) {
+                    if ((existsMask & SURR_MINUS_X) == 0 || (alphaMask & SURR_MINUS_X)) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSX]].vertices.push_back({
                                 glm::vec3(xlate * locs[minusxVertexIndices[v]]),
@@ -517,7 +561,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
 
                     // check for block on +y
-                    if ((mask & SURR_PLUS_Y) == 0) {
+                    if ((existsMask & SURR_PLUS_Y) == 0 || (alphaMask & SURR_PLUS_Y)) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSY]].vertices.push_back({
                                 glm::vec3(xlate * locs[plusyVertexIndices[v]]),
@@ -528,7 +572,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     }
 
                     // check for block on -y
-                    if ((mask & SURR_MINUS_Y) == 0) {
+                    if ((existsMask & SURR_MINUS_Y) == 0 || (alphaMask & SURR_MINUS_Y)) {
                         for (int64_t v = 0; v < 6; v++) {
                             lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSY]].vertices.push_back({
                                 glm::vec3(xlate * locs[minusyVertexIndices[v]]),

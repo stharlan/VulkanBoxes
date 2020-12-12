@@ -247,19 +247,19 @@ HGLRC createRenderingContext1(HDC hdc)
 //    return textureID;
 //}
 
-void LoadTextures(const char* filename[], int numFilenames, VOXC_WINDOW_CONTEXT* lpctx)
+void LoadTextures(TEXTURE_SPEC tsArray[], int numFilenames, VOXC_WINDOW_CONTEXT* lpctx)
 {
     std::vector<GLuint> texids(numFilenames);
     lpctx->groups.resize(numFilenames);
     glGenTextures(numFilenames, texids.data());
     int texWidth, texHeight, texChannels;
     for (int i = 0; i < numFilenames; i++) {
-        stbi_uc* pixels = stbi_load(filename[i], &texWidth, &texHeight,
+        stbi_uc* pixels = stbi_load(tsArray[i].name, &texWidth, &texHeight,
             &texChannels, STBI_rgb_alpha);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texids[i]);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-        if (i == 3) { // this is a transparent texture, no mipmaps
+        if (TRUE == tsArray[i].isTransparent) { // this is a transparent texture, no mipmaps
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         }
@@ -326,10 +326,11 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
     glActiveTexture(GL_TEXTURE0);
     for (; iter != lpctx->groups.end(); ++iter)
     {
-        if (iter->vertices.size() > 0) {
+        if(iter->vsize > 0) 
+        {
             glVertexArrayVertexBuffer(lpctx->vao, 0, iter->vbo, 0, 8 * sizeof(GLfloat));
             glBindTexture(GL_TEXTURE_2D, iter->tid);
-            glDrawArrays(GL_TRIANGLES, 0, (GLsizei)iter->vertices.size());
+            glDrawArrays(GL_TRIANGLES, 0, (GLsizei)iter->vsize);
         }
     }
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -451,16 +452,16 @@ DWORD WINAPI RenderThread(LPVOID parm)
     // also, go to voxc.h and add another define
     // also, in vertex buffer creation below, increase count
     // also, createbuffers and loop below it
-    const char* fnArray[6];
-    fnArray[0] = "vocxdirt.png";    
-    fnArray[1] = "vocxdirtgrass.png";
-    fnArray[2] = "vocxgrass.png";
-    fnArray[3] = "vocxleaves_t.png";
-    fnArray[4] = "vocxwoodbark.png";
-    fnArray[5] = "vocxwoodrings.png";
+    TEXTURE_SPEC tsArray[6] = { 0 };
+    tsArray[0].name = "vocxdirt.png"; tsArray[0].isTransparent = FALSE;
+    tsArray[1].name = "vocxdirtgrass.png"; tsArray[1].isTransparent = FALSE;
+    tsArray[2].name = "vocxgrass.png"; tsArray[2].isTransparent = FALSE;
+    tsArray[3].name = "vocxleaves_t.png"; tsArray[3].isTransparent = TRUE;
+    tsArray[4].name = "vocxwoodbark.png"; tsArray[4].isTransparent = FALSE;
+    tsArray[5].name = "vocxwoodrings.png"; tsArray[5].isTransparent = FALSE;
     // after this, there will be one block group
     // for each texture 
-    LoadTextures(fnArray, 6, lpctx); 
+    LoadTextures(tsArray, 6, lpctx); 
 
     // physics: must be done before create vertex buffer
     glm::vec3 startingPosition(265, 249, 110);
@@ -478,8 +479,13 @@ DWORD WINAPI RenderThread(LPVOID parm)
     for(int i=0; i<6; i++)
     {
         if (lpctx->groups[i].vertices.size() > 0) {
+            lpctx->groups[i].vsize = lpctx->groups[i].vertices.size();
             glNamedBufferStorage(vbos[i], sizeof(VERTEX1) * lpctx->groups[i].vertices.size(),
                 lpctx->groups[i].vertices.data(), 0);
+            lpctx->groups[i].vertices.clear();
+        }
+        else {
+            lpctx->groups[i].vsize = 0;
         }
         lpctx->groups[i].vbo = vbos[i];
     }

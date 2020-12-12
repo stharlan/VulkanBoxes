@@ -11,9 +11,13 @@ So...this changed to OpenGL 4.6.  It's morphed into a cubic voxel-based world. T
 It uses...
 
   ...[NVIDIA Physx](https://developer.nvidia.com/physx-sdk) for physics
+  
   ...[GLM](https://github.com/g-truc/glm) for math
+  
   ...[FreeType](https://www.freetype.org/) for rendering fonts
+  
   ...[nothings/stb](https://github.com/nothings/stb) for reading/writing images
+  
   ...and, [OpenGL](https://www.opengl.org/)...of course
 
 Stuart Harlan

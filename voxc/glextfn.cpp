@@ -54,6 +54,9 @@ PFNGLUNIFORM3FPROC glUniform3f = NULL;
 PFNGLBUFFERSUBDATAPROC glBufferSubData = NULL;
 PFNGLNAMEDBUFFERSUBDATAPROC glNamedBufferSubData = NULL;
 
+wglCreateContextAttribsARBFN wglCreateContextAttribsARB = NULL;
+wglChoosePixelFormatARBFN wglChoosePixelFormatARB = NULL;
+
 BOOL loadExtensionFunctions()
 {
     GETPROC(PFNGLACTIVETEXTUREPROC, glActiveTexture, "glActiveTexture");

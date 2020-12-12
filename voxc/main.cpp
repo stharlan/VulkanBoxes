@@ -2,6 +2,57 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "voxc.h"
 
+void init_opengl_ext()
+{
+    WNDCLASS wc = { 0 };
+    wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+    wc.lpfnWndProc = DefWindowProc;
+    wc.hInstance = GetModuleHandle(0);
+    wc.lpszClassName = L"DUMMY_WSL_jdmcnghr";
+    RegisterClass(&wc);
+
+    HWND dummy = CreateWindowEx(
+        0,
+        wc.lpszClassName,
+        L"DUMMY OPENGL WINDOW",
+        0,
+        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+        0, 0, wc.hInstance, 0);
+
+    HDC ddc = GetDC(dummy);
+
+    PIXELFORMATDESCRIPTOR pfd = { 0 };
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.cColorBits = 32;
+    pfd.cAlphaBits = 8;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 8;
+
+    int pf = ChoosePixelFormat(ddc, &pfd);
+
+    SetPixelFormat(ddc, pf, &pfd);
+
+    HGLRC hrc = wglCreateContext(ddc);
+
+    wglMakeCurrent(ddc, hrc);
+
+    wglCreateContextAttribsARB = (wglCreateContextAttribsARBFN)wglGetProcAddress("wglCreateContextAttribsARB");
+    wglChoosePixelFormatARB = (wglChoosePixelFormatARBFN)wglGetProcAddress("wglChoosePixelFormatARB");
+
+    //printf("wglCreateContextAttribsARB = %8x\n", wglCreateContextAttribsARB);
+    //printf("wglChoosePixelFormatARB = %8x\n", wglChoosePixelFormatARB);
+
+    wglMakeCurrent(ddc, 0);
+    wglDeleteContext(hrc);
+    ReleaseDC(dummy, ddc);
+    DestroyWindow(dummy);
+
+}
+
 int WINAPI WinMain(
     HINSTANCE hInstance,
     HINSTANCE hPrevInstance,
@@ -15,6 +66,8 @@ int WINAPI WinMain(
     freopen_s(&f, "CONIN$", "r", stdin);
     freopen_s(&f, "CONOUT$", "w", stdout);
     freopen_s(&f, "CONOUT$", "w", stderr);
+
+    init_opengl_ext();
 
     const LPCWSTR WNDCLASS_VNAME = L"VOXC";
     WNDCLASS wc = {};

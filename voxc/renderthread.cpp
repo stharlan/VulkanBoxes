@@ -57,7 +57,50 @@ void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64
     lpctx->zblock = zint;
 }
 
-HGLRC createRenderingContext(HDC hdc)
+HGLRC createRenderingContext2(HDC hdc)
+{
+    int attrs[] = {
+        WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+        WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+        WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+        WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+        WGL_COLOR_BITS_ARB, 32,
+        WGL_DEPTH_BITS_ARB, 24,
+        WGL_STENCIL_BITS_ARB, 8,
+        WGL_SAMPLE_BUFFERS_ARB, 1, // Number of buffers (must be 1 at time of writing)
+        WGL_SAMPLES_ARB, 4,        // Number of samples
+        0
+    };
+
+    int pf = 0;
+    UINT numfmts = 0;
+    wglChoosePixelFormatARB(hdc, attrs, 0, 1, &pf, &numfmts);
+
+    PIXELFORMATDESCRIPTOR pfd = { 0 };
+    DescribePixelFormat(hdc, pf, sizeof(pfd), &pfd);
+    SetPixelFormat(hdc, pf, &pfd);
+
+    int glverattribs[] = {
+        WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
+        WGL_CONTEXT_MINOR_VERSION_ARB, 6,
+        0
+    };
+
+    HGLRC hglrc = wglCreateContextAttribsARB(hdc, 0, glverattribs);
+
+    if (hglrc == NULL) {
+        printf("ERROR: Failed to create rendering context\n");
+    }
+    else {
+        printf("Rendering context...ok.\n");
+    }
+
+    wglMakeCurrent(hdc, hglrc);
+
+    return hglrc;
+}
+
+HGLRC createRenderingContext1(HDC hdc)
 {
     HGLRC hglrc = NULL;
     PIXELFORMATDESCRIPTOR pfd =
@@ -360,7 +403,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     HWND hwnd = (HWND)parm;
     VOXC_WINDOW_CONTEXT* lpctx = (VOXC_WINDOW_CONTEXT*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     HDC hdc = GetDC(hwnd);
-    HGLRC hglrc = createRenderingContext(hdc);
+    HGLRC hglrc = createRenderingContext2(hdc);
 
     // load all the xtension functions
     if (FALSE == loadExtensionFunctions())
@@ -370,6 +413,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     }
 
     // opengl configuration
+    glEnable(GL_MULTISAMPLE);
     glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
     glFrontFace(GL_CCW);
     glClearDepth(1.0f);
@@ -377,13 +421,14 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_CULL_FACE);
     glShadeModel(GL_SMOOTH);
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-    glEnable(GL_TEXTURE_2D);
+    //glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+    //glEnable(GL_TEXTURE_2D);
     //glEnable(GL_MULTISAMPLE);
     //glEnable(GL_POLYGON_SMOOTH);
     //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
     //glEnable(GL_BLEND);
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
     // load programs
     OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
@@ -432,9 +477,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
         }
         lpctx->groups[i].vbo = vbos[i];
     }
-
-    GLenum err = glGetError();
-    if (err != GL_NO_ERROR) printf("gl err %i\n", err);
 
     // vbo for 2d quad
     GLuint quadVbo1 = 0;
@@ -536,8 +578,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
         // check if done
         if (WAIT_OBJECT_0 == WaitForSingleObject(lpctx->hQuitEvent, 0)) break;
 
-        
-
         // calculate elapsed seconds
         QueryPerformanceCounter(&perfCount);
         elapsedTicks = perfCount.QuadPart - lastCount.QuadPart;
@@ -589,6 +629,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
             0.00f, // min dist
             elapsed, mCCFilters);
 
+
         // if on ground, stop falling
         if (cflags.isSet(physx::PxControllerCollisionFlag::eCOLLISION_DOWN))
         {
@@ -625,10 +666,12 @@ DWORD WINAPI RenderThread(LPVOID parm)
             shadowProg.Use();
             shadowProg.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
             shadowProg.SetUniformMatrix4fv("model", &modelMatrix[0][0]);
+            glBindVertexArray(lpctx->vao);
             RenderScene(lpctx);
+            glBindVertexArray(0);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
-         
+
         // process elevation to radians
         float sinfElevation = sinf(DEG2RAD(lpctx->elevation));
         sinfElevation = FCLAMP(sinfElevation, -0.99f, 0.99f);
@@ -660,10 +703,11 @@ DWORD WINAPI RenderThread(LPVOID parm)
             voxcProgram.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
             voxcProgram.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
             voxcProgram.SetUniform3fv("lightDir", &lightDir[0]);
-            glBindVertexArray(lpctx->vao);
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, depthMap);
+            glBindVertexArray(lpctx->vao);
             RenderScene(lpctx);
+            glBindVertexArray(0);
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, 0);
         }
@@ -705,6 +749,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
             glBindVertexArray(lpctx->vao);
             glVertexArrayVertexBuffer(lpctx->vao, 0, zeroCube, 0, 8 * sizeof(GLfloat));
             glDrawArrays(GL_TRIANGLES, 0, (GLsizei)36);
+            glBindVertexArray(0);
             // end sel cube
         }
 
@@ -734,13 +779,16 @@ DWORD WINAPI RenderThread(LPVOID parm)
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, depthMap);
             glDrawArrays(GL_TRIANGLES, 0, 6);
+            glBindVertexArray(0);
         }
-
         glFlush();
 
         SwapBuffers(hdc);
 
         glUseProgram(0);
+
+        GLenum err = glGetError();
+        if (err != GL_NO_ERROR) printf("GL ERROR %i\n", err);
 
     }
 

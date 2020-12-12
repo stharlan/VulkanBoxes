@@ -1,5 +1,16 @@
 #include "voxc.h"
 
+//void addAllActors(VOXC_WINDOW_CONTEXT* lpctx)
+//{
+//    for (const BLOCK_ENTITY& entity : lpctx->blockEntities)
+//    {
+//        if (entity.type && entity.rigidStatic)
+//        {
+//            lpctx->mScene->addActor(*entity.rigidStatic);
+//        }
+//    }
+//}
+
 void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64_t yint, int64_t zint)
 {
 
@@ -21,15 +32,17 @@ void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64
     // clear array
     lpctx->blocksAroundMe.clear();
 
-    for (int64_t xbl = xint - 4; xbl < xint + 5; xbl++)
+    int64_t radius = 10;
+
+    for (int64_t xbl = xint - radius; xbl < xint + (radius + 1); xbl++)
     {
         if (xbl >= 0 && xbl < X_GRID_EXTENT)
         {
-            for (int64_t ybl = yint - 4; ybl < yint + 5; ybl++)
+            for (int64_t ybl = yint - radius; ybl < yint + (radius + 1); ybl++)
             {
                 if (ybl >= 0 && ybl < Y_GRID_EXTENT)
                 {
-                    for (int64_t zbl = zint - 8; zbl < zint + 1; zbl++)
+                    for (int64_t zbl = zint - radius; zbl < zint + (radius + 1); zbl++)
                     {
                         if (zbl >= 0 && zbl < Z_GRID_EXTENT)
                         {
@@ -50,6 +63,7 @@ void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64
         }
     }
 
+    printf("adding %i actors\n", lpctx->blocksAroundMe.size());
     lpctx->mScene->addActors(lpctx->blocksAroundMe.data(), (unsigned int)lpctx->blocksAroundMe.size());
 
     lpctx->xblock = xint;
@@ -746,13 +760,13 @@ DWORD WINAPI RenderThread(LPVOID parm)
         pos = lpctx->mController->getPosition();
 
         // refresh physics actors based on location
-        if (abs(lpctx->xblock - (int64_t)pos.x) > 4) {
+        if (abs(lpctx->xblock - (int64_t)pos.x) > 5) {
             addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
         }
-        else if (abs(lpctx->yblock - (int64_t)pos.y) > 4) {
+        else if (abs(lpctx->yblock - (int64_t)pos.y) > 5) {
             addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
         }
-        else if (abs(lpctx->zblock - (int64_t)pos.z) > 4)
+        else if (abs(lpctx->zblock - (int64_t)pos.z) > 5)
         {
             addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
         }
@@ -847,6 +861,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
         // render selection cube
         // player is as pos.xyz
         // direction is azimuth
+        bool hitStatus = FALSE;
+        physx::PxTransform gp;
         {
             // offset the cube from the player
             //glm::vec3 xpos(pos.x, pos.y, pos.z);
@@ -878,11 +894,29 @@ DWORD WINAPI RenderThread(LPVOID parm)
                     sinfElevation);
                 unitDir.normalize();
                 physx::PxRaycastBuffer hit;
-                bool status = lpctx->mScene->raycast(origin, unitDir, 5, hit);
-                if (status) {
-                    physx::PxTransform gp = hit.block.actor->getGlobalPose();
+                hitStatus = lpctx->mScene->raycast(origin + unitDir, unitDir, 5, hit);
+                if (hitStatus) {
+                    gp = hit.block.actor->getGlobalPose();
                     //printf("HIT! %i %.1f %.1f %.1f\n", timeGetTime(),
                         //gp.p[0], gp.p[1], gp.p[2]);
+
+                    glm::mat4 zeroCubeModelt = glm::translate(
+                        glm::mat4(1.0f), 
+                        glm::vec3(
+                            floorf(gp.p[0]) + 0.5f,
+                            floorf(gp.p[1]) + 0.5f,
+                            floorf(gp.p[2]) + 0.5f));
+
+                    // draw selection cube
+                    selCubeProg.Use();
+                    selCubeProg.SetUniformMatrix4fv("model", &zeroCubeModelt[0][0]);
+                    selCubeProg.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
+                    selCubeProg.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
+                    glBindVertexArray(lpctx->vao);
+                    glVertexArrayVertexBuffer(lpctx->vao, 0, zeroCube, 0, 8 * sizeof(GLfloat));
+                    glDrawArrays(GL_TRIANGLES, 0, (GLsizei)36);
+                    glBindVertexArray(0);
+                    // end sel cube
 
                     //glUseProgram(0);
                     //glBegin(GL_POINTS);
@@ -892,18 +926,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
                     //glEnd();
                 }
 
-                glm::mat4 zeroCubeModelt = glm::translate(glm::mat4(1.0f), glm::vec3(origin.x + unitDir.x * 2, origin.y + unitDir.y * 2, origin.z + unitDir.z * 2));
-
-                // draw selection cube
-                selCubeProg.Use();
-                selCubeProg.SetUniformMatrix4fv("model", &zeroCubeModelt[0][0]);
-                selCubeProg.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
-                selCubeProg.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
-                glBindVertexArray(lpctx->vao);
-                glVertexArrayVertexBuffer(lpctx->vao, 0, zeroCube, 0, 8 * sizeof(GLfloat));
-                glDrawArrays(GL_TRIANGLES, 0, (GLsizei)36);
-                glBindVertexArray(0);
-                // end sel cube
             }
 
         }
@@ -921,6 +943,12 @@ DWORD WINAPI RenderThread(LPVOID parm)
             memset(textBuffer, 0, 256);
             sprintf_s(textBuffer, 256, "POS: %.1f %.1f %.1f  AZ %.1f  EL %.1f", pos.x, pos.y, pos.z, lpctx->azimuth, lpctx->elevation);
             RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (2.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+            if (hitStatus)
+            {
+                memset(textBuffer, 0, 256);
+                sprintf_s(textBuffer, 256, "HIT POS: %.1f %.1f %.1f", gp.p[0], gp.p[1], gp.p[2]);
+                RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (3.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+            }
         }
 
         // disable blend

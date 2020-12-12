@@ -154,8 +154,9 @@ typedef struct _BLOCK_ENTITY
 {
     int8_t type = 0; 
     physx::PxRigidStatic* rigidStatic = NULL;
-    uint8_t surroundExistsMask;
-    uint8_t surroundAlphaMask;
+    uint8_t surroundExistsMask = 0;
+    uint8_t surroundAlphaMask = 0;
+    uint8_t faceMask = 0;
 } BLOCK_ENTITY, * PBLOCK_ENTITY;
 
 #define TEXTURE_INDEX_TOP 0
@@ -303,5 +304,6 @@ typedef void(*CALLBACK_BLOCKS_FOREACH)(BLOCK_ENTITY*);
 void blocks_foreach(VOXC_WINDOW_CONTEXT*, CALLBACK_BLOCKS_FOREACH);
 uint8_t block_get_surround_exists_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 uint8_t block_get_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
+void block_set_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value);
 
 #include "OpenGlProgram.h"

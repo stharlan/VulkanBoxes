@@ -110,3 +110,8 @@ uint8_t block_get_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
 {
 	return lpctx->blockEntities[index].surroundAlphaMask;
 }
+
+void block_set_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value)
+{
+	lpctx->blockEntities[index].faceMask = value;
+}

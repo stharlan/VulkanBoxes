@@ -501,6 +501,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                 int8_t blockType = block_get_type(lpctx, idx);
                 uint8_t existsMask = block_get_surround_exists_mask(lpctx, idx);
                 uint8_t alphaMask = block_get_surround_alpha_mask(lpctx, idx);
+                uint8_t faceMask = 0;
 
                 if(blockType)
                 {
@@ -524,6 +525,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                 texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]]
                                 });
                             facesAdded++;
+                            faceMask |= SURR_ON_BOTTOM;
                         }
                     }
 
@@ -535,6 +537,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                 texcrds[topVertexIndices[v]],normals[topVertexIndices[v]]
                                 });
                             facesAdded++;
+                            faceMask |= SURR_ON_TOP;
                         }
                     }
 
@@ -546,6 +549,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                 texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]]
                                 });
                             facesAdded++;
+                            faceMask |= SURR_PLUS_X;
                         }
                     }
 
@@ -557,6 +561,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                 texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]]
                                 });
                             facesAdded++;
+                            faceMask |= SURR_MINUS_X;
                         }
                     }
 
@@ -568,6 +573,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                 texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]]
                                 });
                             facesAdded++;
+                            faceMask |= SURR_PLUS_Y;
                         }
                     }
 
@@ -579,6 +585,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                                 texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]]
                                 });
                             facesAdded++;
+                            faceMask |= SURR_MINUS_Y;
                         }
                     }
 
@@ -586,6 +593,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     {
                         // create new actors
                         block_create_new_actor(lpctx, idx, xc, yc, zc);
+                        block_set_face_mask(lpctx, idx, faceMask);
                     }
                 }
             }

@@ -379,7 +379,12 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glEnable(GL_TEXTURE_2D);
-       
+    //glEnable(GL_MULTISAMPLE);
+    //glEnable(GL_POLYGON_SMOOTH);
+    //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     // load programs
     OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
     voxcProgram.Use();
@@ -424,9 +429,12 @@ DWORD WINAPI RenderThread(LPVOID parm)
         if (lpctx->groups[i].vertices.size() > 0) {
             glNamedBufferStorage(vbos[i], sizeof(VERTEX1) * lpctx->groups[i].vertices.size(),
                 lpctx->groups[i].vertices.data(), 0);
-            lpctx->groups[i].vbo = vbos[i];
         }
+        lpctx->groups[i].vbo = vbos[i];
     }
+
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) printf("gl err %i\n", err);
 
     // vbo for 2d quad
     GLuint quadVbo1 = 0;
@@ -491,7 +499,11 @@ DWORD WINAPI RenderThread(LPVOID parm)
     LARGE_INTEGER perfFreq = { 0 };
     LARGE_INTEGER lastCount = { 0 };
     int64_t elapsedTicks = 0;
-    float elps[10];
+    // 0.016f is 60 fps
+    float elps[10] = {
+        0.016f, 0.016f, 0.016f, 0.016f, 0.016f,
+        0.016f, 0.016f, 0.016f, 0.016f, 0.016f
+    };
     int64_t elpsCtr = 0;
     QueryPerformanceCounter(&perfCount);
     lastCount = perfCount;
@@ -759,9 +771,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
     }
 
     glDeleteVertexArrays(1, &lpctx->vao);
-
-    GLenum err = glGetError();
-    if (err != GL_NO_ERROR) printf("gl err %i\n", err);
 
     wglMakeCurrent(hdc, nullptr);
     ReleaseDC(hwnd, hdc);

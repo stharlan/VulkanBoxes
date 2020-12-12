@@ -118,7 +118,15 @@
 #include <freetype/freetype.h>
 
 #include "stb_image.h"
+#include "tiny_obj_loader.h"
 #include "glext.h"
+
+typedef struct _VBO_DATA
+{
+    GLuint vboId;
+    GLuint numVerts;
+    glm::vec4 diffuseColor;
+} VBO_DATA;
 
 typedef struct _TEXTURE_SPEC
 {

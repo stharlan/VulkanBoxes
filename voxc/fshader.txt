@@ -11,6 +11,9 @@ out vec4 outColor;
 uniform sampler2D texs;
 uniform sampler2D shadowMap;
 
+uniform vec4 diffuseColor;
+uniform int useDiffuseColor; // 0 = false, 1 = true
+
 float ShadowCalculation(vec4 fragPosLightSpace)
 {
     // perform perspective divide
@@ -46,7 +49,8 @@ void main()
     float diff = max(dot(norm, lightDir), 0.0f);
     vec3 diffuse = diff * lightColor;
 
-    vec4 c4 = texture( texs, UV );
+    vec4 c4 = diffuseColor;
+    if(useDiffuseColor == 0) c4 = texture( texs, UV );
     if(c4.a < 0.5f) discard;
     vec3 color = c4.rgb;
     vec3 ambient = ambientStrength * lightColor;

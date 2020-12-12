@@ -404,6 +404,94 @@ void setupFreeType(std::map<char, Character>& Characters, GLuint* pfontVAO, GLui
     //if (err != GL_NO_ERROR) printf("gl err %i\n", err);
 }
 
+void LoadModel(std::vector<VBO_DATA>& vboData)
+{
+
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+    //if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, "Lowpoly_tree_sample.model"))
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, "tree.model"))
+    {
+        printf("ERROR: Failed to load model\n");
+    }
+    else {
+
+        // find model bounds
+        float xmin = attrib.vertices[0], 
+            xmax = attrib.vertices[0], 
+            ymin = attrib.vertices[1], 
+            ymax = attrib.vertices[1], 
+            zmin = attrib.vertices[2], 
+            zmax = attrib.vertices[2];
+        int nverts = attrib.vertices.size() / 3;
+        for (int vi = 0; vi < nverts; vi++)
+        {
+            if (attrib.vertices[vi * 3] < xmin) xmin = attrib.vertices[vi * 3];
+            if (attrib.vertices[vi * 3] < xmax) xmax = attrib.vertices[vi * 3];
+            if (attrib.vertices[(vi * 3) + 1] < ymin) ymin = attrib.vertices[(vi * 3) + 1];
+            if (attrib.vertices[(vi * 3) + 1] < ymax) ymax = attrib.vertices[(vi * 3) + 1];
+            if (attrib.vertices[(vi * 3) + 2] < zmin) zmin = attrib.vertices[(vi * 3) + 2];
+            if (attrib.vertices[(vi * 3) + 2] < zmax) zmax = attrib.vertices[(vi * 3) + 2];
+        }
+
+        glm::mat4 trans = glm::translate(glm::mat4(1.0f), glm::vec3(20, 20, -ymin + 1.0f));
+        glm::mat4 rot = glm::rotate(glm::mat4(1.0f), 3.14159f / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::mat4 tr = trans * rot;
+
+        for(int i=0; i<materials.size(); i++)
+        {
+            std::vector<VERTEX1> vertices;
+            for (const auto& shape : shapes)
+            {
+                int64_t f = 0;
+                for (const auto& index : shape.mesh.indices)
+                {
+
+                    int face = f / 3;
+                    int current_material_id = shape.mesh.material_ids[face];
+                    if (current_material_id == i) {
+                        //printf("diffuse %.1f, %.1f, %.1f\n",
+                        //    materials[current_material_id].diffuse[0],
+                        //    materials[current_material_id].diffuse[1],
+                        //    materials[current_material_id].diffuse[2]);
+
+                        VERTEX1 v;
+                        v.vertex = tr * glm::vec4(
+                            attrib.vertices[3 * index.vertex_index + 0],
+                            attrib.vertices[3 * index.vertex_index + 1],
+                            attrib.vertices[3 * index.vertex_index + 2],
+                            1.0f
+                        );
+                        v.texc = glm::vec2(
+                            attrib.texcoords[2 * index.texcoord_index + 0],
+                            attrib.texcoords[2 * index.texcoord_index + 1]
+                        );
+                        v.norm = rot * glm::vec4(
+                            attrib.normals[3 * index.normal_index + 0],
+                            attrib.normals[3 * index.normal_index + 1],
+                            attrib.normals[3 * index.normal_index + 2],
+                            1.0f
+                        );
+                        vertices.push_back(v);
+                    }
+                    f++;
+                }
+            }
+            if (vertices.size() > 0) {
+                VBO_DATA vboObject;
+                glCreateBuffers(1, &vboObject.vboId);
+                glNamedBufferStorage(vboObject.vboId, sizeof(VERTEX1) * vertices.size(), vertices.data(), 0);
+                vboObject.numVerts = vertices.size();
+                vboObject.diffuseColor = glm::vec4(materials[i].diffuse[0], materials[i].diffuse[1], materials[i].diffuse[2], 1.0f);
+                printf("this material has %i vertices\n", vboObject.numVerts);
+                vboData.push_back(vboObject);
+            }
+        }
+    }
+}
+
 DWORD WINAPI RenderThread(LPVOID parm)
 {
     // create the rendering contxt
@@ -464,7 +552,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     LoadTextures(tsArray, 6, lpctx); 
 
     // physics: must be done before create vertex buffer
-    glm::vec3 startingPosition(265, 249, 110);
+    glm::vec3 startingPosition(30, 30, 10);
     initPhysics(lpctx, startingPosition);
     // end physics
 
@@ -489,6 +577,10 @@ DWORD WINAPI RenderThread(LPVOID parm)
         }
         lpctx->groups[i].vbo = vbos[i];
     }
+
+    // model
+    std::vector<VBO_DATA> modelVboData;
+    LoadModel(modelVboData);
 
     // vbo for 2d quad
     GLuint quadVbo1 = 0;
@@ -665,6 +757,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
             addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
         }
 
+        glm::vec4 diffuseColor = glm::vec4(0.3, 0.5, 0.7, 1.0);
+
         // render the shadow buffer
         glm::vec3 lightLooking = glm::vec3(pos.x - 100, pos.y - 100, pos.z + 100);
         glm::vec3 posLocation3 = glm::vec3(pos.x, pos.y, pos.z);
@@ -680,6 +774,14 @@ DWORD WINAPI RenderThread(LPVOID parm)
             shadowProg.SetUniformMatrix4fv("model", &modelMatrix[0][0]);
             glBindVertexArray(lpctx->vao);
             RenderScene(lpctx);
+
+            // render model
+            for (const auto& modelVboItem : modelVboData)
+            {
+                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 8 * sizeof(GLfloat));
+                glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
+            }
+
             glBindVertexArray(0);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
@@ -715,10 +817,24 @@ DWORD WINAPI RenderThread(LPVOID parm)
             voxcProgram.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
             voxcProgram.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
             voxcProgram.SetUniform3fv("lightDir", &lightDir[0]);
+            voxcProgram.SetUniform1i("useDiffuseColor", 0);
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, depthMap);
             glBindVertexArray(lpctx->vao);
             RenderScene(lpctx);
+
+            // render model
+            voxcProgram.SetUniform1i("useDiffuseColor", 1);
+            //glVertexArrayVertexBuffer(lpctx->vao, 0, modelVbo, 0, 8 * sizeof(GLfloat));
+            //glDrawArrays(GL_TRIANGLES, 0, modelVertices.size());
+            // render model
+            for (const auto& modelVboItem : modelVboData)
+            {
+                voxcProgram.SetUniform4fv("diffuseColor", &modelVboItem.diffuseColor[0]);
+                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 8 * sizeof(GLfloat));
+                glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
+            }
+
             glBindVertexArray(0);
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, 0);
@@ -733,36 +849,63 @@ DWORD WINAPI RenderThread(LPVOID parm)
         // direction is azimuth
         {
             // offset the cube from the player
-            glm::vec3 xpos(pos.x, pos.y, pos.z);
-            int azmod = abs((int)lpctx->azimuth % 360);
-            if (azmod <= 45) {
-                xpos.x += 2.0f;
-            }
-            else if (azmod <= 135) {
-                xpos.y += 2.0f;
-            }
-            else if (azmod <= 225) {
-                xpos.x -= 2.0f;
-            }
-            else if (azmod <= 315) {
-                xpos.y -= 2.0f;
-            }
-            else {
-                xpos.x += 1.0f;
-            }
-            glm::vec3 xlatevec = glm::vec3(floorf(xpos.x) + 0.5f, floorf(xpos.y) + 0.5f, floorf(xpos.z) - 1.5f);
-            glm::mat4 zeroCubeModelt = glm::translate(glm::mat4(1.0f), xlatevec);
+            //glm::vec3 xpos(pos.x, pos.y, pos.z);
+            //int azmod = abs((int)lpctx->azimuth % 360);
+            //if (azmod <= 45) {
+            //    xpos.x += 2.0f;
+            //}
+            //else if (azmod <= 135) {
+            //    xpos.y += 2.0f;
+            //}
+            //else if (azmod <= 225) {
+            //    xpos.x -= 2.0f;
+            //}
+            //else if (azmod <= 315) {
+            //    xpos.y -= 2.0f;
+            //}
+            //else {
+            //    xpos.x += 1.0f;
+            //}
+            //glm::vec3 xlatevec = glm::vec3(floorf(xpos.x) + 0.5f, floorf(xpos.y) + 0.5f, floorf(xpos.z) - 1.5f);
+            //glm::mat4 zeroCubeModelt = glm::translate(glm::mat4(1.0f), xlatevec);
 
-            // draw selection cube
-            selCubeProg.Use();
-            selCubeProg.SetUniformMatrix4fv("model", &zeroCubeModelt[0][0]);
-            selCubeProg.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
-            selCubeProg.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
-            glBindVertexArray(lpctx->vao);
-            glVertexArrayVertexBuffer(lpctx->vao, 0, zeroCube, 0, 8 * sizeof(GLfloat));
-            glDrawArrays(GL_TRIANGLES, 0, (GLsizei)36);
-            glBindVertexArray(0);
-            // end sel cube
+            // raycast
+            {
+                physx::PxVec3 origin = physx::PxVec3(pos.x, pos.y, pos.z);
+                physx::PxVec3 unitDir = physx::PxVec3(
+                    cosf(DEG2RAD(lpctx->azimuth)) * invSinfElevation,
+                    (sinf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
+                    sinfElevation);
+                unitDir.normalize();
+                physx::PxRaycastBuffer hit;
+                bool status = lpctx->mScene->raycast(origin, unitDir, 5, hit);
+                if (status) {
+                    physx::PxTransform gp = hit.block.actor->getGlobalPose();
+                    //printf("HIT! %i %.1f %.1f %.1f\n", timeGetTime(),
+                        //gp.p[0], gp.p[1], gp.p[2]);
+
+                    //glUseProgram(0);
+                    //glBegin(GL_POINTS);
+                    //glColor3f(1, 0, 0);
+                    //glPointSize(10.0f);
+                    //glVertex3f(origin.x + unitDir.x, origin.y + unitDir.y, origin.z + unitDir.z);
+                    //glEnd();
+                }
+
+                glm::mat4 zeroCubeModelt = glm::translate(glm::mat4(1.0f), glm::vec3(origin.x + unitDir.x * 2, origin.y + unitDir.y * 2, origin.z + unitDir.z * 2));
+
+                // draw selection cube
+                selCubeProg.Use();
+                selCubeProg.SetUniformMatrix4fv("model", &zeroCubeModelt[0][0]);
+                selCubeProg.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
+                selCubeProg.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
+                glBindVertexArray(lpctx->vao);
+                glVertexArrayVertexBuffer(lpctx->vao, 0, zeroCube, 0, 8 * sizeof(GLfloat));
+                glDrawArrays(GL_TRIANGLES, 0, (GLsizei)36);
+                glBindVertexArray(0);
+                // end sel cube
+            }
+
         }
 
         // render text
@@ -816,6 +959,11 @@ DWORD WINAPI RenderThread(LPVOID parm)
     for (; citer != Characters.end(); ++citer)
     {
         glDeleteTextures(1, &citer->second.TextureID);
+    }
+
+    for (const auto& modelVboItem : modelVboData)
+    {
+        glDeleteBuffers(1, &modelVboItem.vboId);
     }
 
     glDeleteBuffers(1, &quadVbo1);

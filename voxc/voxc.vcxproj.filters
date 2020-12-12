@@ -22,6 +22,9 @@
     <Filter Include="fonts">
       <UniqueIdentifier>{ad868c0b-0677-4712-84d5-0c0dfa68b88c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="models">
+      <UniqueIdentifier>{5df72e24-242b-4b8a-8c75-40de58cdf431}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -63,6 +66,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="OpenGlProgram.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tiny_obj_loader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -127,5 +133,27 @@
     <Font Include="FiraCode-Regular.ttf">
       <Filter>fonts</Filter>
     </Font>
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="Lowpoly_tree_sample.obj">
+      <Filter>models</Filter>
+    </Object>
+    <Object Include="tree.obj">
+      <Filter>models</Filter>
+    </Object>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Lowpoly_tree_sample.mtl">
+      <Filter>models</Filter>
+    </None>
+    <None Include="ChristmasTree.model">
+      <Filter>models</Filter>
+    </None>
+    <None Include="ChristmasTree.mtl">
+      <Filter>models</Filter>
+    </None>
+    <None Include="tree.mtl">
+      <Filter>models</Filter>
+    </None>
   </ItemGroup>
 </Project>

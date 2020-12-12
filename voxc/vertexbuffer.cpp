@@ -22,6 +22,56 @@ const GLuint plusyVertexIndices[6] = { 12, 13, 14, 14, 15, 12 };
 const GLuint minusyVertexIndices[6] = { 16, 17, 18, 18, 19, 16 };
 const GLuint bottomVertexIndices[6] = { 20, 21, 22, 22, 23, 20 };
 
+const int8_t TreeLeaves[] = {
+    0,0,0,0,0,0,0,
+    0,0,1,1,1,0,0,
+    0,1,0,0,0,1,0,
+    0,1,0,0,0,1,0,
+    0,1,0,0,0,1,0,
+    0,0,1,1,1,0,0,
+    0,0,0,0,0,0,0,
+
+    0,1,1,1,1,1,0,
+    1,0,0,0,0,0,1,
+    1,0,1,1,1,0,1,
+    1,0,1,1,1,0,1,
+    1,0,1,1,1,0,1,
+    1,0,0,0,0,0,1,
+    0,1,1,1,1,1,0,
+
+    0,1,1,1,1,1,0,
+    1,0,0,0,0,0,1,
+    1,0,0,0,0,0,1,
+    1,0,0,0,0,0,1,
+    1,0,0,0,0,0,1,
+    1,0,0,0,0,0,1,
+    0,1,1,1,1,1,0,
+
+    0,1,1,1,1,1,0,
+    1,0,0,0,0,0,1,
+    1,0,0,0,0,0,1,
+    1,0,0,0,0,0,1,
+    1,0,0,0,0,0,1,
+    1,0,0,0,0,0,1,
+    0,1,1,1,1,1,0,
+
+    0,0,0,0,0,0,0,
+    0,0,1,1,1,0,0,
+    0,1,0,0,0,1,0,
+    0,1,0,0,0,1,0,
+    0,1,0,0,0,1,0,
+    0,0,1,1,1,0,0,
+    0,0,0,0,0,0,0,
+
+    0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,
+    0,0,1,1,1,0,0,
+    0,0,1,1,1,0,0,
+    0,0,1,1,1,0,0,
+    0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0
+};
+
 // cube vertices
 const glm::vec4 locs[40] = {
     // +z
@@ -311,9 +361,50 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         if ((h + th) < Z_GRID_EXTENT) {
                             if (th == 5) {
                                 // the top of the tree (leaves)
-                                block_set_type(lpctx, xc, yc, h + th, REG_TREELEAVES);
+                                //block_set_type(lpctx, xc, yc, h + th, REG_TREELEAVES);
+                                for (int64_t tlz = 1; tlz < 6; tlz++) {
+                                    if (tlz < Z_GRID_EXTENT) {
+                                        for (int64_t ly = yc - 3; ly < yc + 4; ly++) {
+                                            if (ly > 0 && ly < Y_GRID_EXTENT) {
+                                                int64_t tly = ly - (yc - 3);
+                                                for (int64_t lx = xc - 3; lx < xc + 4; lx++) {
+                                                    if (lx > 0 && lx < X_GRID_EXTENT)
+                                                    {
+                                                        int64_t tlx = lx - (xc - 3);
+                                                        if (TreeLeaves[(tlz * 7 * 7) + (tly * 7) + tlx] == 1)
+                                                        {
+                                                            int64_t lidx = GRIDIDX(lx, ly, h + th + (tlz - 1));
+                                                            if (block_get_type(lpctx, lidx) == 0) block_set_type(lpctx, lidx, REG_TREELEAVES);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                            else {
+                            else if (th == 4)
+                            {
+                                block_set_type(lpctx, xc, yc, h + th, REG_TREETRUNK);
+                                for (int64_t ly = yc - 3; ly < yc + 4; ly++) {
+                                    if (ly > 0 && ly < Y_GRID_EXTENT) {
+                                        int64_t tly = ly - (yc - 3);
+                                        for (int64_t lx = xc - 3; lx < xc + 4; lx++) {
+                                            if (lx > 0 && lx < X_GRID_EXTENT)
+                                            {
+                                                int64_t tlx = lx - (xc - 3);
+                                                if (TreeLeaves[(tly * 7) + tlx] == 1)
+                                                {
+                                                    int64_t lidx = GRIDIDX(lx, ly, h + th);
+                                                    if(block_get_type(lpctx, lidx) == 0) block_set_type(lpctx, lidx, REG_TREELEAVES);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else 
+                            {
                                 // the trunk of the tree
                                 block_set_type(lpctx, xc, yc, h + th, REG_TREETRUNK);
                             }

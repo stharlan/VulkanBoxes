@@ -56,6 +56,11 @@ void block_set_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z,
 	lpctx->blockEntities[GRIDIDX(x, y, z)].type = type;
 }
 
+void block_set_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int8_t type)
+{
+	lpctx->blockEntities[index].type = type;
+}
+
 int8_t block_get_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z)
 {
 	return lpctx->blockEntities[GRIDIDX(x, y, z)].type;

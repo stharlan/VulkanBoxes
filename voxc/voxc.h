@@ -280,6 +280,7 @@ void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx);
 GLuint CreateZeroCube();
 
 void block_set_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type);
+void block_set_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int8_t type);
 int8_t block_get_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z);
 int8_t block_get_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 void block_create_new_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t xc, int64_t yc, int64_t zc);

@@ -77,6 +77,11 @@
 
 #define FCLAMP(v,i,x) (v < i ? i : (v > x ? x : v))
 
+#define CLEAR_BIT(t,b) (t &= ~(b))
+#define SET_BIT(t,b) (t |= b)
+#define TOGL_BIT(t,b) (t ^= b)
+#define IS_BITSET(t,b) (t & b)
+
 #define X_GRID_EXTENT 512ll
 #define Y_GRID_EXTENT 512ll
 #define Z_GRID_EXTENT 256ll
@@ -156,9 +161,9 @@ typedef struct _BLOCK_ENTITY
 {
     int8_t type = 0; 
     physx::PxRigidStatic* rigidStatic = NULL;
-    uint8_t surroundExistsMask = 0;
-    uint8_t surroundAlphaMask = 0;
-    uint8_t faceMask = 0;
+    uint8_t surroundExistsMask = 0; // block exists on side
+    uint8_t surroundAlphaMask = 0; // block is transparenton side (by default, exists will also be true if this is true)
+    uint8_t faceMask = 0; // face on this side of this block
     int64_t hashCode = 0;
 } BLOCK_ENTITY, * PBLOCK_ENTITY;
 

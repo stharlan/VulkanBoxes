@@ -323,6 +323,219 @@ GLuint CreateZeroCube()
 //    return hash;
 //}
 
+void update_masks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc)
+{
+    int64_t idx = GRIDIDX(xc, yc, zc);
+    if (zc < (Z_GRID_EXTENT - 1))
+    {
+        int8_t blockType = block_get_type(lpctx, xc, yc, zc + 1);
+        if (blockType) {
+            lpctx->blockEntities[idx].surroundExistsMask |= SURR_ON_TOP;
+            //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+            std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                vBlockRegistry.begin(),
+                vBlockRegistry.end(),
+                [&](const BLOCK_REG& item) { return item.regType == blockType; });
+            if (ifb != vBlockRegistry.end()) {
+                if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_ON_TOP;
+            }
+        }
+    }
+    if (zc > 0) {
+        int8_t blockType = block_get_type(lpctx, xc, yc, zc - 1);
+        if (blockType) {
+            lpctx->blockEntities[idx].surroundExistsMask |= SURR_ON_BOTTOM;
+            //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+            std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                vBlockRegistry.begin(),
+                vBlockRegistry.end(),
+                [&](const BLOCK_REG& item) { return item.regType == blockType; });
+            if (ifb != vBlockRegistry.end()) {
+                if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_ON_BOTTOM;
+            }
+        }
+    }
+    if (xc < (X_GRID_EXTENT - 1))
+    {
+        int8_t blockType = block_get_type(lpctx, xc + 1, yc, zc);
+        if (blockType) {
+            lpctx->blockEntities[idx].surroundExistsMask |= SURR_PLUS_X;
+            //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+            std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                vBlockRegistry.begin(),
+                vBlockRegistry.end(),
+                [&](const BLOCK_REG& item) { return item.regType == blockType; });
+            if (ifb != vBlockRegistry.end()) {
+                std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                    vBlockRegistry.begin(),
+                    vBlockRegistry.end(),
+                    [&](const BLOCK_REG& item) { return item.regType == blockType; });
+                if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_PLUS_X;
+            }
+        }
+    }
+    if (xc > 0) {
+        int8_t blockType = block_get_type(lpctx, xc - 1, yc, zc);
+        if (blockType) {
+            lpctx->blockEntities[idx].surroundExistsMask |= SURR_MINUS_X;
+            //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+            std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                vBlockRegistry.begin(),
+                vBlockRegistry.end(),
+                [&](const BLOCK_REG& item) { return item.regType == blockType; });
+            if (ifb != vBlockRegistry.end()) {
+                if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_MINUS_X;
+            }
+        }
+    }
+    if (yc < (Y_GRID_EXTENT - 1))
+    {
+        int8_t blockType = block_get_type(lpctx, xc, yc + 1, zc);
+        if (blockType) {
+            lpctx->blockEntities[idx].surroundExistsMask |= SURR_PLUS_Y;
+            //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+            std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                vBlockRegistry.begin(),
+                vBlockRegistry.end(),
+                [&](const BLOCK_REG& item) { return item.regType == blockType; });
+            if (ifb != vBlockRegistry.end()) {
+                if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_PLUS_Y;
+            }
+        }
+    }
+    if (yc > 0) {
+        int8_t blockType = block_get_type(lpctx, xc, yc - 1, zc);
+        if (blockType) {
+            lpctx->blockEntities[idx].surroundExistsMask |= SURR_MINUS_Y;
+            //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+            std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                vBlockRegistry.begin(),
+                vBlockRegistry.end(),
+                [&](const BLOCK_REG& item) { return item.regType == blockType; });
+            if (ifb != vBlockRegistry.end()) {
+                if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_MINUS_Y;
+            }
+        }
+    }
+
+}
+
+void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc)
+{
+    int64_t idx = GRIDIDX(xc, yc, zc);
+
+    int8_t blockType = block_get_type(lpctx, idx);
+
+    if (blockType)
+    {
+
+        glm::vec3 translateVector = glm::vec3(xc, yc, zc);
+        glm::mat4 xlate = glm::translate(glm::mat4(1.0f), translateVector);
+
+        uint8_t existsMask = block_get_surround_exists_mask(lpctx, idx);
+        uint8_t alphaMask = block_get_surround_alpha_mask(lpctx, idx);
+        uint8_t faceMask = 0;
+
+        //std::vector<BLOCK_REG>::iterator ifoundBlock = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+        std::vector<BLOCK_REG>::iterator ifoundBlock = std::find_if(
+            vBlockRegistry.begin(),
+            vBlockRegistry.end(),
+            [&](const BLOCK_REG& item) { return item.regType == blockType; });
+        if (ifoundBlock == vBlockRegistry.end())
+        {
+            printf("block reg not found %i\n", blockType);
+            return;
+        }
+
+        BLOCK_REG& fndBlock = *ifoundBlock;
+
+        uint64_t facesAdded = 0;
+
+        //unsigned long hashCode = sdbm((unsigned char*)&translateVector[0], sizeof(glm::vec3));
+        block_set_hash_code(lpctx, idx, idx);
+
+        // check for block on bottom (-z)
+        if ((existsMask & SURR_ON_BOTTOM) == 0 || (alphaMask & SURR_ON_BOTTOM)) {
+            for (int64_t v = 0; v < 6; v++) {
+                lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_BOTTOM]].vertices.push_back({
+                    glm::vec3(xlate * locs[bottomVertexIndices[v]]),
+                    texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]], {idx,0}
+                    });
+                facesAdded++;
+                faceMask |= SURR_ON_BOTTOM;
+            }
+        }
+
+        // check for block on top (+z)
+        if ((existsMask & SURR_ON_TOP) == 0 || (alphaMask & SURR_ON_TOP)) {
+            for (int64_t v = 0; v < 6; v++) {
+                lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_TOP]].vertices.push_back({
+                    glm::vec3(xlate * locs[topVertexIndices[v]]),
+                    texcrds[topVertexIndices[v]],normals[topVertexIndices[v]], {idx,0}
+                    });
+                facesAdded++;
+                faceMask |= SURR_ON_TOP;
+            }
+        }
+
+        // check for block on +x
+        if ((existsMask & SURR_PLUS_X) == 0 || (alphaMask & SURR_PLUS_X)) {
+            for (int64_t v = 0; v < 6; v++) {
+                lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSX]].vertices.push_back({
+                    glm::vec3(xlate * locs[plusxVertexIndices[v]]),
+                    texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]], {idx,0}
+                    });
+                facesAdded++;
+                faceMask |= SURR_PLUS_X;
+            }
+        }
+
+        // check for block on -x
+        if ((existsMask & SURR_MINUS_X) == 0 || (alphaMask & SURR_MINUS_X)) {
+            for (int64_t v = 0; v < 6; v++) {
+                lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSX]].vertices.push_back({
+                    glm::vec3(xlate * locs[minusxVertexIndices[v]]),
+                    texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]], {idx,0}
+                    });
+                facesAdded++;
+                faceMask |= SURR_MINUS_X;
+            }
+        }
+
+        // check for block on +y
+        if ((existsMask & SURR_PLUS_Y) == 0 || (alphaMask & SURR_PLUS_Y)) {
+            for (int64_t v = 0; v < 6; v++) {
+                lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSY]].vertices.push_back({
+                    glm::vec3(xlate * locs[plusyVertexIndices[v]]),
+                    texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]], {idx,0}
+                    });
+                facesAdded++;
+                faceMask |= SURR_PLUS_Y;
+            }
+        }
+
+        // check for block on -y
+        if ((existsMask & SURR_MINUS_Y) == 0 || (alphaMask & SURR_MINUS_Y)) {
+            for (int64_t v = 0; v < 6; v++) {
+                lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSY]].vertices.push_back({
+                    glm::vec3(xlate * locs[minusyVertexIndices[v]]),
+                    texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]], {idx,0}
+                    });
+                facesAdded++;
+                faceMask |= SURR_MINUS_Y;
+            }
+        }
+
+        if (facesAdded > 0)
+        {
+            // create new actors
+            block_create_new_actor(lpctx, idx, xc, yc, zc);
+            block_set_face_mask(lpctx, idx, faceMask);
+        }
+    }
+
+}
+
 void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 {
     int texWidth = 0;
@@ -423,98 +636,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
     for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
         for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
             for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
-                int64_t idx = GRIDIDX(xc, yc, zc);
-                if (zc < (Z_GRID_EXTENT - 1))
-                {
-                    int8_t blockType = block_get_type(lpctx, xc, yc, zc + 1);
-                    if (blockType) {
-                        lpctx->blockEntities[idx].surroundExistsMask |= SURR_ON_TOP;
-                        //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                            vBlockRegistry.begin(),
-                            vBlockRegistry.end(),
-                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
-                        if (ifb != vBlockRegistry.end()) {
-                            if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_ON_TOP;
-                        }
-                    }
-                }
-                if (zc > 0) {
-                    int8_t blockType = block_get_type(lpctx, xc, yc, zc - 1);
-                    if (blockType) {
-                        lpctx->blockEntities[idx].surroundExistsMask |= SURR_ON_BOTTOM;
-                        //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                            vBlockRegistry.begin(),
-                            vBlockRegistry.end(),
-                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
-                        if (ifb != vBlockRegistry.end()) {
-                            if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_ON_BOTTOM;
-                        }
-                    }
-                }
-                if (xc < (X_GRID_EXTENT - 1))
-                {
-                    int8_t blockType = block_get_type(lpctx, xc + 1, yc, zc);
-                    if (blockType) {
-                        lpctx->blockEntities[idx].surroundExistsMask |= SURR_PLUS_X;
-                        //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                            vBlockRegistry.begin(),
-                            vBlockRegistry.end(),
-                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
-                        if (ifb != vBlockRegistry.end()) {
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                            vBlockRegistry.begin(),
-                            vBlockRegistry.end(),
-                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
-                            if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_PLUS_X;
-                        }
-                    }
-                }
-                if (xc > 0) {
-                    int8_t blockType = block_get_type(lpctx, xc - 1, yc, zc);
-                    if (blockType) {
-                        lpctx->blockEntities[idx].surroundExistsMask |= SURR_MINUS_X;
-                        //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                            vBlockRegistry.begin(),
-                            vBlockRegistry.end(),
-                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
-                        if (ifb != vBlockRegistry.end()) {
-                            if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_MINUS_X;
-                        }
-                    }
-                }
-                if (yc < (Y_GRID_EXTENT - 1))
-                {
-                    int8_t blockType = block_get_type(lpctx, xc, yc + 1, zc);
-                    if (blockType) {
-                        lpctx->blockEntities[idx].surroundExistsMask |= SURR_PLUS_Y;
-                        //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                            vBlockRegistry.begin(),
-                            vBlockRegistry.end(),
-                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
-                        if (ifb != vBlockRegistry.end()) {
-                            if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_PLUS_Y;
-                        }
-                    }
-                }
-                if (yc > 0) {
-                    int8_t blockType = block_get_type(lpctx, xc, yc - 1, zc);
-                    if (blockType) {
-                        lpctx->blockEntities[idx].surroundExistsMask |= SURR_MINUS_Y;
-                        //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                            vBlockRegistry.begin(),
-                            vBlockRegistry.end(),
-                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
-                        if (ifb != vBlockRegistry.end()) {
-                            if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_MINUS_Y;
-                        }
-                    }
-                }
+                update_masks(lpctx, xc, yc, zc);
             }
         }
     }
@@ -523,119 +645,33 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
     for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
         for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
             for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
-
-                int64_t idx = GRIDIDX(xc, yc, zc);
-
-                int8_t blockType = block_get_type(lpctx, idx);
-
-                if(blockType)
-                {
-
-                    glm::vec3 translateVector = glm::vec3(xc, yc, zc);
-                    glm::mat4 xlate = glm::translate(glm::mat4(1.0f), translateVector);
-
-                    uint8_t existsMask = block_get_surround_exists_mask(lpctx, idx);
-                    uint8_t alphaMask = block_get_surround_alpha_mask(lpctx, idx);
-                    uint8_t faceMask = 0;
-
-                    //std::vector<BLOCK_REG>::iterator ifoundBlock = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
-                    std::vector<BLOCK_REG>::iterator ifoundBlock = std::find_if(
-                        vBlockRegistry.begin(),
-                        vBlockRegistry.end(),
-                        [&](const BLOCK_REG& item) { return item.regType == blockType; });
-                    if (ifoundBlock == vBlockRegistry.end())
-                    {
-                        printf("block reg not found %i\n", blockType);
-                        continue;
-                    }
-
-                    BLOCK_REG& fndBlock = *ifoundBlock;
-
-                    uint64_t facesAdded = 0;
-
-                    //unsigned long hashCode = sdbm((unsigned char*)&translateVector[0], sizeof(glm::vec3));
-                    block_set_hash_code(lpctx, idx, idx);
-
-                    // check for block on bottom (-z)
-                    if ((existsMask & SURR_ON_BOTTOM) == 0 || (alphaMask & SURR_ON_BOTTOM)) {
-                        for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_BOTTOM]].vertices.push_back({
-                                glm::vec3(xlate * locs[bottomVertexIndices[v]]),
-                                texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]], {idx,0}
-                                });
-                            facesAdded++;
-                            faceMask |= SURR_ON_BOTTOM;
-                        }
-                    }
-
-                    // check for block on top (+z)
-                    if ((existsMask & SURR_ON_TOP) == 0 || (alphaMask & SURR_ON_TOP)) {
-                        for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_TOP]].vertices.push_back({
-                                glm::vec3(xlate * locs[topVertexIndices[v]]),
-                                texcrds[topVertexIndices[v]],normals[topVertexIndices[v]], {idx,0}
-                                });
-                            facesAdded++;
-                            faceMask |= SURR_ON_TOP;
-                        }
-                    }
-
-                    // check for block on +x
-                    if ((existsMask & SURR_PLUS_X) == 0 || (alphaMask & SURR_PLUS_X)) {
-                        for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSX]].vertices.push_back({
-                                glm::vec3(xlate * locs[plusxVertexIndices[v]]),
-                                texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]], {idx,0}
-                                });
-                            facesAdded++;
-                            faceMask |= SURR_PLUS_X;
-                        }
-                    }
-
-                    // check for block on -x
-                    if ((existsMask & SURR_MINUS_X) == 0 || (alphaMask & SURR_MINUS_X)) {
-                        for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSX]].vertices.push_back({
-                                glm::vec3(xlate * locs[minusxVertexIndices[v]]),
-                                texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]], {idx,0}
-                                });
-                            facesAdded++;
-                            faceMask |= SURR_MINUS_X;
-                        }
-                    }
-
-                    // check for block on +y
-                    if ((existsMask & SURR_PLUS_Y) == 0 || (alphaMask & SURR_PLUS_Y)) {
-                        for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSY]].vertices.push_back({
-                                glm::vec3(xlate * locs[plusyVertexIndices[v]]),
-                                texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]], {idx,0}
-                                });
-                            facesAdded++;
-                            faceMask |= SURR_PLUS_Y;
-                        }
-                    }
-
-                    // check for block on -y
-                    if ((existsMask & SURR_MINUS_Y) == 0 || (alphaMask & SURR_MINUS_Y)) {
-                        for (int64_t v = 0; v < 6; v++) {
-                            lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSY]].vertices.push_back({
-                                glm::vec3(xlate * locs[minusyVertexIndices[v]]),
-                                texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]], {idx,0}
-                                });
-                            facesAdded++;
-                            faceMask |= SURR_MINUS_Y;
-                        }
-                    }
-
-                    if(facesAdded > 0)
-                    {
-                        // create new actors
-                        block_create_new_actor(lpctx, idx, xc, yc, zc);
-                        block_set_face_mask(lpctx, idx, faceMask);
-                    }
-                }
+                update_faces(lpctx, xc, yc, zc);
             }
         }
     }
 }
+
+int64_t blocksToAddress[] = {
+    0,0,-1,
+    0,0,1,
+    1,0,0,
+    -1,0,0,
+    0,1,0,
+    0,-1,0
+};
+
+void update_surrounding_blocks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc)
+{
+    //// update masks for this block
+    //update_masks(lpctx, xc, yc, zc);
+
+    //// update faces and mask for 'some' surrounding blocks
+    //for (int i = 0; i < 6; i++)
+    //{
+    //    int64_t xx = xc + blocksToAddress[i * 3];
+    //    int64_t yy = yc + blocksToAddress[(i * 3) + 1];
+    //    int64_t zz = zc + blocksToAddress[(i * 3) + 2];
+    //    create_block_faces(lpctx, xx, yy, zz);
+    //}
+}
+

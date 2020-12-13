@@ -798,9 +798,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
                             std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
                                 [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }), lpctx->groups[gi].vertices.end());
 
-                        glNamedBufferSubData(lpctx->groups[gi].vbo, 0,
-                            sizeof(VERTEX2) * lpctx->groups[gi].vertices.size(),
-                            lpctx->groups[gi].vertices.data());
+                        //glNamedBufferSubData(lpctx->groups[gi].vbo, 0,
+                            //sizeof(VERTEX2) * lpctx->groups[gi].vertices.size(),
+                            //lpctx->groups[gi].vertices.data());
                     }
 
                     physx::PxRigidStatic* pActor = hitBlock->rigidStatic;
@@ -818,6 +818,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
                     hitBlock->rigidStatic = NULL;
                     hitBlock->surroundAlphaMask = 0;
                     hitBlock->surroundExistsMask = 0;
+
+                    update_surrounding_blocks(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
 
                     hitBlock = NULL;
                 }

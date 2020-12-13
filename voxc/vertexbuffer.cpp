@@ -314,125 +314,36 @@ GLuint CreateZeroCube()
     return zeroCubeId;
 }
 
-//static unsigned long
-//sdbm(unsigned char* data, unsigned int length)
-//{
-//    unsigned long hash = 0;
-//    for(unsigned int i=0; i<length; i++) 
-//        hash = data[i] + (hash << 6) + (hash << 16) - hash;
-//    return hash;
-//}
+void update_mask_surround(VOXC_WINDOW_CONTEXT * lpctx, int64_t tx, int64_t ty, int64_t tz, int64_t idx,
+    uint8_t bitMask)
+{
+    int8_t blockType = block_get_type(lpctx, tx, ty, tz);
+    if (blockType) {
+        SET_BIT(lpctx->blockEntities[idx].surroundExistsMask, bitMask);
+        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+            vBlockRegistry.begin(),
+            vBlockRegistry.end(),
+            [&](const BLOCK_REG& item) { return item.regType == blockType; });
+        if (ifb != vBlockRegistry.end()) {
+            if (TRUE == ifb->isTransparent) SET_BIT(lpctx->blockEntities[idx].surroundAlphaMask, bitMask);
+        }
+    }
+    else {
+        CLEAR_BIT(lpctx->blockEntities[idx].surroundExistsMask, bitMask);
+        CLEAR_BIT(lpctx->blockEntities[idx].surroundAlphaMask, bitMask);
+    }
+}
 
 // this does alpha and exists
 void update_masks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc)
 {
     int64_t idx = GRIDIDX(xc, yc, zc);
-    if (zc < (Z_GRID_EXTENT - 1))
-    {
-        int8_t blockType = block_get_type(lpctx, xc, yc, zc + 1);
-        if (blockType) {
-            SET_BIT(lpctx->blockEntities[idx].surroundExistsMask, SURR_ON_TOP);
-            std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                vBlockRegistry.begin(),
-                vBlockRegistry.end(),
-                [&](const BLOCK_REG& item) { return item.regType == blockType; });
-            if (ifb != vBlockRegistry.end()) {
-                if (TRUE == ifb->isTransparent) SET_BIT(lpctx->blockEntities[idx].surroundAlphaMask, SURR_ON_TOP);
-            }
-        }
-        else {
-            CLEAR_BIT(lpctx->blockEntities[idx].surroundExistsMask, SURR_ON_TOP);
-            CLEAR_BIT(lpctx->blockEntities[idx].surroundAlphaMask, SURR_ON_TOP);
-        }
-    }
-    if (zc > 0) {
-        int8_t blockType = block_get_type(lpctx, xc, yc, zc - 1);
-        if (blockType) {
-            SET_BIT(lpctx->blockEntities[idx].surroundExistsMask, SURR_ON_BOTTOM);
-            std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                vBlockRegistry.begin(),
-                vBlockRegistry.end(),
-                [&](const BLOCK_REG& item) { return item.regType == blockType; });
-            if (ifb != vBlockRegistry.end()) {
-                if (TRUE == ifb->isTransparent) SET_BIT(lpctx->blockEntities[idx].surroundAlphaMask, SURR_ON_BOTTOM);
-            }
-        }
-        else {
-            CLEAR_BIT(lpctx->blockEntities[idx].surroundExistsMask, SURR_ON_BOTTOM);
-            CLEAR_BIT(lpctx->blockEntities[idx].surroundAlphaMask, SURR_ON_BOTTOM);
-        }
-    }
-    if (xc < (X_GRID_EXTENT - 1))
-    {
-        int8_t blockType = block_get_type(lpctx, xc + 1, yc, zc);
-        if (blockType) {
-            SET_BIT(lpctx->blockEntities[idx].surroundExistsMask, SURR_PLUS_X);
-            std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                vBlockRegistry.begin(),
-                vBlockRegistry.end(),
-                [&](const BLOCK_REG& item) { return item.regType == blockType; });
-            if (ifb != vBlockRegistry.end()) {
-                if (TRUE == ifb->isTransparent) SET_BIT(lpctx->blockEntities[idx].surroundAlphaMask, SURR_PLUS_X);
-            }
-        }
-        else {
-            CLEAR_BIT(lpctx->blockEntities[idx].surroundExistsMask, SURR_PLUS_X);
-            CLEAR_BIT(lpctx->blockEntities[idx].surroundAlphaMask, SURR_PLUS_X);
-        }
-    }
-    if (xc > 0) {
-        int8_t blockType = block_get_type(lpctx, xc - 1, yc, zc);
-        if (blockType) {
-            SET_BIT(lpctx->blockEntities[idx].surroundExistsMask, SURR_MINUS_X);
-            std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                vBlockRegistry.begin(),
-                vBlockRegistry.end(),
-                [&](const BLOCK_REG& item) { return item.regType == blockType; });
-            if (ifb != vBlockRegistry.end()) {
-                if (TRUE == ifb->isTransparent) SET_BIT(lpctx->blockEntities[idx].surroundAlphaMask, SURR_MINUS_X);
-            }
-        }
-        else {
-            CLEAR_BIT(lpctx->blockEntities[idx].surroundExistsMask, SURR_MINUS_X);
-            CLEAR_BIT(lpctx->blockEntities[idx].surroundAlphaMask, SURR_MINUS_X);
-        }
-    }
-    if (yc < (Y_GRID_EXTENT - 1))
-    {
-        int8_t blockType = block_get_type(lpctx, xc, yc + 1, zc);
-        if (blockType) {
-            SET_BIT(lpctx->blockEntities[idx].surroundExistsMask, SURR_PLUS_Y);
-            std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                vBlockRegistry.begin(),
-                vBlockRegistry.end(),
-                [&](const BLOCK_REG& item) { return item.regType == blockType; });
-            if (ifb != vBlockRegistry.end()) {
-                if (TRUE == ifb->isTransparent) SET_BIT(lpctx->blockEntities[idx].surroundAlphaMask, SURR_PLUS_Y);
-            }
-        }
-        else {
-            CLEAR_BIT(lpctx->blockEntities[idx].surroundExistsMask, SURR_PLUS_Y);
-            CLEAR_BIT(lpctx->blockEntities[idx].surroundAlphaMask, SURR_PLUS_Y);
-        }
-    }
-    if (yc > 0) {
-        int8_t blockType = block_get_type(lpctx, xc, yc - 1, zc);
-        if (blockType) {
-            SET_BIT(lpctx->blockEntities[idx].surroundExistsMask, SURR_MINUS_Y);
-            std::vector<BLOCK_REG>::iterator ifb = std::find_if(
-                vBlockRegistry.begin(),
-                vBlockRegistry.end(),
-                [&](const BLOCK_REG& item) { return item.regType == blockType; });
-            if (ifb != vBlockRegistry.end()) {
-                if (TRUE == ifb->isTransparent) SET_BIT(lpctx->blockEntities[idx].surroundAlphaMask, SURR_MINUS_Y);
-            }
-        }
-        else {
-            CLEAR_BIT(lpctx->blockEntities[idx].surroundExistsMask, SURR_MINUS_Y);
-            CLEAR_BIT(lpctx->blockEntities[idx].surroundAlphaMask, SURR_MINUS_Y);
-        }
-    }
-
+    if (zc < (Z_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc, yc, zc + 1, idx, SURR_ON_TOP);
+    if (zc > 0) update_mask_surround(lpctx, xc, yc, zc - 1, idx, SURR_ON_BOTTOM);
+    if (xc < (X_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc + 1, yc, zc, idx, SURR_PLUS_X);
+    if (xc > 0) update_mask_surround(lpctx, xc - 1, yc, zc, idx, SURR_MINUS_X);
+    if (yc < (Y_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc, yc + 1, zc, idx, SURR_PLUS_Y);
+    if (yc > 0) update_mask_surround(lpctx, xc, yc - 1, zc, idx, SURR_MINUS_Y);
 }
 
 void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc)

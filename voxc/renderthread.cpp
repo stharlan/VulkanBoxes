@@ -787,7 +787,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
 
                 // keys 6 left button destroys block
                 // hitBlock is the block to update
-                //hitBlock->type = 0;
                 if (lpctx->keys[6] == 1)
                 {
                     int64_t hashCode = hitBlock->hashCode;
@@ -795,12 +794,10 @@ DWORD WINAPI RenderThread(LPVOID parm)
                     // remove faces
                     for (int gi = 0; gi < lpctx->groups.size(); gi++)
                     {
-                        printf("removing vertices from group %i\n", gi);
                         lpctx->groups[gi].vertices.erase(
                             std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
                                 [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }), lpctx->groups[gi].vertices.end());
 
-                        printf("updating buffer data\n");
                         glNamedBufferSubData(lpctx->groups[gi].vbo, 0,
                             sizeof(VERTEX2) * lpctx->groups[gi].vertices.size(),
                             lpctx->groups[gi].vertices.data());
@@ -808,19 +805,19 @@ DWORD WINAPI RenderThread(LPVOID parm)
 
                     physx::PxRigidStatic* pActor = hitBlock->rigidStatic;
 
-                    printf("erasing block\n");
-                    lpctx->blockEntities.erase(
-                        std::remove_if(lpctx->blockEntities.begin(), lpctx->blockEntities.end(),
-                            [hashCode](const BLOCK_ENTITY& item) { return item.hashCode == hashCode; }), lpctx->blockEntities.end());
+                    // setting block to air
+                    hitBlock->type = REG_AIR;
 
-                    printf("refreshing actors for location\n");
+                    // refreshing actors and disabling refresh later
                     addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
                     shouldAddActors = false;
 
-                    printf("releasing actor\n");
-                    if(pActor != NULL) pActor->release();
-
-                    printf("done\n");
+                    // resetting block
+                    hitBlock->faceMask = 0;
+                    if (hitBlock->rigidStatic) hitBlock->rigidStatic->release();
+                    hitBlock->rigidStatic = NULL;
+                    hitBlock->surroundAlphaMask = 0;
+                    hitBlock->surroundExistsMask = 0;
 
                     hitBlock = NULL;
                 }

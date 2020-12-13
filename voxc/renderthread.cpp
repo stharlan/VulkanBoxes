@@ -63,7 +63,7 @@ void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64
         }
     }
 
-    printf("adding %i actors\n", lpctx->blocksAroundMe.size());
+    printf("adding %lli actors\n", lpctx->blocksAroundMe.size());
     lpctx->mScene->addActors(lpctx->blocksAroundMe.data(), (unsigned int)lpctx->blocksAroundMe.size());
 
     lpctx->xblock = xint;
@@ -439,7 +439,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
             ymax = attrib.vertices[1], 
             zmin = attrib.vertices[2], 
             zmax = attrib.vertices[2];
-        int nverts = attrib.vertices.size() / 3;
+        size_t nverts = attrib.vertices.size() / 3;
         for (int vi = 0; vi < nverts; vi++)
         {
             if (attrib.vertices[vi * 3] < xmin) xmin = attrib.vertices[vi * 3];
@@ -463,7 +463,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
                 for (const auto& index : shape.mesh.indices)
                 {
 
-                    int face = f / 3;
+                    int64_t face = f / 3;
                     int current_material_id = shape.mesh.material_ids[face];
                     if (current_material_id == i) {
                         //printf("diffuse %.1f, %.1f, %.1f\n",
@@ -499,7 +499,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
                 VBO_DATA vboObject;
                 glCreateBuffers(1, &vboObject.vboId);
                 glNamedBufferStorage(vboObject.vboId, sizeof(VERTEX2) * vertices.size(), vertices.data(), 0);
-                vboObject.numVerts = vertices.size();
+                vboObject.numVerts = (GLsizei)vertices.size();
                 vboObject.diffuseColor = glm::vec4(materials[i].diffuse[0], materials[i].diffuse[1], materials[i].diffuse[2], 1.0f);
                 printf("this material has %i vertices\n", vboObject.numVerts);
                 vboData.push_back(vboObject);
@@ -585,8 +585,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
         if (lpctx->groups[i].vertices.size() > 0) {
             lpctx->groups[i].vsize = lpctx->groups[i].vertices.size();
             glNamedBufferStorage(vbos[i], sizeof(VERTEX2) * lpctx->groups[i].vertices.size(),
-                lpctx->groups[i].vertices.data(), 0);
-            lpctx->groups[i].vertices.clear();
+                lpctx->groups[i].vertices.data(), GL_DYNAMIC_STORAGE_BIT);
+            //lpctx->groups[i].vertices.clear();
         }
         else {
             lpctx->groups[i].vsize = 0;
@@ -761,16 +761,88 @@ DWORD WINAPI RenderThread(LPVOID parm)
         lpctx->mScene->fetchResults(true);
         pos = lpctx->mController->getPosition();
 
-        // refresh physics actors based on location
-        if (abs(lpctx->xblock - (int64_t)pos.x) > 5) {
-            addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
-        }
-        else if (abs(lpctx->yblock - (int64_t)pos.y) > 5) {
-            addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
-        }
-        else if (abs(lpctx->zblock - (int64_t)pos.z) > 5)
+        // process elevation to radians
+        float sinfElevation = sinf(DEG2RAD(lpctx->elevation));
+        sinfElevation = FCLAMP(sinfElevation, -0.99f, 0.99f);
+        float invSinfElevation = 1.0f - fabs(sinfElevation);
+
+        // cast ray for selected cube
+        bool hitStatus = FALSE;
+        physx::PxTransform gp;
+        BLOCK_ENTITY* hitBlock = NULL;
+        bool shouldAddActors = TRUE;
         {
-            addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+            physx::PxVec3 origin = physx::PxVec3((float)pos.x, (float)pos.y, (float)pos.z);
+            physx::PxVec3 unitDir = physx::PxVec3(
+                cosf(DEG2RAD(lpctx->azimuth)) * invSinfElevation,
+                (sinf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
+                sinfElevation);
+            unitDir.normalize();
+            physx::PxRaycastBuffer hit;
+            hitStatus = lpctx->mScene->raycast(origin + unitDir, unitDir, 5, hit);
+            if (hitStatus) {
+
+                gp = hit.block.actor->getGlobalPose();
+                hitBlock = (BLOCK_ENTITY*)hit.block.actor->userData;
+
+                // keys 6 left button destroys block
+                // hitBlock is the block to update
+                //hitBlock->type = 0;
+                if (lpctx->keys[6] == 1)
+                {
+                    int64_t hashCode = hitBlock->hashCode;
+                    lpctx->keys[6] = 0;
+                    // remove faces
+                    for (int gi = 0; gi < lpctx->groups.size(); gi++)
+                    {
+                        printf("removing vertices from group %i\n", gi);
+                        lpctx->groups[gi].vertices.erase(
+                            std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
+                                [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }), lpctx->groups[gi].vertices.end());
+
+                        printf("updating buffer data\n");
+                        glNamedBufferSubData(lpctx->groups[gi].vbo, 0,
+                            sizeof(VERTEX2) * lpctx->groups[gi].vertices.size(),
+                            lpctx->groups[gi].vertices.data());
+                    }
+
+                    physx::PxRigidStatic* pActor = hitBlock->rigidStatic;
+
+                    printf("erasing block\n");
+                    lpctx->blockEntities.erase(
+                        std::remove_if(lpctx->blockEntities.begin(), lpctx->blockEntities.end(),
+                            [hashCode](const BLOCK_ENTITY& item) { return item.hashCode == hashCode; }), lpctx->blockEntities.end());
+
+                    printf("refreshing actors for location\n");
+                    addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+                    shouldAddActors = false;
+
+                    printf("releasing actor\n");
+                    if(pActor != NULL) pActor->release();
+
+                    printf("done\n");
+
+                    hitBlock = NULL;
+                }
+
+                // keys 7 right button
+
+            }
+        }
+
+        // refresh physics actors based on location
+        if (shouldAddActors)
+        {
+            if (abs(lpctx->xblock - (int64_t)pos.x) > 5) {
+                addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+            }
+            else if (abs(lpctx->yblock - (int64_t)pos.y) > 5) {
+                addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+            }
+            else if (abs(lpctx->zblock - (int64_t)pos.z) > 5)
+            {
+                addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+            }
         }
 
         glm::vec4 diffuseColor = glm::vec4(0.3, 0.5, 0.7, 1.0);
@@ -801,11 +873,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
             glBindVertexArray(0);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
-
-        // process elevation to radians
-        float sinfElevation = sinf(DEG2RAD(lpctx->elevation));
-        sinfElevation = FCLAMP(sinfElevation, -0.99f, 0.99f);
-        float invSinfElevation = 1.0f - fabs(sinfElevation);
 
         // configure player matrices (view and projection)
         // based on current location
@@ -863,9 +930,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
         // render selection cube
         // player is as pos.xyz
         // direction is azimuth
-        bool hitStatus = FALSE;
-        physx::PxTransform gp;
-        BLOCK_ENTITY* hitBlock = NULL;
+        if(hitStatus == true)
         {
             // offset the cube from the player
             //glm::vec3 xpos(pos.x, pos.y, pos.z);
@@ -889,48 +954,24 @@ DWORD WINAPI RenderThread(LPVOID parm)
             //glm::mat4 zeroCubeModelt = glm::translate(glm::mat4(1.0f), xlatevec);
 
             // raycast
-            {
-                physx::PxVec3 origin = physx::PxVec3(pos.x, pos.y, pos.z);
-                physx::PxVec3 unitDir = physx::PxVec3(
-                    cosf(DEG2RAD(lpctx->azimuth)) * invSinfElevation,
-                    (sinf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
-                    sinfElevation);
-                unitDir.normalize();
-                physx::PxRaycastBuffer hit;
-                hitStatus = lpctx->mScene->raycast(origin + unitDir, unitDir, 5, hit);
-                if (hitStatus) {
+            glm::mat4 zeroCubeModelt = glm::translate(
+                glm::mat4(1.0f),
+                glm::vec3(
+                    floorf(gp.p[0]) + 0.5f,
+                    floorf(gp.p[1]) + 0.5f,
+                    floorf(gp.p[2]) + 0.5f));
 
-                    gp = hit.block.actor->getGlobalPose();
-                    hitBlock = (BLOCK_ENTITY*)hit.block.actor->userData;
+            // draw selection cube
+            selCubeProg.Use();
+            selCubeProg.SetUniformMatrix4fv("model", &zeroCubeModelt[0][0]);
+            selCubeProg.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
+            selCubeProg.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
+            glBindVertexArray(lpctx->vao);
+            glVertexArrayVertexBuffer(lpctx->vao, 0, zeroCube, 0, 12 * sizeof(GLfloat));
+            glDrawArrays(GL_TRIANGLES, 0, (GLsizei)36);
+            glBindVertexArray(0);
+            // end sel cube
 
-                    // keys 6 left button destroys block
-                    // hitBlock is the block to update
-                    //hitBlock->type = 0;
-
-                    // keys 7 right button
-
-
-                    glm::mat4 zeroCubeModelt = glm::translate(
-                        glm::mat4(1.0f), 
-                        glm::vec3(
-                            floorf(gp.p[0]) + 0.5f,
-                            floorf(gp.p[1]) + 0.5f,
-                            floorf(gp.p[2]) + 0.5f));
-
-
-
-                    // draw selection cube
-                    selCubeProg.Use();
-                    selCubeProg.SetUniformMatrix4fv("model", &zeroCubeModelt[0][0]);
-                    selCubeProg.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
-                    selCubeProg.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
-                    glBindVertexArray(lpctx->vao);
-                    glVertexArrayVertexBuffer(lpctx->vao, 0, zeroCube, 0, 12 * sizeof(GLfloat));
-                    glDrawArrays(GL_TRIANGLES, 0, (GLsizei)36);
-                    glBindVertexArray(0);
-                    // end sel cube
-                }
-            }
         }
 
         // render text
@@ -954,8 +995,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
                 if (hitBlock != NULL)
                 {
                     memset(textBuffer, 0, 256);
-                    sprintf_s(textBuffer, 256, "T: %i F: %i A: %i S: %i H: 0x%08x", hitBlock->type, hitBlock->faceMask, hitBlock->surroundAlphaMask, hitBlock->surroundExistsMask,
-                        hitBlock->hashCode);
+                    sprintf_s(textBuffer, 256, "T: %i F: %i A: %i S: %i H: 0x%08x", hitBlock->type, hitBlock->faceMask, hitBlock->surroundAlphaMask, 
+                        hitBlock->surroundExistsMask, (unsigned int)hitBlock->hashCode);
                     RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (4.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
                 }
             }

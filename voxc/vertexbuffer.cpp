@@ -8,13 +8,6 @@ std::vector<BLOCK_REG> vBlockRegistry = {
     { REG_TREELEAVES, {TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES,TEXTURE_IMG_LEAVES}, TRUE}
 };
 
-class BlockRegFindById : public std::unary_function<BLOCK_REG, bool> {
-    int64_t regtype;
-public:
-    explicit BlockRegFindById(const int64_t type) : regtype(type) {}
-    bool operator() (const BLOCK_REG &item) const { return item.regType == regtype; }
-};
-
 const GLuint topVertexIndices[6] = { 0, 1, 2, 2, 3, 0 };
 const GLuint plusxVertexIndices[6] = { 4, 5, 6, 6, 7, 4 };
 const GLuint minusxVertexIndices[6] = { 8, 9, 10, 10, 11, 8 };
@@ -325,7 +318,7 @@ static unsigned long
 sdbm(unsigned char* data, unsigned int length)
 {
     unsigned long hash = 0;
-    for(int i=0; i<length; i++) 
+    for(unsigned int i=0; i<length; i++) 
         hash = data[i] + (hash << 6) + (hash << 16) - hash;
     return hash;
 }
@@ -436,7 +429,11 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     int8_t blockType = block_get_type(lpctx, xc, yc, zc + 1);
                     if (blockType) {
                         lpctx->blockEntities[idx].surroundExistsMask |= SURR_ON_TOP;
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                            vBlockRegistry.begin(),
+                            vBlockRegistry.end(),
+                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
                         if (ifb != vBlockRegistry.end()) {
                             if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_ON_TOP;
                         }
@@ -446,7 +443,11 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     int8_t blockType = block_get_type(lpctx, xc, yc, zc - 1);
                     if (blockType) {
                         lpctx->blockEntities[idx].surroundExistsMask |= SURR_ON_BOTTOM;
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                            vBlockRegistry.begin(),
+                            vBlockRegistry.end(),
+                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
                         if (ifb != vBlockRegistry.end()) {
                             if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_ON_BOTTOM;
                         }
@@ -457,8 +458,16 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     int8_t blockType = block_get_type(lpctx, xc + 1, yc, zc);
                     if (blockType) {
                         lpctx->blockEntities[idx].surroundExistsMask |= SURR_PLUS_X;
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                            vBlockRegistry.begin(),
+                            vBlockRegistry.end(),
+                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
                         if (ifb != vBlockRegistry.end()) {
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                            vBlockRegistry.begin(),
+                            vBlockRegistry.end(),
+                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
                             if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_PLUS_X;
                         }
                     }
@@ -467,7 +476,11 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     int8_t blockType = block_get_type(lpctx, xc - 1, yc, zc);
                     if (blockType) {
                         lpctx->blockEntities[idx].surroundExistsMask |= SURR_MINUS_X;
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                            vBlockRegistry.begin(),
+                            vBlockRegistry.end(),
+                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
                         if (ifb != vBlockRegistry.end()) {
                             if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_MINUS_X;
                         }
@@ -478,7 +491,11 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     int8_t blockType = block_get_type(lpctx, xc, yc + 1, zc);
                     if (blockType) {
                         lpctx->blockEntities[idx].surroundExistsMask |= SURR_PLUS_Y;
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                            vBlockRegistry.begin(),
+                            vBlockRegistry.end(),
+                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
                         if (ifb != vBlockRegistry.end()) {
                             if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_PLUS_Y;
                         }
@@ -488,7 +505,11 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     int8_t blockType = block_get_type(lpctx, xc, yc - 1, zc);
                     if (blockType) {
                         lpctx->blockEntities[idx].surroundExistsMask |= SURR_MINUS_Y;
-                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        //std::vector<BLOCK_REG>::iterator ifb = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                        std::vector<BLOCK_REG>::iterator ifb = std::find_if(
+                            vBlockRegistry.begin(),
+                            vBlockRegistry.end(),
+                            [&](const BLOCK_REG& item) { return item.regType == blockType; });
                         if (ifb != vBlockRegistry.end()) {
                             if (TRUE == ifb->isTransparent) lpctx->blockEntities[idx].surroundAlphaMask |= SURR_MINUS_Y;
                         }
@@ -517,7 +538,11 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                     uint8_t alphaMask = block_get_surround_alpha_mask(lpctx, idx);
                     uint8_t faceMask = 0;
 
-                    std::vector<BLOCK_REG>::iterator ifoundBlock = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                    //std::vector<BLOCK_REG>::iterator ifoundBlock = std::find_if(vBlockRegistry.begin(), vBlockRegistry.end(), BlockRegFindById(blockType));
+                    std::vector<BLOCK_REG>::iterator ifoundBlock = std::find_if(
+                        vBlockRegistry.begin(),
+                        vBlockRegistry.end(),
+                        [&](const BLOCK_REG& item) { return item.regType == blockType; });
                     if (ifoundBlock == vBlockRegistry.end())
                     {
                         printf("block reg not found %i\n", blockType);

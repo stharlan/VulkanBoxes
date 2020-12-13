@@ -99,6 +99,7 @@
 #include <chrono>
 #include <map>
 #include <string>
+#include <algorithm>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -124,7 +125,7 @@
 typedef struct _VBO_DATA
 {
     GLuint vboId;
-    GLuint numVerts;
+    GLsizei numVerts;
     glm::vec4 diffuseColor;
 } VBO_DATA;
 
@@ -310,3 +311,24 @@ void block_set_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t valu
 void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode);
 
 #include "OpenGlProgram.h"
+
+//class VertexFindByHash : public std::unary_function<VERTEX2, bool> {
+//    int64_t hashcode;
+//public:
+//    explicit VertexFindByHash(const int64_t value) : hashcode(value) {}
+//    bool operator() (const VERTEX2& item) const { return item.userData[0] == hashcode; }
+//};
+//
+//class BlockEntityByHash : public std::unary_function<BLOCK_ENTITY, bool> {
+//    int64_t hashcode;
+//public:
+//    explicit BlockEntityByHash(const int64_t value) : hashcode(value) {}
+//    bool operator() (const BLOCK_ENTITY& item) const { return item.hashCode == hashcode; }
+//};
+//
+//class BlockRegFindById : public std::unary_function<BLOCK_REG, bool> {
+//    int64_t regtype;
+//public:
+//    explicit BlockRegFindById(const int64_t type) : regtype(type) {}
+//    bool operator() (const BLOCK_REG& item) const { return item.regType == regtype; }
+//};

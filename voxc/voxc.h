@@ -159,7 +159,8 @@ typedef struct _VERTEX_BUFFER_GROUP1
 // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
 typedef struct _BLOCK_ENTITY
 {
-    int8_t type = 0; 
+    glm::uvec3 gridLocation;
+    int8_t regType = 0; 
     physx::PxRigidStatic* rigidStatic = NULL;
     uint8_t surroundExistsMask = 0; // block exists on side
     uint8_t surroundAlphaMask = 0; // block is transparenton side (by default, exists will also be true if this is true)
@@ -203,7 +204,8 @@ typedef struct _VOXC_WINDOW_CONTEXT
     float vz = 0.0f;
     float elevation = 0.0f;
     float azimuth = 0.0f;
-    std::vector<BLOCK_ENTITY> blockEntities;
+    BLOCK_ENTITY* lpBlockEntities = NULL;
+    int64_t numEntities = 0;
     std::vector<VERTEX_BUFFER_GROUP1> groups;
     float viewportRatio = 0.0f;
     bool isFullscreen = 0;
@@ -301,21 +303,25 @@ void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition);
 void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx);
 GLuint CreateZeroCube();
 
-void block_set_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type);
-void block_set_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int8_t type);
-int8_t block_get_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z);
-int8_t block_get_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
+void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type);
+void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int8_t type);
+int8_t block_get_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z,bool);
+int8_t block_get_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t index,bool);
 void block_create_new_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t xc, int64_t yc, int64_t zc);
 physx::PxRigidStatic* block_get_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx);
 
-typedef void(*CALLBACK_BLOCKS_FOREACH)(BLOCK_ENTITY*);
-void blocks_foreach(VOXC_WINDOW_CONTEXT*, CALLBACK_BLOCKS_FOREACH);
+void block_allocate(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z);
+void block_cleanup(VOXC_WINDOW_CONTEXT* lpctx);
 uint8_t block_get_surround_exists_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 uint8_t block_get_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 void block_set_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value);
 void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode);
 uint8_t block_get_surround_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
+void block_set_surround_exists_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value);
+void block_set_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value);
+void block_set_surround_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value);
+void block_release_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 
 #include "OpenGlProgram.h"
 

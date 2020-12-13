@@ -1,128 +1,125 @@
 
 #include "voxc.h"
 
-//extern const GLuint topVertexIndices[];
-//extern const GLuint plusxVertexIndices[];
-//extern const GLuint minusxVertexIndices[];
-//extern const GLuint plusyVertexIndices[];
-//extern const GLuint minusyVertexIndices[];
-//extern const GLuint bottomVertexIndices[];
-//
-//extern const glm::vec4 locs[];
-//extern const glm::vec2 texcrds[];
-//extern const glm::vec3 normals[];
-
-//void block_add_block_geometry(VOXC_WINDOW_CONTEXT* lpctx, int64_t regType, int64_t x, int64_t y, int64_t z)
-//{
-//	glm::mat4 xlate = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
-//	int64_t idx = GRIDIDX(x, y, z);
-//	for (int i = 0; i < 4; i++) {
-//		if (blockRegistry[i].regType == regType) {
-//
-//			uint64_t facesAdded = 0;
-//
-//			if ((lpctx->blockEntities[idx].surround & SURR_ON_TOP) == 0)
-//			{
-//				int64_t groupId = blockRegistry[i].textureIndex[TEXTURE_INDEX_TOP];
-//				for (int64_t v = 0; v < 6; v++) {
-//					lpctx->groups[groupId].vertices.push_back({
-//						glm::vec3(xlate * locs[topVertexIndices[v]]),
-//						texcrds[topVertexIndices[v]],
-//						normals[topVertexIndices[v]]
-//					});
-//					facesAdded++;
-//				}
-//			}
-//			if ((lpctx->blockEntities[idx].surround & SURR_ON_BOTTOM) == 0)
-//			{
-//				int64_t groupId = blockRegistry[i].textureIndex[TEXTURE_INDEX_BOTTOM];
-//				for (int64_t v = 0; v < 6; v++) {
-//					lpctx->groups[groupId].vertices.push_back({
-//						glm::vec3(xlate * locs[bottomVertexIndices[v]]),
-//						texcrds[bottomVertexIndices[v]],
-//						normals[bottomVertexIndices[v]]
-//					});
-//					facesAdded++;
-//				}
-//			}
-//
-//			return;
-//		}
-//	}
-//}
-
-void block_set_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type)
+void block_allocate(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z)
 {
-	lpctx->blockEntities[GRIDIDX(x, y, z)].type = type;
-}
+	lpctx->lpBlockEntities = new BLOCK_ENTITY[x * y * z];
+	memset(lpctx->lpBlockEntities, 0, x * y * z * sizeof(BLOCK_ENTITY));
+	lpctx->numEntities = x * y * z;
 
-void block_set_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int8_t type)
-{
-	lpctx->blockEntities[index].type = type;
-}
-
-int8_t block_get_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z)
-{
-	return lpctx->blockEntities[GRIDIDX(x, y, z)].type;
-}
-
-int8_t block_get_type(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
-{
-	return lpctx->blockEntities[index].type;
-}
-
-void block_create_new_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t xc, int64_t yc, int64_t zc)
-{
-	lpctx->blockEntities[index].rigidStatic = lpctx->mPhysics->createRigidStatic(
-		physx::PxTransform(xc + 0.5f, yc + 0.5f, zc + 0.5f));
-	lpctx->blockEntities[index].rigidStatic->attachShape(*lpctx->mBlockShape);
-	lpctx->blockEntities[index].rigidStatic->userData = (void*)&lpctx->blockEntities[GRIDIDX(xc, yc, zc)];
-}
-
-physx::PxRigidStatic* block_get_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
-{
-	return lpctx->blockEntities[index].rigidStatic;
-}
-
-void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx)
-{
-	std::vector<BLOCK_ENTITY>::iterator bi = lpctx->blockEntities.begin();
-	for (; bi != lpctx->blockEntities.end(); ++bi)
-	{
-		if (bi->rigidStatic) {
-			bi->rigidStatic->release();
-			bi->rigidStatic = NULL;
+	for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
+		for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
+			for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
+				lpctx->lpBlockEntities[GRIDIDX(xc, yc, zc)].gridLocation = glm::uvec3(xc, yc, zc);
+			}
 		}
 	}
 }
 
-void blocks_foreach(VOXC_WINDOW_CONTEXT* lpctx, CALLBACK_BLOCKS_FOREACH fn)
+void block_cleanup(VOXC_WINDOW_CONTEXT* lpctx)
 {
-	std::vector<BLOCK_ENTITY>::iterator iter = lpctx->blockEntities.begin();
-	for (; iter != lpctx->blockEntities.end(); ++iter) fn(&*iter);
+	delete[] lpctx->lpBlockEntities;
+}
+
+void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type)
+{
+	lpctx->lpBlockEntities[GRIDIDX(x, y, z)].regType = type;
+}
+
+void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int8_t type)
+{
+	lpctx->lpBlockEntities[index].regType = type;
+}
+
+int8_t block_get_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, bool debug=false)
+{
+	if (debug == true)
+	{
+		BLOCK_ENTITY be = lpctx->lpBlockEntities[GRIDIDX(x, y, z)];
+		printf("block_get_regtype: hash: %lli %lli %lli %lli\n", x, y, z, be.hashCode);
+		printf("block_get_regtype: rigid: %lli %lli %lli %i\n", x, y, z, be.rigidStatic);		
+	}
+	return lpctx->lpBlockEntities[GRIDIDX(x, y, z)].regType;
+}
+
+int8_t block_get_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, bool debug=false)
+{
+	if (debug == true)
+	{
+		BLOCK_ENTITY be = lpctx->lpBlockEntities[index];
+		printf("block_get_regtype: hash: %lli %lli\n", index, be.hashCode);
+		printf("block_get_regtype: rigid: %lli %i\n", index, be.rigidStatic);
+	}
+	return lpctx->lpBlockEntities[index].regType;
+}
+
+void block_create_new_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t xc, int64_t yc, int64_t zc)
+{
+	lpctx->lpBlockEntities[index].rigidStatic = lpctx->mPhysics->createRigidStatic(
+		physx::PxTransform(xc + 0.5f, yc + 0.5f, zc + 0.5f));
+	lpctx->lpBlockEntities[index].rigidStatic->attachShape(*lpctx->mBlockShape);
+	lpctx->lpBlockEntities[index].rigidStatic->userData = (void*)&lpctx->lpBlockEntities[GRIDIDX(xc, yc, zc)];
+}
+
+physx::PxRigidStatic* block_get_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
+{
+	return lpctx->lpBlockEntities[index].rigidStatic;
+}
+
+void block_release_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
+{
+	if (lpctx->lpBlockEntities[index].rigidStatic)
+		lpctx->lpBlockEntities[index].rigidStatic->release();
+	lpctx->lpBlockEntities[index].rigidStatic = NULL;
+}
+
+void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx)
+{
+	for (int64_t i = 0; i < lpctx->numEntities; i++) {
+		if (lpctx->lpBlockEntities[i].rigidStatic)
+		{
+			lpctx->lpBlockEntities[i].rigidStatic->release();
+			lpctx->lpBlockEntities[i].rigidStatic = NULL;
+		}
+	}
 }
 
 uint8_t block_get_surround_exists_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
 {
-	return lpctx->blockEntities[index].surroundExistsMask;
+	return lpctx->lpBlockEntities[index].surroundExistsMask;
 }
 
 uint8_t block_get_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
 {
-	return lpctx->blockEntities[index].surroundAlphaMask;
+	return lpctx->lpBlockEntities[index].surroundAlphaMask;
 }
 
 uint8_t block_get_surround_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
 {
-	return lpctx->blockEntities[index].faceMask;
+	return lpctx->lpBlockEntities[index].faceMask;
 }
 
 void block_set_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value)
 {
-	lpctx->blockEntities[index].faceMask = value;
+	lpctx->lpBlockEntities[index].faceMask = value;
 }
 
 void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode)
 {
-	lpctx->blockEntities[index].hashCode = hashCode;
+	lpctx->lpBlockEntities[index].hashCode = hashCode;
+}
+
+void block_set_surround_exists_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value)
+{
+	lpctx->lpBlockEntities[index].surroundExistsMask = value;
+}
+
+void block_set_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value)
+{
+	lpctx->lpBlockEntities[index].surroundAlphaMask = value;
+}
+
+void block_set_surround_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value)
+{
+	lpctx->lpBlockEntities[index].faceMask = value;
 }

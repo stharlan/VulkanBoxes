@@ -47,7 +47,7 @@ void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64
                         if (zbl >= 0 && zbl < Z_GRID_EXTENT)
                         {
                             idx = GRIDIDX(xbl, ybl, zbl);
-                            int64_t blockType = block_get_type(lpctx, idx);
+                            int64_t blockType = block_get_regtype(lpctx, idx, false);
                             if (blockType == REG_DIRT || blockType == REG_DIRTGRASS) 
                             {
                                 physx::PxRigidStatic* lpActor = block_get_actor(lpctx, idx);
@@ -791,36 +791,54 @@ DWORD WINAPI RenderThread(LPVOID parm)
                 {
                     int64_t hashCode = hitBlock->hashCode;
                     lpctx->keys[6] = 0;
+
                     // remove faces
                     for (int gi = 0; gi < lpctx->groups.size(); gi++)
                     {
                         lpctx->groups[gi].vertices.erase(
                             std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
-                                [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }), lpctx->groups[gi].vertices.end());
-
-                        //glNamedBufferSubData(lpctx->groups[gi].vbo, 0,
-                            //sizeof(VERTEX2) * lpctx->groups[gi].vertices.size(),
-                            //lpctx->groups[gi].vertices.data());
+                                [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }), 
+                            lpctx->groups[gi].vertices.end());
                     }
 
-                    physx::PxRigidStatic* pActor = hitBlock->rigidStatic;
+                    int64_t hitBlockIndex = GRIDIDX(hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
 
                     // setting block to air
-                    hitBlock->type = REG_AIR;
+                    //hitBlock->regType = REG_AIR;
+                    block_set_regtype(lpctx, hitBlockIndex, REG_AIR);
 
                     // refreshing actors and disabling refresh later
+                    // since this block is now air, it will not be added to the scene
                     addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+
+                    // do not add actors below
                     shouldAddActors = false;
 
-                    // resetting block
-                    hitBlock->faceMask = 0;
-                    if (hitBlock->rigidStatic) hitBlock->rigidStatic->release();
-                    hitBlock->rigidStatic = NULL;
-                    hitBlock->surroundAlphaMask = 0;
-                    hitBlock->surroundExistsMask = 0;
+                    // reset the block
+                    //hitBlock->faceMask = 0;
+                    //if (hitBlock->rigidStatic) hitBlock->rigidStatic->release();
+                    //hitBlock->rigidStatic = NULL;
+                    //hitBlock->surroundAlphaMask = 0;
+                    //hitBlock->surroundExistsMask = 0;
+                    block_release_actor(lpctx, hitBlockIndex);
+                    block_set_surround_face_mask(lpctx, hitBlockIndex, 0);
+                    block_set_surround_alpha_mask(lpctx, hitBlockIndex, 0);
+                    block_set_surround_exists_mask(lpctx, hitBlockIndex, 0);
 
-                    update_surrounding_blocks(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+                    // update the masks for the block removed
+                    // and update the masks for the surrounding blocks
+                    // and update the face data for the surrounding blocks
+                    update_surrounding_blocks(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
 
+                    // update the vertex buffers based on new face data
+                    for (int gi = 0; gi < lpctx->groups.size(); gi++)
+                    {
+                        glNamedBufferSubData(lpctx->groups[gi].vbo, 0,
+                            sizeof(VERTEX2) * lpctx->groups[gi].vertices.size(),
+                            lpctx->groups[gi].vertices.data());
+                    }
+
+                    // the hit block is invalid now - it's gone
                     hitBlock = NULL;
                 }
 
@@ -994,9 +1012,20 @@ DWORD WINAPI RenderThread(LPVOID parm)
                 if (hitBlock != NULL)
                 {
                     memset(textBuffer, 0, 256);
-                    sprintf_s(textBuffer, 256, "T: %i F: %i A: %i S: %i H: 0x%08x", hitBlock->type, hitBlock->faceMask, hitBlock->surroundAlphaMask, 
+                    sprintf_s(textBuffer, 256, "T: %i F: %i A: %i S: %i H: 0x%08x", hitBlock->regType, hitBlock->faceMask, hitBlock->surroundAlphaMask, 
                         hitBlock->surroundExistsMask, (unsigned int)hitBlock->hashCode);
                     RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (4.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+                    memset(textBuffer, 0, 256);
+                    sprintf_s(textBuffer, 256, "GRIDLOC: %i %i %i",
+                        hitBlock->gridLocation.x,
+                        hitBlock->gridLocation.y,
+                        hitBlock->gridLocation.z);
+                    RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (5.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+
+                    uint8_t regType = block_get_regtype(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z, false);
+                    memset(textBuffer, 0, 256);
+                    sprintf_s(textBuffer, 256, "REGTYPE: %i", regType);
+                    RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (6.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
                 }
             }
         }

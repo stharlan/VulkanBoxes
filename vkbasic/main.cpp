@@ -59,7 +59,7 @@ HWND vbasic_create_window(HINSTANCE hInstance)
 		wc.lpszClassName,
 		L"VBASIC",
 		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT, 640, 480,
+		CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
 		NULL, NULL, hInstance, 0);
 	return hwnd;
 }
@@ -194,12 +194,17 @@ void vbasic_create_logical_device(VBASIC_CONTEXT* lpctx)
 
 	VkPhysicalDeviceFeatures deviceFeatures{};
 
+	const std::vector<const char*> deviceExtensions = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME
+	};
+
 	VkDeviceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pEnabledFeatures = &deviceFeatures;
-	createInfo.enabledExtensionCount = 0;
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 	createInfo.enabledLayerCount = 0;
 
 	if (vkCreateDevice(lpctx->vkPhysicalDev, &createInfo, nullptr, &lpctx->vkDevice) != VK_SUCCESS) {
@@ -212,6 +217,57 @@ void vbasic_create_logical_device(VBASIC_CONTEXT* lpctx)
 		(long long)lpctx->vkGraphicsQueue, 
 		(long long)lpctx->vkPresentQueue);
 
+}
+
+void vbasic_create_swapchain(VBASIC_CONTEXT* lpctx)
+{
+	VkSurfaceCapabilitiesKHR caps;
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(lpctx->vkPhysicalDev, lpctx->vkSurface, &caps);
+	
+	std::vector<VkSurfaceFormatKHR> formats;
+	std::vector<VkPresentModeKHR> presentModes;
+
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(lpctx->vkPhysicalDev, lpctx->vkSurface, &formatCount, nullptr);
+	if (formatCount != 0) {
+		formats.resize(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(lpctx->vkPhysicalDev, lpctx->vkSurface, &formatCount, formats.data());
+	}
+
+	uint32_t presentModeCount;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(lpctx->vkPhysicalDev, lpctx->vkSurface, &presentModeCount, nullptr);
+	if (presentModeCount != 0) {
+		presentModes.resize(presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(lpctx->vkPhysicalDev, lpctx->vkSurface, &presentModeCount, presentModes.data());
+	}
+
+	// color space VK_COLOR_SPACE_SRGB_NONLINEAR_KHR is 0
+	// VK_FORMAT_B8G8R8A8_UNORM
+	// VK_FORMAT_B8G8R8A8_SRGB
+	// VK_FORMAT_A2B10G10R10_UNORM_PACK32
+	for (const auto& format : formats)
+	{
+		printf("%i / %i\n", format.format, format.colorSpace);
+	}
+
+	// VK_PRESENT_MODE_IMMEDIATE_KHR = 0,
+	// VK_PRESENT_MODE_MAILBOX_KHR = 1, triple buffering
+	// VK_PRESENT_MODE_FIFO_KHR = 2,
+	// VK_PRESENT_MODE_FIFO_RELAXED_KHR = 3,
+	for (const auto& mode : presentModes)
+	{
+		printf("mode %i\n", mode);
+	}
+
+	printf("min w/h: %i %i  max w/h: %i %i\n",
+		caps.minImageExtent.width, caps.minImageExtent.height,
+		caps.maxImageExtent.width, caps.maxImageExtent.height);
+	// 2 to 8: want 3
+	printf("min img ct %i to %i\n", caps.minImageCount, caps.maxImageCount);
+
+	VkSwapchainCreateInfoKHR createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	createInfo.surface = lpctx->vkSurface;
 }
 
 int WINAPI WinMain(
@@ -235,6 +291,7 @@ int WINAPI WinMain(
 		vbasic_create_vulkan_instance(&ctx, hwnd, hInstance);
 		vbasic_select_physical_device(&ctx);
 		vbasic_create_logical_device(&ctx);
+		vbasic_create_swapchain(&ctx);
 	}
 	catch (const std::exception& e) {
 		printf("%s\n", e.what());

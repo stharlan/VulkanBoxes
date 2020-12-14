@@ -291,11 +291,34 @@ const glm::vec3 normals[40] = {
     {-1.0f, -1.0f, 0.0f}
 };
 
-GLuint CreateZeroCube()
+//GLuint CreateZeroCube()
+//{
+//    glm::mat4 xz = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, -0.5f, -0.5f));
+//    glm::mat4 sc = glm::scale(glm::mat4(1.0f), glm::vec3(1.1f, 1.1f, 1.1f));
+//    std::vector<VERTEX2> zeroCubeVerts;
+//    for (int i = 0; i < 6; i++) 
+//        zeroCubeVerts.push_back({ sc * (xz * locs[topVertexIndices[i]]), texcrds[topVertexIndices[i]], normals[topVertexIndices[i]], {0,0} });
+//    for (int i = 0; i < 6; i++)
+//        zeroCubeVerts.push_back({ sc * (xz * locs[bottomVertexIndices[i]]), texcrds[bottomVertexIndices[i]], normals[bottomVertexIndices[i]], {0,0} });
+//    for (int i = 0; i < 6; i++)
+//        zeroCubeVerts.push_back({ sc * (xz * locs[plusxVertexIndices[i]]), texcrds[plusxVertexIndices[i]], normals[plusxVertexIndices[i]], {0,0} });
+//    for (int i = 0; i < 6; i++)
+//        zeroCubeVerts.push_back({ sc * (xz * locs[minusxVertexIndices[i]]), texcrds[minusxVertexIndices[i]], normals[minusxVertexIndices[i]], {0,0} });
+//    for (int i = 0; i < 6; i++)
+//        zeroCubeVerts.push_back({ sc * (xz * locs[plusyVertexIndices[i]]), texcrds[plusyVertexIndices[i]], normals[plusyVertexIndices[i]], {0,0} });
+//    for (int i = 0; i < 6; i++)
+//        zeroCubeVerts.push_back({ sc * (xz * locs[minusyVertexIndices[i]]), texcrds[minusyVertexIndices[i]], normals[minusyVertexIndices[i]], {0,0} });
+//    GLuint zeroCubeId = 0;
+//    glCreateBuffers(1, &zeroCubeId);
+//    glNamedBufferStorage(zeroCubeId, sizeof(VERTEX2) * 36, zeroCubeVerts.data(), 0);
+//    return zeroCubeId;
+//}
+
+void getZeroCubeVertices(std::vector<VERTEX2>& zeroCubeVerts)
 {
     glm::mat4 xz = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, -0.5f, -0.5f));
     glm::mat4 sc = glm::scale(glm::mat4(1.0f), glm::vec3(1.1f, 1.1f, 1.1f));
-    std::vector<VERTEX2> zeroCubeVerts;
+    //std::vector<VERTEX2> zeroCubeVerts;
     for (int i = 0; i < 6; i++) 
         zeroCubeVerts.push_back({ sc * (xz * locs[topVertexIndices[i]]), texcrds[topVertexIndices[i]], normals[topVertexIndices[i]], {0,0} });
     for (int i = 0; i < 6; i++)
@@ -308,10 +331,10 @@ GLuint CreateZeroCube()
         zeroCubeVerts.push_back({ sc * (xz * locs[plusyVertexIndices[i]]), texcrds[plusyVertexIndices[i]], normals[plusyVertexIndices[i]], {0,0} });
     for (int i = 0; i < 6; i++)
         zeroCubeVerts.push_back({ sc * (xz * locs[minusyVertexIndices[i]]), texcrds[minusyVertexIndices[i]], normals[minusyVertexIndices[i]], {0,0} });
-    GLuint zeroCubeId = 0;
-    glCreateBuffers(1, &zeroCubeId);
-    glNamedBufferStorage(zeroCubeId, sizeof(VERTEX2) * 36, zeroCubeVerts.data(), 0);
-    return zeroCubeId;
+    //GLuint zeroCubeId = 0;
+    //glCreateBuffers(1, &zeroCubeId);
+    //glNamedBufferStorage(zeroCubeId, sizeof(VERTEX2) * 36, zeroCubeVerts.data(), 0);
+    //return zeroCubeId;
 }
 
 // update the exists and alpha mask for a block adjacent to another block
@@ -367,7 +390,7 @@ void update_masks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
         if (yc > 0) update_mask_surround(lpctx, xc, yc - 1, zc, idx, SURR_MINUS_Y);
 }
 
-void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc, uint8_t sideToUpdate)
+int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc, uint8_t sideToUpdate)
 {
 
     int64_t idx = GRIDIDX(xc, yc, zc);
@@ -377,6 +400,8 @@ void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
     if (sideToUpdate > 0) {
         printf("faces: %i %i %i %i block type is %i\n", idx, xc, yc, zc, blockType);
     }
+
+    int facesAdded = 0;
 
     if (blockType)
     {
@@ -400,7 +425,7 @@ void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
         if (ifoundBlock == vBlockRegistry.end())
         {
             printf("block reg not found %i\n", blockType);
-            return;
+            return facesAdded;
         }
 
         BLOCK_REG& fndBlock = *ifoundBlock;
@@ -423,6 +448,7 @@ void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
                             });
                     }
                     SET_BIT(faceMask, SURR_ON_BOTTOM);
+                    facesAdded++;
                 }
             }
         }
@@ -430,6 +456,10 @@ void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
         // check for block on top (+z)
         if (sideToUpdate == 0 || sideToUpdate == SURR_ON_TOP)
         {
+            if (sideToUpdate == SURR_ON_TOP)
+            {
+                printf("!DEBUG!\n");
+            }
             if (!IS_BITSET(existsMask, SURR_ON_TOP) || IS_BITSET(alphaMask, SURR_ON_TOP)) {
                 if (!IS_BITSET(faceMask, SURR_ON_TOP)) {
                     for (int64_t v = 0; v < 6; v++) {
@@ -439,8 +469,21 @@ void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
                             });
                     }
                     SET_BIT(faceMask, SURR_ON_TOP);
+                    facesAdded++;
+                    if (sideToUpdate == SURR_ON_TOP)
+                    {
+                        printf("!DEBUG IS ADDED!\n");
+                    }
                 }
+                else if (sideToUpdate == SURR_ON_TOP)
+                {
+                    printf("!DEBUG IS NOT ADDED!\n");
+                }
+            } else if (sideToUpdate == SURR_ON_TOP)
+            {
+                printf("!DEBUG IS NOT ADDED!\n");
             }
+
         }
 
         // check for block on +x
@@ -455,6 +498,7 @@ void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
                             });
                     }
                     SET_BIT(faceMask, SURR_PLUS_X);
+                    facesAdded++;
                 }
             }
         }
@@ -471,6 +515,7 @@ void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
                             });
                     }
                     SET_BIT(faceMask, SURR_MINUS_X);
+                    facesAdded++;
                 }
             }
         }
@@ -487,6 +532,7 @@ void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
                             });
                     }
                     SET_BIT(faceMask, SURR_PLUS_Y);
+                    facesAdded++;
                 }
             }
         }
@@ -503,6 +549,7 @@ void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
                             });
                     }
                     SET_BIT(faceMask, SURR_MINUS_Y);
+                    facesAdded++;
                 }
             }
         }
@@ -515,6 +562,7 @@ void update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
         block_set_face_mask(lpctx, idx, faceMask);
     }
 
+    return facesAdded;
 }
 
 void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
@@ -651,20 +699,25 @@ void update_surrounding_blocks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t y
     // surround mask needs to be updated
     // alpha mask needs to be updated
     update_masks(lpctx, xc, yc, zc, 0);
-    //int64_t grididx = GRIDIDX(xc, yc, zc);
-    //printf("%i - %i\n", grididx, block_get_regtype(lpctx, grididx, true));
+    int64_t grididx = GRIDIDX(xc, yc, zc);
+    printf("%i - %i\n", grididx, block_get_regtype(lpctx, grididx, true));
 
     // update faces and mask for 'some' surrounding blocks
     for (int i = 0; i < 6; i++)
     {
         int64_t xx = xc + blocksToAddress[i * 4];
+        if (xx < 0 || xx > (X_GRID_EXTENT - 1)) continue;
         int64_t yy = yc + blocksToAddress[(i * 4) + 1];
+        if (yy < 0 || yy > (Y_GRID_EXTENT - 1)) continue;
         int64_t zz = zc + blocksToAddress[(i * 4) + 2];
+        if (zz < 0 || zz > (Z_GRID_EXTENT - 1)) continue;
+
         uint8_t sideToUpdate = (uint8_t)blocksToAddress[(i * 4) + 3];
-        //grididx = GRIDIDX(xx, yy, zz);
-        //printf("%i - %i\n", grididx, block_get_regtype(lpctx, grididx, false));
+        grididx = GRIDIDX(xx, yy, zz);
+        printf("%i - %i\n", grididx, block_get_regtype(lpctx, grididx, false));
         update_masks(lpctx, xx, yy, zz, sideToUpdate);
-        update_faces(lpctx, xx, yy, zz, sideToUpdate);
+        int fa = update_faces(lpctx, xx, yy, zz, sideToUpdate);
+        printf("faces added = %i\n", fa);
     }
 }
 

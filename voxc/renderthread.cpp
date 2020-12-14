@@ -1,5 +1,14 @@
 #include "voxc.h"
 
+const VERTEX2 quadVerts[] = {
+    { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0, 0 } },
+    { { 1, 0.5, 0 },{ 1, 0 }, {0,0,0}, { 0, 0 } },
+    { { 1, 1, 0 },{ 1, 1 }, {0,0,0}, { 0, 0 } },
+    { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0, 0 } },
+    { { 1, 1, 0 },{ 1, 1 }, {0,0,0}, { 0, 0 } },
+    { { 0.5, 1, 0 },{ 0, 1 }, {0,0,0}, { 0, 0 } }
+};
+
 //void addAllActors(VOXC_WINDOW_CONTEXT* lpctx)
 //{
 //    for (const BLOCK_ENTITY& entity : lpctx->blockEntities)
@@ -598,21 +607,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
     std::vector<VBO_DATA> modelVboData;
     LoadModel(modelVboData);
 
-    // vbo for 2d quad
-    GLuint quadVbo1 = 0;
-    std::vector<VERTEX2> quadVerts = {
-        { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0, 0 } },
-        { { 1, 0.5, 0 },{ 1, 0 }, {0,0,0}, { 0, 0 } },
-        { { 1, 1, 0 },{ 1, 1 }, {0,0,0}, { 0, 0 } },
-        { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0, 0 } },
-        { { 1, 1, 0 },{ 1, 1 }, {0,0,0}, { 0, 0 } },
-        { { 0.5, 1, 0 },{ 0, 1 }, {0,0,0}, { 0, 0 } }
-    };
-    glCreateBuffers(1, &quadVbo1);
-    glNamedBufferStorage(quadVbo1, sizeof(VERTEX2) * 6, quadVerts.data(), 0);
-
-    GLuint zeroCube = CreateZeroCube();
-
     // create the vertex array
     glCreateVertexArrays(1, &lpctx->vao);
     glVertexArrayAttribBinding(lpctx->vao, 0, 0);
@@ -655,6 +649,16 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glm::vec3 cntr1 = glm::vec3(X_GRID_EXTENT / 3, Y_GRID_EXTENT / 3, 50);
     glm::mat4 lightView1 = glm::lookAt(eye1, cntr1, glm::vec3(0.0f, 0.0f, 1.0f)); 
     // end shadows
+
+    // vbo for 2d quad
+    OpenGlVertexBuffer<VERTEX2> quadBuffer(lpctx->vao, (GLsizei)6, &quadVerts[0]);
+    quadBuffer.setTextureInfo(GL_TEXTURE0, GL_TEXTURE_2D, depthMap);
+
+    // selection cube vertex buffer
+    std::vector<VERTEX2> zeroCubeVertices;
+    getZeroCubeVertices(zeroCubeVertices);
+    OpenGlVertexBuffer<VERTEX2> zeroCubeBuffer(lpctx->vao, (GLsizei)zeroCubeVertices.size(), zeroCubeVertices.data());
+    zeroCubeVertices.clear();
 
     // performance monitoring
     LARGE_INTEGER perfCount = { 0 };
@@ -792,14 +796,21 @@ DWORD WINAPI RenderThread(LPVOID parm)
                     int64_t hashCode = hitBlock->hashCode;
                     lpctx->keys[6] = 0;
 
+                    // instead of removing the faces
+                    // create an entirely new vertex buffer
+                    // for the changes
+                    // then switch the buffer
+
                     // remove faces
-                    for (int gi = 0; gi < lpctx->groups.size(); gi++)
-                    {
-                        lpctx->groups[gi].vertices.erase(
-                            std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
-                                [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }), 
-                            lpctx->groups[gi].vertices.end());
-                    }
+                    //for (int gi = 0; gi < lpctx->groups.size(); gi++)
+                    //{
+                        //printf("verts before %i\n", lpctx->groups[gi].vertices.size());
+                        //lpctx->groups[gi].vertices.erase(
+                            //std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
+                                //[hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }), 
+                            //lpctx->groups[gi].vertices.end());
+                        //printf("verts after %i\n", lpctx->groups[gi].vertices.size());
+                    //}
 
                     int64_t hitBlockIndex = GRIDIDX(hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
 
@@ -831,12 +842,22 @@ DWORD WINAPI RenderThread(LPVOID parm)
                     update_surrounding_blocks(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
 
                     // update the vertex buffers based on new face data
-                    for (int gi = 0; gi < lpctx->groups.size(); gi++)
-                    {
-                        glNamedBufferSubData(lpctx->groups[gi].vbo, 0,
-                            sizeof(VERTEX2) * lpctx->groups[gi].vertices.size(),
-                            lpctx->groups[gi].vertices.data());
-                    }
+                    //for (int gi = 0; gi < lpctx->groups.size(); gi++)
+                    //{
+                        //printf("verts after after %i\n", lpctx->groups[gi].vertices.size());
+                        //glNamedBufferSubData(lpctx->groups[gi].vbo, 0,
+                            //sizeof(VERTEX2) * lpctx->groups[gi].vertices.size(),
+                            //lpctx->groups[gi].vertices.data());
+
+                        // create an array of threads
+                    //}
+
+                    // TODO bug
+                    // the problem is, the vertex buffers may get
+                    // more or less data
+                    // a new vertex buffer needs to be created and
+                    // swapped out
+                    // i could use libuv and do it asynchronously
 
                     // the hit block is invalid now - it's gone
                     hitBlock = NULL;
@@ -983,10 +1004,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
             selCubeProg.SetUniformMatrix4fv("model", &zeroCubeModelt[0][0]);
             selCubeProg.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
             selCubeProg.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
-            glBindVertexArray(lpctx->vao);
-            glVertexArrayVertexBuffer(lpctx->vao, 0, zeroCube, 0, 12 * sizeof(GLfloat));
-            glDrawArrays(GL_TRIANGLES, 0, (GLsizei)36);
-            glBindVertexArray(0);
+            zeroCubeBuffer.draw();
             // end sel cube
 
         }
@@ -1034,15 +1052,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glDisable(GL_BLEND);
 
         // render depth map
-        {
-            ddProg.Use();
-            glBindVertexArray(lpctx->vao);
-            glVertexArrayVertexBuffer(lpctx->vao, 0, quadVbo1, 0, 12 * sizeof(GLfloat));
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, depthMap);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
-            glBindVertexArray(0);
-        }
+        ddProg.Use();
+        quadBuffer.draw();
+
         glFlush();
 
         SwapBuffers(hdc);
@@ -1072,8 +1084,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
     {
         glDeleteBuffers(1, &modelVboItem.vboId);
     }
-
-    glDeleteBuffers(1, &quadVbo1);
 
     glDeleteTextures(1, &depthMap);
     glDeleteFramebuffers(1, &depthMapFBO);

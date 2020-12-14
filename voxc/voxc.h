@@ -227,6 +227,8 @@ typedef struct _VOXC_WINDOW_CONTEXT
     int64_t xblock = 0;
     int64_t yblock = 0;
     int64_t zblock = 0;
+
+    HANDLE RebuildVerticesThread = NULL;
 } VOXC_WINDOW_CONTEXT;
 
 struct Character {
@@ -301,7 +303,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT*);
 void update_surrounding_blocks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc); 
 void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition);
 void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx);
-GLuint CreateZeroCube();
+void getZeroCubeVertices(std::vector<VERTEX2>& zeroCubeVerts);
 
 void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type);
 void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int8_t type);
@@ -324,6 +326,7 @@ void block_set_surround_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uin
 void block_release_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 
 #include "OpenGlProgram.h"
+#include "OpenGlVertexBuffer.h"
 
 //class VertexFindByHash : public std::unary_function<VERTEX2, bool> {
 //    int64_t hashcode;

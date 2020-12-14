@@ -155,6 +155,7 @@
     <ClCompile Include="glextfn.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OpenGlProgram.cpp" />
+    <ClCompile Include="OpenGlVertexBuffer.cpp" />
     <ClCompile Include="physics.cpp" />
     <ClCompile Include="renderthread.cpp" />
     <ClCompile Include="vertexbuffer.cpp" />
@@ -164,6 +165,7 @@
     <ClInclude Include="glext.h" />
     <ClInclude Include="khrplatform.h" />
     <ClInclude Include="OpenGlProgram.h" />
+    <ClInclude Include="OpenGlVertexBuffer.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="tiny_obj_loader.h" />
     <ClInclude Include="voxc.h" />

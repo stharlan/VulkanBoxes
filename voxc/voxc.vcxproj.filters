@@ -51,6 +51,9 @@
     <ClCompile Include="blocks.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="OpenGlVertexBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="voxc.h">
@@ -69,6 +72,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="tiny_obj_loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="OpenGlVertexBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -135,14 +141,6 @@
     </Font>
   </ItemGroup>
   <ItemGroup>
-    <Object Include="Lowpoly_tree_sample.obj">
-      <Filter>models</Filter>
-    </Object>
-    <Object Include="tree.obj">
-      <Filter>models</Filter>
-    </Object>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Lowpoly_tree_sample.mtl">
       <Filter>models</Filter>
     </None>
@@ -155,5 +153,7 @@
     <None Include="tree.mtl">
       <Filter>models</Filter>
     </None>
+    <None Include="Lowpoly_tree_sample.model" />
+    <None Include="tree.model" />
   </ItemGroup>
 </Project>

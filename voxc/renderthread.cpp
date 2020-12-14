@@ -594,7 +594,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
         if (lpctx->groups[i].vertices.size() > 0) {
             lpctx->groups[i].vsize = lpctx->groups[i].vertices.size();
             glNamedBufferStorage(vbos[i], sizeof(VERTEX2) * lpctx->groups[i].vertices.size(),
-                lpctx->groups[i].vertices.data(), GL_DYNAMIC_STORAGE_BIT);
+                lpctx->groups[i].vertices.data(), 0);
             //lpctx->groups[i].vertices.clear();
         }
         else {
@@ -802,15 +802,19 @@ DWORD WINAPI RenderThread(LPVOID parm)
                     // then switch the buffer
 
                     // remove faces
-                    //for (int gi = 0; gi < lpctx->groups.size(); gi++)
-                    //{
-                        //printf("verts before %i\n", lpctx->groups[gi].vertices.size());
-                        //lpctx->groups[gi].vertices.erase(
-                            //std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
-                                //[hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }), 
-                            //lpctx->groups[gi].vertices.end());
-                        //printf("verts after %i\n", lpctx->groups[gi].vertices.size());
-                    //}
+                    std::vector<int> groupsToUpdate(lpctx->groups.size());
+                    for (int gi = 0; gi < lpctx->groups.size(); gi++)
+                    {
+                        size_t sizeBefore = lpctx->groups[gi].vertices.size();
+                        lpctx->groups[gi].vertices.erase(
+                            std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
+                                [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }), 
+                            lpctx->groups[gi].vertices.end());
+                        if (lpctx->groups[gi].vertices.size() != sizeBefore)
+                        {
+                            groupsToUpdate.push_back(gi);
+                        }
+                    }
 
                     int64_t hitBlockIndex = GRIDIDX(hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
 
@@ -840,6 +844,18 @@ DWORD WINAPI RenderThread(LPVOID parm)
                     // and update the masks for the surrounding blocks
                     // and update the face data for the surrounding blocks
                     update_surrounding_blocks(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
+
+                    for (const auto& gidx : groupsToUpdate)
+                    {
+                        lpctx->groups[gidx].vsize = lpctx->groups[gidx].vertices.size();
+                        glDeleteBuffers(1, &lpctx->groups[gidx].vbo);
+                        lpctx->groups[gidx].vbo = 0;
+                        glCreateBuffers(1, &lpctx->groups[gidx].vbo);
+                        glNamedBufferStorage(
+                            lpctx->groups[gidx].vbo, 
+                            sizeof(VERTEX2) * lpctx->groups[gidx].vertices.size(),
+                            lpctx->groups[gidx].vertices.data(),  0);
+                    }
 
                     // update the vertex buffers based on new face data
                     //for (int gi = 0; gi < lpctx->groups.size(); gi++)

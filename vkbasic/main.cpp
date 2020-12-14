@@ -10,6 +10,18 @@
 #include <set>
 #include <stdexcept>
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+typedef struct _VERTEX
+{
+	glm::vec3 position;
+	glm::vec2 texc;
+	glm::vec3 norm;
+} VERTEX;
+
 typedef struct _VBASIC_CONTEXT
 {
 	VkInstance vkInstance = NULL;
@@ -27,6 +39,11 @@ typedef struct _VBASIC_CONTEXT
 	std::vector<VkImageView> vkSwapChainImageViews;
 	VkShaderModule vkVshader = nullptr;
 	VkShaderModule vkFshader = nullptr;
+	VkBuffer vkBuffer = nullptr;
+	VkDeviceMemory vkBufferMemory = nullptr;
+	VkPipelineLayout vkPipelineLayout = nullptr;
+	VkRenderPass vkRenderPass = nullptr;
+	VkPipeline vkGraphicsPipeline;
 } VBASIC_CONTEXT;
 
 LRESULT CALLBACK WindowProc(
@@ -117,9 +134,8 @@ void vbasic_create_vulkan_instance(VBASIC_CONTEXT* lpctx, HWND hwnd, HINSTANCE h
 	{
 		throw std::runtime_error("ERROR: Failed to create vulkan instance");
 	}
-	else {
-		printf("Vulkan instance created\n");
-	}
+	
+	printf("Vulkan instance created\n");
 
 	VkWin32SurfaceCreateInfoKHR surfCreateInfo{};
 	surfCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -133,6 +149,11 @@ void vbasic_create_vulkan_instance(VBASIC_CONTEXT* lpctx, HWND hwnd, HINSTANCE h
 
 void vbasic_cleanup(VBASIC_CONTEXT* lpctx)
 {
+	if (lpctx->vkBuffer) vkDestroyBuffer(lpctx->vkDevice, lpctx->vkBuffer, nullptr);
+	if (lpctx->vkBufferMemory) vkFreeMemory(lpctx->vkDevice, lpctx->vkBufferMemory, nullptr);
+	if (lpctx->vkGraphicsPipeline) vkDestroyPipeline(lpctx->vkDevice, lpctx->vkGraphicsPipeline, nullptr);
+	if (lpctx->vkPipelineLayout) vkDestroyPipelineLayout(lpctx->vkDevice, lpctx->vkPipelineLayout, nullptr);
+	if (lpctx->vkRenderPass) vkDestroyRenderPass(lpctx->vkDevice, lpctx->vkRenderPass, nullptr);
 	if (lpctx->vkVshader) vkDestroyShaderModule(lpctx->vkDevice, lpctx->vkVshader, nullptr);
 	if (lpctx->vkFshader) vkDestroyShaderModule(lpctx->vkDevice, lpctx->vkFshader, nullptr);
 	for (auto imageView : lpctx->vkSwapChainImageViews) {
@@ -205,6 +226,7 @@ void vbasic_create_logical_device(VBASIC_CONTEXT* lpctx)
 	}
 
 	VkPhysicalDeviceFeatures deviceFeatures{};
+	deviceFeatures.samplerAnisotropy = VK_TRUE;
 
 	const std::vector<const char*> deviceExtensions = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -212,8 +234,8 @@ void vbasic_create_logical_device(VBASIC_CONTEXT* lpctx)
 
 	VkDeviceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 	createInfo.pEnabledFeatures = &deviceFeatures;
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
 	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
@@ -234,18 +256,16 @@ void vbasic_create_logical_device(VBASIC_CONTEXT* lpctx)
 void vbasic_create_swapchain(VBASIC_CONTEXT* lpctx)
 {
 	VkSurfaceCapabilitiesKHR caps;
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(lpctx->vkPhysicalDev, lpctx->vkSurface, &caps);
-	
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> presentModes;
 
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(lpctx->vkPhysicalDev, lpctx->vkSurface, &caps);
 	uint32_t formatCount;
 	vkGetPhysicalDeviceSurfaceFormatsKHR(lpctx->vkPhysicalDev, lpctx->vkSurface, &formatCount, nullptr);
 	if (formatCount != 0) {
 		formats.resize(formatCount);
 		vkGetPhysicalDeviceSurfaceFormatsKHR(lpctx->vkPhysicalDev, lpctx->vkSurface, &formatCount, formats.data());
 	}
-
 	uint32_t presentModeCount;
 	vkGetPhysicalDeviceSurfacePresentModesKHR(lpctx->vkPhysicalDev, lpctx->vkSurface, &presentModeCount, nullptr);
 	if (presentModeCount != 0) {
@@ -288,10 +308,10 @@ void vbasic_create_swapchain(VBASIC_CONTEXT* lpctx)
 	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	if (lpctx->graphicsFamilyIndex != lpctx->presentFamilyIndex) {
 		printf("queues are different\n");
-		std::vector<uint32_t> indices = { (uint32_t)lpctx->graphicsFamilyIndex,(uint32_t)lpctx->presentFamilyIndex};
+		uint32_t indices[] = { (uint32_t)lpctx->graphicsFamilyIndex,(uint32_t)lpctx->presentFamilyIndex};
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		createInfo.queueFamilyIndexCount = 2;
-		createInfo.pQueueFamilyIndices = indices.data();
+		createInfo.pQueueFamilyIndices = indices;
 	}
 	else {
 		printf("queues are same\n");
@@ -380,6 +400,9 @@ VkShaderModule getShaderFromFile(VBASIC_CONTEXT* lpctx, const char* fn)
 
 void vbasic_create_graphics_pipeline(VBASIC_CONTEXT* lpctx)
 {
+	// *******
+	// shaders
+	// *******
 	std::vector<BYTE> vertexShader;
 	std::vector<BYTE> fragmentShader;
 	lpctx->vkVshader = getShaderFromFile(lpctx, "vbasic.spv");
@@ -400,6 +423,271 @@ void vbasic_create_graphics_pipeline(VBASIC_CONTEXT* lpctx)
 
 	// programmable pipeline stages
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+
+	printf("shaders are loaded\n");
+
+	// *****************
+	// vertex descriptor
+	// *****************
+	// specifically for VERTEX structure
+	// glm::vec3 pos
+	// glm::vec2 tex
+	// glm::vec3 norm
+	VkVertexInputBindingDescription bindingDescription{};
+	bindingDescription.binding = 0;
+	bindingDescription.stride = sizeof(VERTEX);
+	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+	VkVertexInputAttributeDescription attrs[3];
+	// position
+	attrs[0].binding = 0;
+	attrs[0].location = 0;
+	attrs[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+	attrs[0].offset = offsetof(VERTEX, position);
+	// tex coords
+	attrs[1].binding = 0;
+	attrs[1].location = 1;
+	attrs[1].format = VK_FORMAT_R32G32_SFLOAT;
+	attrs[1].offset = offsetof(VERTEX, position);
+	// normal
+	attrs[2].binding = 0;
+	attrs[2].location = 2;
+	attrs[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+	attrs[2].offset = offsetof(VERTEX, position);
+
+	printf("vertices are described\n");
+
+	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+	vertexInputInfo.vertexAttributeDescriptionCount = 3;
+	vertexInputInfo.pVertexAttributeDescriptions = &attrs[0];
+
+	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+	VkViewport viewport{};
+	viewport.x = 0.0f;
+	viewport.y = 0.0f;
+	viewport.width = (float)lpctx->vkSwapChainExtent.width;
+	viewport.height = (float)lpctx->vkSwapChainExtent.height;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+
+	VkRect2D scissor{};
+	scissor.offset = { 0, 0 };
+	scissor.extent = lpctx->vkSwapChainExtent;
+
+	VkPipelineViewportStateCreateInfo viewportState{};
+	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportState.viewportCount = 1;
+	viewportState.pViewports = &viewport;
+	viewportState.scissorCount = 1;
+	viewportState.pScissors = &scissor;
+
+	VkPipelineRasterizationStateCreateInfo rasterizer{};
+	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterizer.depthClampEnable = VK_FALSE;
+	rasterizer.rasterizerDiscardEnable = VK_FALSE;
+	rasterizer.polygonMode = VK_POLYGON_MODE_FILL; // line mode draw lines
+	rasterizer.lineWidth = 1.0f;
+	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	rasterizer.depthBiasEnable = VK_FALSE;
+	rasterizer.depthBiasConstantFactor = 0.0f; // Optional
+	rasterizer.depthBiasClamp = 0.0f; // Optional
+	rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+
+	VkPipelineMultisampleStateCreateInfo multisampling{};
+	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisampling.sampleShadingEnable = VK_FALSE;
+	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+	multisampling.minSampleShading = 1.0f; // Optional
+	multisampling.pSampleMask = nullptr; // Optional
+	multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
+	multisampling.alphaToOneEnable = VK_FALSE; // Optional
+
+	VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	colorBlendAttachment.blendEnable = VK_FALSE;
+	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
+	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+
+	VkPipelineColorBlendStateCreateInfo colorBlending{};
+	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlending.logicOpEnable = VK_FALSE;
+	colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
+	colorBlending.attachmentCount = 1;
+	colorBlending.pAttachments = &colorBlendAttachment;
+	colorBlending.blendConstants[0] = 0.0f; // Optional
+	colorBlending.blendConstants[1] = 0.0f; // Optional
+	colorBlending.blendConstants[2] = 0.0f; // Optional
+	colorBlending.blendConstants[3] = 0.0f; // Optional
+
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount = 0; // Optional
+	pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
+	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+
+	if (vkCreatePipelineLayout(lpctx->vkDevice, &pipelineLayoutInfo, nullptr, &lpctx->vkPipelineLayout) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create pipeline layout!");
+	}
+
+	printf("pipeline layout is created\n");
+
+
+	// ********
+	// pipeline
+	// ********
+	VkGraphicsPipelineCreateInfo pipelineInfo{};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderStages;
+	pipelineInfo.pVertexInputState = &vertexInputInfo;
+	pipelineInfo.pInputAssemblyState = &inputAssembly;
+	pipelineInfo.pViewportState = &viewportState;
+	pipelineInfo.pRasterizationState = &rasterizer;
+	pipelineInfo.pMultisampleState = &multisampling;
+	pipelineInfo.pDepthStencilState = nullptr; // Optional
+	pipelineInfo.pColorBlendState = &colorBlending;
+	pipelineInfo.pDynamicState = nullptr; // Optional
+	pipelineInfo.layout = lpctx->vkPipelineLayout;
+	pipelineInfo.renderPass = lpctx->vkRenderPass;
+	pipelineInfo.subpass = 0;
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
+	pipelineInfo.basePipelineIndex = -1; // Optional
+	if (vkCreateGraphicsPipelines(lpctx->vkDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &lpctx->vkGraphicsPipeline) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create graphics pipeline!");
+	}
+
+	printf("graphics pipeline is created\n");
+
+	// !! start here with a new method
+
+	// ******
+	// buffer
+	// ******
+	VERTEX triangle[] = {
+		{{-0.5f,0.0f,-0.5f},{0.0f,0.0f},{0.0f,1.0f,0.0f}},
+		{{0.5f,0.0f,-0.5f},{1.0f,0.0f},{0.0f,1.0f,0.0f}},
+		{{0.0f,0.0f,0.5f},{0.5f,1.0f},{0.0f,1.0f,0.0f}}
+	};
+
+	// create buffer
+	VkBufferCreateInfo bufferInfo{};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = sizeof(VERTEX) * 3;
+	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	if (vkCreateBuffer(lpctx->vkDevice, &bufferInfo, nullptr, &lpctx->vkBuffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create vertex buffer!");
+	}
+
+	// get memory requirements
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(lpctx->vkDevice, lpctx->vkBuffer, &memRequirements);
+	printf("s: %lli, a: %lli, b: %i\n",
+		memRequirements.size,
+		memRequirements.alignment,
+		memRequirements.memoryTypeBits);
+
+	// find memory type
+	uint32_t typeFilter = memRequirements.memoryTypeBits;
+	VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	VkPhysicalDeviceMemoryProperties memProperties;
+	uint32_t memoryTypeIndex = 0;
+	bool isFound = false;
+	vkGetPhysicalDeviceMemoryProperties(lpctx->vkPhysicalDev, &memProperties);
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+			memoryTypeIndex = i;
+			isFound = true;
+		}
+	}
+
+	if(false == isFound) 
+		throw std::runtime_error("failed to find suitable memory type!");
+
+	// allocate memory
+	VkMemoryAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = memoryTypeIndex;
+
+	if (vkAllocateMemory(lpctx->vkDevice, &allocInfo, nullptr, &lpctx->vkBufferMemory) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate vertex buffer memory!");
+	}
+
+	// associate buffer with memory
+	vkBindBufferMemory(lpctx->vkDevice, lpctx->vkBuffer, lpctx->vkBufferMemory, 0);
+
+	printf("buffer is created and associated with memory\n");
+
+	// copy data into buffer
+	void* data;
+	vkMapMemory(lpctx->vkDevice, lpctx->vkBufferMemory, 0, bufferInfo.size, 0, &data);
+	memcpy(data, &triangle[0], (size_t)bufferInfo.size);
+	vkUnmapMemory(lpctx->vkDevice, lpctx->vkBufferMemory); 
+
+	printf("buffer is loaded\n");
+}
+
+void vbasic_create_render_pass(VBASIC_CONTEXT* lpctx)
+{
+	// ***********
+	// render pass
+	// ***********
+	VkAttachmentDescription colorAttachment{};
+	colorAttachment.format = lpctx->vkSwapChainImageFormat;
+	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentDescription depthAttachment{};
+	depthAttachment.format = findDepthFormat();
+	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference colorAttachmentRef{};
+	colorAttachmentRef.attachment = 0;
+	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription subpass{};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &colorAttachmentRef;
+
+	VkRenderPassCreateInfo renderPassInfo{};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	renderPassInfo.attachmentCount = 1;
+	renderPassInfo.pAttachments = &colorAttachment;
+	renderPassInfo.subpassCount = 1;
+	renderPassInfo.pSubpasses = &subpass;
+
+	if (vkCreateRenderPass(lpctx->vkDevice, &renderPassInfo, nullptr, &lpctx->vkRenderPass) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create render pass!");
+	}
+
+	printf("render pass is created\n");
+
 }
 
 int WINAPI WinMain(
@@ -425,6 +713,8 @@ int WINAPI WinMain(
 		vbasic_create_logical_device(&ctx);
 		vbasic_create_swapchain(&ctx);
 		vbasic_create_swapchain_image_views(&ctx);
+		vbasic_create_render_pass(&ctx);
+
 		vbasic_create_graphics_pipeline(&ctx);
 	}
 	catch (const std::exception& e) {

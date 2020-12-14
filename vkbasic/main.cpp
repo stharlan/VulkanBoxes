@@ -7,10 +7,13 @@
 #include <vulkan/vulkan.h>
 #include <stdio.h>
 #include <vector>
+#include <stdexcept>
 
 typedef struct _VBASIC_CONTEXT
 {
 	VkInstance vkInstance = NULL;
+	VkPhysicalDevice vkPhysicalDev = NULL;
+	VkDevice vkDevice = NULL;
 } VBASIC_CONTEXT;
 
 LRESULT CALLBACK WindowProc(
@@ -99,7 +102,7 @@ void vbasic_create_vulkan_instance(VBASIC_CONTEXT* lpctx)
 	createInfo.enabledLayerCount = 0;
 	if (vkCreateInstance(&createInfo, nullptr, &lpctx->vkInstance) != VK_SUCCESS)
 	{
-		printf("ERROR: Failed to create vulkan instance\n");
+		throw std::runtime_error("ERROR: Failed to create vulkan instance");
 	}
 	else {
 		printf("Vulkan instance created\n");
@@ -108,7 +111,74 @@ void vbasic_create_vulkan_instance(VBASIC_CONTEXT* lpctx)
 
 void vbasic_cleanup(VBASIC_CONTEXT* lpctx)
 {
+	if (lpctx->vkDevice) vkDestroyDevice(lpctx->vkDevice, nullptr);
 	if (lpctx->vkInstance) vkDestroyInstance(lpctx->vkInstance, nullptr);
+}
+
+void vbasic_select_physical_device(VBASIC_CONTEXT* lpctx)
+{
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(lpctx->vkInstance, &deviceCount, nullptr);
+	printf("%i devices\n", deviceCount);
+
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(lpctx->vkInstance, &deviceCount, devices.data());
+	for (const auto& device : devices) {
+		VkPhysicalDeviceProperties deviceProperties;
+		vkGetPhysicalDeviceProperties(device, &deviceProperties);
+		printf("%s\n", deviceProperties.deviceName);
+		if (strcmp("GeForce GTX 1660 Ti", deviceProperties.deviceName) == 0) {
+			printf("found a device\n");
+			lpctx->vkPhysicalDev = device;
+			return;
+		}
+	}
+}
+
+void vbasic_create_logical_device(VBASIC_CONTEXT* lpctx)
+{
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(lpctx->vkPhysicalDev, &queueFamilyCount, nullptr);
+
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(lpctx->vkPhysicalDev, &queueFamilyCount, queueFamilies.data());
+
+	int graphicsFamilyIndex = -1;
+
+	int i = 0;
+	for (const auto& queueFamily : queueFamilies) {
+		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			graphicsFamilyIndex = i;
+		}
+		i++;
+	}
+
+	if (graphicsFamilyIndex == -1) {
+		throw std::runtime_error("Failed to get graphics family index");
+	}
+
+	VkDeviceQueueCreateInfo queueCreateInfo{};
+	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueCreateInfo.queueFamilyIndex = graphicsFamilyIndex;
+	queueCreateInfo.queueCount = 1;
+	float queuePriority = 1.0f;
+	queueCreateInfo.pQueuePriorities = &queuePriority;
+
+	VkPhysicalDeviceFeatures deviceFeatures{};
+
+	VkDeviceCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.pQueueCreateInfos = &queueCreateInfo;
+	createInfo.queueCreateInfoCount = 1;
+	createInfo.pEnabledFeatures = &deviceFeatures;
+	createInfo.enabledExtensionCount = 0;
+	createInfo.enabledLayerCount = 0;
+
+	if (vkCreateDevice(lpctx->vkPhysicalDev, &createInfo, nullptr, &lpctx->vkDevice) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create logical device!");
+	}
+
+	printf("logical device created\n");
 }
 
 int WINAPI WinMain(
@@ -128,7 +198,16 @@ int WINAPI WinMain(
 	ShowWindow(hwnd, SW_SHOW);
 
 	VBASIC_CONTEXT ctx{};
-	vbasic_create_vulkan_instance(&ctx);
+	try {
+		vbasic_create_vulkan_instance(&ctx);
+		vbasic_select_physical_device(&ctx);
+		vbasic_create_logical_device(&ctx);
+	}
+	catch (const std::exception& e) {
+		printf("%s\n", e.what());
+		vbasic_cleanup(&ctx);
+		return EXIT_FAILURE;
+	}
 
 	vbasic_begin_message_loop(hwnd);
 
@@ -136,5 +215,5 @@ int WINAPI WinMain(
 
 	FreeConsole();
 
-	return 0;
+	return EXIT_SUCCESS;
 }

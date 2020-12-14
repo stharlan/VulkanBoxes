@@ -7,13 +7,17 @@
 #include <vulkan/vulkan.h>
 #include <stdio.h>
 #include <vector>
+#include <set>
 #include <stdexcept>
 
 typedef struct _VBASIC_CONTEXT
 {
 	VkInstance vkInstance = NULL;
+	VkSurfaceKHR vkSurface = NULL;
 	VkPhysicalDevice vkPhysicalDev = NULL;
 	VkDevice vkDevice = NULL;
+	VkQueue vkGraphicsQueue = NULL;
+	VkQueue vkPresentQueue = NULL;
 } VBASIC_CONTEXT;
 
 LRESULT CALLBACK WindowProc(
@@ -79,7 +83,7 @@ void vbasic_begin_message_loop(HWND hwnd)
 	}
 }
 
-void vbasic_create_vulkan_instance(VBASIC_CONTEXT* lpctx)
+void vbasic_create_vulkan_instance(VBASIC_CONTEXT* lpctx, HWND hwnd, HINSTANCE hInst)
 {
 	VkApplicationInfo appInfo = {};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -107,10 +111,20 @@ void vbasic_create_vulkan_instance(VBASIC_CONTEXT* lpctx)
 	else {
 		printf("Vulkan instance created\n");
 	}
+
+	VkWin32SurfaceCreateInfoKHR surfCreateInfo{};
+	surfCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+	surfCreateInfo.hwnd = hwnd;
+	surfCreateInfo.hinstance = hInst;
+
+	if (vkCreateWin32SurfaceKHR(lpctx->vkInstance, &surfCreateInfo, nullptr, &lpctx->vkSurface) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create window surface!");
+	}
 }
 
 void vbasic_cleanup(VBASIC_CONTEXT* lpctx)
 {
+	if (lpctx->vkSurface) vkDestroySurfaceKHR(lpctx->vkInstance, lpctx->vkSurface, nullptr);
 	if (lpctx->vkDevice) vkDestroyDevice(lpctx->vkDevice, nullptr);
 	if (lpctx->vkInstance) vkDestroyInstance(lpctx->vkInstance, nullptr);
 }
@@ -143,33 +157,47 @@ void vbasic_create_logical_device(VBASIC_CONTEXT* lpctx)
 	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(lpctx->vkPhysicalDev, &queueFamilyCount, queueFamilies.data());
 
-	int graphicsFamilyIndex = -1;
+	uint32_t graphicsFamilyIndex = -1;
+	uint32_t presentFamilyIndex = -1;
 
-	int i = 0;
+	uint32_t ii = 0;
+	VkBool32 supported = VK_FALSE;
 	for (const auto& queueFamily : queueFamilies) {
 		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-			graphicsFamilyIndex = i;
+			graphicsFamilyIndex = ii;
 		}
-		i++;
+		vkGetPhysicalDeviceSurfaceSupportKHR(lpctx->vkPhysicalDev, ii, lpctx->vkSurface, &supported);
+		if (VK_TRUE == supported) {
+			presentFamilyIndex = ii;
+		}
+		ii++;
 	}
 
-	if (graphicsFamilyIndex == -1) {
-		throw std::runtime_error("Failed to get graphics family index");
+	if (graphicsFamilyIndex == -1 || presentFamilyIndex == -1) {
+		throw std::runtime_error("Failed to get family indices");
 	}
 
-	VkDeviceQueueCreateInfo queueCreateInfo{};
-	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queueCreateInfo.queueFamilyIndex = graphicsFamilyIndex;
-	queueCreateInfo.queueCount = 1;
+	printf("found queues %i %i\n", graphicsFamilyIndex, presentFamilyIndex);
+
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	std::set<uint32_t> uniqueQueueFamilies = { graphicsFamilyIndex, presentFamilyIndex };
+
 	float queuePriority = 1.0f;
-	queueCreateInfo.pQueuePriorities = &queuePriority;
+	for (uint32_t queueFamily : uniqueQueueFamilies) {
+		VkDeviceQueueCreateInfo queueCreateInfo{};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = queueFamily;
+		queueCreateInfo.queueCount = 1;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+		queueCreateInfos.push_back(queueCreateInfo);
+	}
 
 	VkPhysicalDeviceFeatures deviceFeatures{};
 
 	VkDeviceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.pQueueCreateInfos = &queueCreateInfo;
-	createInfo.queueCreateInfoCount = 1;
+	createInfo.pQueueCreateInfos = queueCreateInfos.data();
+	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pEnabledFeatures = &deviceFeatures;
 	createInfo.enabledExtensionCount = 0;
 	createInfo.enabledLayerCount = 0;
@@ -177,8 +205,13 @@ void vbasic_create_logical_device(VBASIC_CONTEXT* lpctx)
 	if (vkCreateDevice(lpctx->vkPhysicalDev, &createInfo, nullptr, &lpctx->vkDevice) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create logical device!");
 	}
+	vkGetDeviceQueue(lpctx->vkDevice, graphicsFamilyIndex, 0, &lpctx->vkGraphicsQueue);
+	vkGetDeviceQueue(lpctx->vkDevice, presentFamilyIndex, 0, &lpctx->vkPresentQueue);
 
-	printf("logical device created\n");
+	printf("logical device created; queues %lli %lli\n", 
+		(long long)lpctx->vkGraphicsQueue, 
+		(long long)lpctx->vkPresentQueue);
+
 }
 
 int WINAPI WinMain(
@@ -199,13 +232,14 @@ int WINAPI WinMain(
 
 	VBASIC_CONTEXT ctx{};
 	try {
-		vbasic_create_vulkan_instance(&ctx);
+		vbasic_create_vulkan_instance(&ctx, hwnd, hInstance);
 		vbasic_select_physical_device(&ctx);
 		vbasic_create_logical_device(&ctx);
 	}
 	catch (const std::exception& e) {
 		printf("%s\n", e.what());
 		vbasic_cleanup(&ctx);
+		getchar();
 		return EXIT_FAILURE;
 	}
 

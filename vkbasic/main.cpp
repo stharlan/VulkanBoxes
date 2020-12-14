@@ -18,6 +18,15 @@ typedef struct _VBASIC_CONTEXT
 	VkDevice vkDevice = NULL;
 	VkQueue vkGraphicsQueue = NULL;
 	VkQueue vkPresentQueue = NULL;
+	int32_t graphicsFamilyIndex = -1;
+	int32_t presentFamilyIndex = -1;
+	VkSwapchainKHR vkSwapChain = NULL;
+	std::vector<VkImage> vkSwapChainImages;
+	VkFormat vkSwapChainImageFormat;
+	VkExtent2D vkSwapChainExtent;
+	std::vector<VkImageView> vkSwapChainImageViews;
+	VkShaderModule vkVshader = nullptr;
+	VkShaderModule vkFshader = nullptr;
 } VBASIC_CONTEXT;
 
 LRESULT CALLBACK WindowProc(
@@ -124,6 +133,12 @@ void vbasic_create_vulkan_instance(VBASIC_CONTEXT* lpctx, HWND hwnd, HINSTANCE h
 
 void vbasic_cleanup(VBASIC_CONTEXT* lpctx)
 {
+	if (lpctx->vkVshader) vkDestroyShaderModule(lpctx->vkDevice, lpctx->vkVshader, nullptr);
+	if (lpctx->vkFshader) vkDestroyShaderModule(lpctx->vkDevice, lpctx->vkFshader, nullptr);
+	for (auto imageView : lpctx->vkSwapChainImageViews) {
+		vkDestroyImageView(lpctx->vkDevice, imageView, nullptr);
+	}
+	if (lpctx->vkSwapChain) vkDestroySwapchainKHR(lpctx->vkDevice, lpctx->vkSwapChain, nullptr);
 	if (lpctx->vkSurface) vkDestroySurfaceKHR(lpctx->vkInstance, lpctx->vkSurface, nullptr);
 	if (lpctx->vkDevice) vkDestroyDevice(lpctx->vkDevice, nullptr);
 	if (lpctx->vkInstance) vkDestroyInstance(lpctx->vkInstance, nullptr);
@@ -157,30 +172,27 @@ void vbasic_create_logical_device(VBASIC_CONTEXT* lpctx)
 	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(lpctx->vkPhysicalDev, &queueFamilyCount, queueFamilies.data());
 
-	uint32_t graphicsFamilyIndex = -1;
-	uint32_t presentFamilyIndex = -1;
-
 	uint32_t ii = 0;
 	VkBool32 supported = VK_FALSE;
 	for (const auto& queueFamily : queueFamilies) {
 		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-			graphicsFamilyIndex = ii;
+			lpctx->graphicsFamilyIndex = ii;
 		}
 		vkGetPhysicalDeviceSurfaceSupportKHR(lpctx->vkPhysicalDev, ii, lpctx->vkSurface, &supported);
 		if (VK_TRUE == supported) {
-			presentFamilyIndex = ii;
+			lpctx->presentFamilyIndex = ii;
 		}
 		ii++;
 	}
 
-	if (graphicsFamilyIndex == -1 || presentFamilyIndex == -1) {
+	if (lpctx->graphicsFamilyIndex == -1 || lpctx->presentFamilyIndex == -1) {
 		throw std::runtime_error("Failed to get family indices");
 	}
 
-	printf("found queues %i %i\n", graphicsFamilyIndex, presentFamilyIndex);
+	printf("found queues %i %i\n", lpctx->graphicsFamilyIndex, lpctx->presentFamilyIndex);
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	std::set<uint32_t> uniqueQueueFamilies = { graphicsFamilyIndex, presentFamilyIndex };
+	std::set<uint32_t> uniqueQueueFamilies = { (uint32_t)lpctx->graphicsFamilyIndex, (uint32_t)lpctx->presentFamilyIndex };
 
 	float queuePriority = 1.0f;
 	for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -210,8 +222,8 @@ void vbasic_create_logical_device(VBASIC_CONTEXT* lpctx)
 	if (vkCreateDevice(lpctx->vkPhysicalDev, &createInfo, nullptr, &lpctx->vkDevice) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create logical device!");
 	}
-	vkGetDeviceQueue(lpctx->vkDevice, graphicsFamilyIndex, 0, &lpctx->vkGraphicsQueue);
-	vkGetDeviceQueue(lpctx->vkDevice, presentFamilyIndex, 0, &lpctx->vkPresentQueue);
+	vkGetDeviceQueue(lpctx->vkDevice, lpctx->graphicsFamilyIndex, 0, &lpctx->vkGraphicsQueue);
+	vkGetDeviceQueue(lpctx->vkDevice, lpctx->presentFamilyIndex, 0, &lpctx->vkPresentQueue);
 
 	printf("logical device created; queues %lli %lli\n", 
 		(long long)lpctx->vkGraphicsQueue, 
@@ -268,6 +280,126 @@ void vbasic_create_swapchain(VBASIC_CONTEXT* lpctx)
 	VkSwapchainCreateInfoKHR createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	createInfo.surface = lpctx->vkSurface;
+	createInfo.minImageCount = 3;
+	createInfo.imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
+	createInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+	createInfo.imageExtent = caps.maxImageExtent;
+	createInfo.imageArrayLayers = 1;
+	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	if (lpctx->graphicsFamilyIndex != lpctx->presentFamilyIndex) {
+		printf("queues are different\n");
+		std::vector<uint32_t> indices = { (uint32_t)lpctx->graphicsFamilyIndex,(uint32_t)lpctx->presentFamilyIndex};
+		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+		createInfo.queueFamilyIndexCount = 2;
+		createInfo.pQueueFamilyIndices = indices.data();
+	}
+	else {
+		printf("queues are same\n");
+		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		createInfo.queueFamilyIndexCount = 0; // Optional
+		createInfo.pQueueFamilyIndices = nullptr; // Optional
+	}
+	createInfo.preTransform = caps.currentTransform;
+	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	createInfo.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+	createInfo.clipped = VK_TRUE;
+	createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+	if (vkCreateSwapchainKHR(lpctx->vkDevice, &createInfo, nullptr, &lpctx->vkSwapChain) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create swap chain!");
+	}
+
+	printf("swap chain is ready\n");
+
+	uint32_t imageCount = 0;
+	vkGetSwapchainImagesKHR(lpctx->vkDevice, lpctx->vkSwapChain, &imageCount, nullptr);
+	lpctx->vkSwapChainImages.resize(imageCount);
+	vkGetSwapchainImagesKHR(lpctx->vkDevice, lpctx->vkSwapChain, &imageCount, lpctx->vkSwapChainImages.data());
+
+	lpctx->vkSwapChainImageFormat = VK_FORMAT_B8G8R8A8_SRGB;
+	lpctx->vkSwapChainExtent = caps.maxImageExtent;
+
+	printf("got %i swap chain images\n", imageCount);
+}
+
+void vbasic_create_swapchain_image_views(VBASIC_CONTEXT* lpctx)
+{
+	lpctx->vkSwapChainImageViews.resize(lpctx->vkSwapChainImages.size());
+	for (size_t i = 0; i < lpctx->vkSwapChainImages.size(); i++) 
+	{
+		VkImageViewCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		createInfo.image = lpctx->vkSwapChainImages[i];
+		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		createInfo.format = lpctx->vkSwapChainImageFormat;
+		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		createInfo.subresourceRange.baseMipLevel = 0;
+		createInfo.subresourceRange.levelCount = 1;
+		createInfo.subresourceRange.baseArrayLayer = 0;
+		createInfo.subresourceRange.layerCount = 1;
+		if (vkCreateImageView(lpctx->vkDevice, &createInfo, nullptr, &lpctx->vkSwapChainImageViews[i]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create image views!");
+		}
+	}
+
+	printf("created all swapchain image views\n");
+}
+
+VkShaderModule getShaderFromFile(VBASIC_CONTEXT* lpctx, const char* fn)
+{
+	std::vector<BYTE> shaderCode;
+	FILE* f = nullptr;
+	fopen_s(&f, fn, "rb");
+	if (f) {
+		fseek(f, 0, SEEK_END);
+		long len = ftell(f);
+		shaderCode.resize(len);
+		fseek(f, 0, SEEK_SET);
+		fread(shaderCode.data(), len, 1, f);
+		fclose(f);
+		printf("read %lli bytes from %s\n", shaderCode.size(), fn);
+	}
+	else {
+		throw std::runtime_error("failed to open shader file!");
+	}
+
+	VkShaderModuleCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = shaderCode.size();
+	createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
+	VkShaderModule shaderModule;
+	if (vkCreateShaderModule(lpctx->vkDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create shader module!");
+	}
+	return shaderModule;
+}
+
+void vbasic_create_graphics_pipeline(VBASIC_CONTEXT* lpctx)
+{
+	std::vector<BYTE> vertexShader;
+	std::vector<BYTE> fragmentShader;
+	lpctx->vkVshader = getShaderFromFile(lpctx, "vbasic.spv");
+	lpctx->vkFshader = getShaderFromFile(lpctx, "fbasic.spv");
+	printf("shaders are loaded\n");
+
+	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertShaderStageInfo.module = lpctx->vkVshader;
+	vertShaderStageInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragShaderStageInfo.module = lpctx->vkFshader;
+	fragShaderStageInfo.pName = "main";
+
+	// programmable pipeline stages
+	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 }
 
 int WINAPI WinMain(
@@ -292,6 +424,8 @@ int WINAPI WinMain(
 		vbasic_select_physical_device(&ctx);
 		vbasic_create_logical_device(&ctx);
 		vbasic_create_swapchain(&ctx);
+		vbasic_create_swapchain_image_views(&ctx);
+		vbasic_create_graphics_pipeline(&ctx);
 	}
 	catch (const std::exception& e) {
 		printf("%s\n", e.what());

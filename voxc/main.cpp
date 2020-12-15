@@ -67,7 +67,7 @@ void init_opengl_ext(HINSTANCE hInstance)
 
 }
 
-int run(HINSTANCE hInstance)
+void setup(HINSTANCE hInstance, VOXC_WINDOW_CONTEXT* lpctx)
 {
     //if (!AllocConsole()) throw new std::runtime_error("allocconsole");
     //FILE* f = nullptr;
@@ -102,7 +102,6 @@ int run(HINSTANCE hInstance)
     if (!AdjustWindowRect(&wr, dwStyle, FALSE))
         throw new std::runtime_error("failed to adjust main window rect");
 
-    VOXC_WINDOW_CONTEXT* lpctx = new VOXC_WINDOW_CONTEXT();
     lpctx->screenWidth = wr.right;
     lpctx->screenHeight = wr.bottom;
     block_allocate(lpctx, X_GRID_EXTENT, Y_GRID_EXTENT, Z_GRID_EXTENT);
@@ -144,7 +143,10 @@ int run(HINSTANCE hInstance)
     if (!ClipCursor(&cr))
         throw new std::runtime_error("failed to clip cursor");
     ShowCursor(FALSE);
+}
 
+void begin_message_loop()
+{
     // start two message loops for two different windows
     {
         BOOL bRet;
@@ -167,18 +169,19 @@ int run(HINSTANCE hInstance)
         }
     }
 
+}
+
+void cleanup(VOXC_WINDOW_CONTEXT* lpctx)
+{
     ShowCursor(TRUE);
     if (!ClipCursor(nullptr))
         throw new std::runtime_error("failed to release clipped cursor");
 
     block_cleanup(lpctx);
-    delete lpctx;
 
     //int throw_away = getchar();
 
     //FreeConsole();
-
-    return EXIT_SUCCESS;
 }
 
 int WINAPI WinMain(
@@ -187,12 +190,20 @@ int WINAPI WinMain(
     _In_ PSTR szCmdLine,
     _In_ int iCmdShow)    
 {   
+    VOXC_WINDOW_CONTEXT* lpctx = new VOXC_WINDOW_CONTEXT();
+
     try {
-        run(hInstance);
+        setup(hInstance, lpctx);
+        begin_message_loop();
+        cleanup(lpctx);
     }
     catch (const std::exception& e) {
         printf("ERROR: %s\n", e.what());
+        delete lpctx;
         return EXIT_FAILURE;
     }
+
+    delete lpctx;
+
     return EXIT_SUCCESS;
 }

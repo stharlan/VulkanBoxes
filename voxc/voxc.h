@@ -331,6 +331,29 @@ void block_release_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 #include "OpenGlProgram.h"
 #include "OpenGlVertexBuffer.h"
 
+typedef struct _RENDER_LOOP_CONTEXT
+{
+    HDC hdc;
+    glm::mat4& lightProjection;
+    GLsizei shadowWidth;
+    GLsizei shadowHeight;
+    GLuint depthMapFBO;
+    OpenGlProgram& shadowProg;
+    glm::mat4& modelMatrix;
+    std::vector<VBO_DATA>& modelVboData;
+    OpenGlProgram& voxcProgram;
+    GLuint depthMap;
+    OpenGlProgram& selCubeProg;
+    OpenGlVertexBuffer<VERTEX2>& zeroCubeBuffer;
+    OpenGlProgram& fontProg;
+    GLuint fontVAO;
+    GLuint fontVBO;
+    std::map<char, Character>& Characters;
+    OpenGlProgram& ddProg;
+    OpenGlVertexBuffer<VERTEX2>& quadBuffer;
+} RENDER_LOOP_CONTEXT;
+
+
 //class VertexFindByHash : public std::unary_function<VERTEX2, bool> {
 //    int64_t hashcode;
 //public:

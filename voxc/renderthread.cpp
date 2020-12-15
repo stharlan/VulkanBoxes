@@ -523,153 +523,14 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
     }
 }
 
-DWORD WINAPI RenderThread(LPVOID parm)
+void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 {
-    // create the rendering contxt
-    HWND hwnd = (HWND)parm;
-    VOXC_WINDOW_CONTEXT* lpctx = (VOXC_WINDOW_CONTEXT*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
-    HDC hdc = GetDC(hwnd);
-    createRenderingContext2(hdc, lpctx);
-
-    // load all the xtension functions
-    if (FALSE == loadExtensionFunctions())
-    {
-        printf("Failed to load opengl extension functions.\n");
-        return 0;
-    }
-
-    // opengl configuration
-    glEnable(GL_MULTISAMPLE);
-    glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
-    glFrontFace(GL_CCW);
-    glClearDepth(1.0f);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    glEnable(GL_CULL_FACE);
-    glShadeModel(GL_SMOOTH);
-    //glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-    //glEnable(GL_TEXTURE_2D);
-    //glEnable(GL_MULTISAMPLE);
-    //glEnable(GL_POLYGON_SMOOTH);
-    //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
-    //glEnable(GL_BLEND);
-    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-
-    // load programs
-    OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
-    voxcProgram.Use();
-    voxcProgram.SetUniform1i("texs", 0);        // one-time setup
-    voxcProgram.SetUniform1i("shadowMap", 1);   // one-time setup
-    OpenGlProgram shadowProg("vshadow.txt", "fshadow.txt");
-    OpenGlProgram ddProg("vsh2d.txt", "fsh2d.txt");
-    OpenGlProgram fontProg("vfont.txt", "ffont.txt");
-    OpenGlProgram selCubeProg("selcube.vert", "selcube.frag");
-
-    // if adding a new texture
-    // increase the count in load textures
-    // also, go to voxc.h and add another define
-    // also, in vertex buffer creation below, increase count
-    // also, createbuffers and loop below it
-    TEXTURE_SPEC tsArray[6] = { 0 };
-    tsArray[0].name = "vocxdirt.png"; tsArray[0].isTransparent = FALSE;
-    tsArray[1].name = "vocxdirtgrass.png"; tsArray[1].isTransparent = FALSE;
-    tsArray[2].name = "vocxgrass.png"; tsArray[2].isTransparent = FALSE;
-    tsArray[3].name = "vocxleaves_t.png"; tsArray[3].isTransparent = TRUE;
-    tsArray[4].name = "vocxwoodbark.png"; tsArray[4].isTransparent = FALSE;
-    tsArray[5].name = "vocxwoodrings.png"; tsArray[5].isTransparent = FALSE;
-    // after this, there will be one block group
-    // for each texture 
-    LoadTextures(tsArray, 6, lpctx); 
-
-    // physics: must be done before create vertex buffer
-    glm::vec3 startingPosition(30, 30, 10);
-    initPhysics(lpctx, startingPosition);
-    // end physics
-
-    CreateVertexBuffer(lpctx);
-    for (int i = 0; i < 6; i++) {
-        printf("vb %i contains %zi vertices\n", i, lpctx->groups[i].vertices.size());
-    }
-
-    // vertex buffer
-    std::vector<GLuint> vbos(6);
-    glCreateBuffers(6, vbos.data());
-    for(int i=0; i<6; i++)
-    {
-        if (lpctx->groups[i].vertices.size() > 0) {
-            lpctx->groups[i].vsize = lpctx->groups[i].vertices.size();
-            glNamedBufferStorage(vbos[i], sizeof(VERTEX2) * lpctx->groups[i].vertices.size(),
-                lpctx->groups[i].vertices.data(), 0);
-            //lpctx->groups[i].vertices.clear();
-        }
-        else {
-            lpctx->groups[i].vsize = 0;
-        }
-        lpctx->groups[i].vbo = vbos[i];
-    }
-
-    // model
-    std::vector<VBO_DATA> modelVboData;
-    LoadModel(modelVboData);
-
-    // create the vertex array
-    glCreateVertexArrays(1, &lpctx->vao);
-    glVertexArrayAttribBinding(lpctx->vao, 0, 0);
-    glVertexArrayAttribBinding(lpctx->vao, 1, 0);
-    glVertexArrayAttribBinding(lpctx->vao, 2, 0);
-    glVertexArrayAttribFormat(lpctx->vao, 0, 3, GL_FLOAT, FALSE, 0);
-    glVertexArrayAttribFormat(lpctx->vao, 1, 2, GL_FLOAT, FALSE, 3 * sizeof(GLfloat));
-    glVertexArrayAttribFormat(lpctx->vao, 2, 3, GL_FLOAT, FALSE, 5 * sizeof(GLfloat));
-    glVertexArrayBindingDivisor(lpctx->vao, 0, 0);
-    glEnableVertexArrayAttrib(lpctx->vao, 0);
-    glEnableVertexArrayAttrib(lpctx->vao, 1);
-    glEnableVertexArrayAttrib(lpctx->vao, 2);
-    // end vertex array 
-
-    // create a frame buffer for shadows 
-    GLuint depthMapFBO = 0;
-    glGenFramebuffers(1, &depthMapFBO);
-
-    const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
-    GLuint depthMap = 0;
-    glGenTextures(1, &depthMap);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, depthMap);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-        SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-     
-    float near_plane = 0.1f, far_plane = 500.0f;
-    glm::mat4 lightProjection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, near_plane, far_plane);
-    glm::vec3 eye1 = glm::vec3(0, 0, 200);
-    glm::vec3 cntr1 = glm::vec3(X_GRID_EXTENT / 3, Y_GRID_EXTENT / 3, 50);
-    glm::mat4 lightView1 = glm::lookAt(eye1, cntr1, glm::vec3(0.0f, 0.0f, 1.0f)); 
-    // end shadows
-
-    // vbo for 2d quad
-    OpenGlVertexBuffer<VERTEX2> quadBuffer(lpctx->vao, (GLsizei)6, &quadVerts[0]);
-    quadBuffer.setTextureInfo(GL_TEXTURE0, GL_TEXTURE_2D, depthMap);
-
-    // selection cube vertex buffer
-    std::vector<VERTEX2> zeroCubeVertices;
-    getZeroCubeVertices(zeroCubeVertices);
-    OpenGlVertexBuffer<VERTEX2> zeroCubeBuffer(lpctx->vao, (GLsizei)zeroCubeVertices.size(), zeroCubeVertices.data());
-    zeroCubeVertices.clear();
-
-    // performance monitoring
+    std::future<void> isDoneProcessing;
+    std::map<GLuint, GLuint> vbosToUpdate;
     LARGE_INTEGER perfCount = { 0 };
     LARGE_INTEGER perfFreq = { 0 };
     LARGE_INTEGER lastCount = { 0 };
+    // performance monitoring
     int64_t elapsedTicks = 0;
     // 0.016f is 60 fps
     float elps[10] = {
@@ -677,33 +538,13 @@ DWORD WINAPI RenderThread(LPVOID parm)
         0.016f, 0.016f, 0.016f, 0.016f, 0.016f
     };
     int64_t elpsCtr = 0;
+    physx::PxControllerFilters mCCFilters = { 0 };
+    physx::PxExtendedVec3 pos;
+    char* textBuffer = (char*)malloc(256);
+
     QueryPerformanceCounter(&perfCount);
     lastCount = perfCount;
     QueryPerformanceFrequency(&perfFreq); // counts per second
-
-    // physx position
-    physx::PxControllerFilters mCCFilters = { 0 };
-    physx::PxExtendedVec3 pos;
-
-    // add initial set of actors based on starting location
-    addActorsForCurrentLocation(lpctx,
-        (int64_t)startingPosition.x,
-        (int64_t)startingPosition.y,
-        (int64_t)startingPosition.z);
-
-    // freetype init
-    GLuint fontVAO = 0;
-    GLuint fontVBO = 0;
-    std::map<char, Character> Characters;
-    setupFreeType(Characters, &fontVAO, &fontVBO);
-    char* textBuffer = (char*)malloc(256);
-
-    // final prep
-    glClearColor(0.9f, 0.9f, 1.0f, 1.0f);
-    glm::mat4 modelMatrix = glm::mat4(1.0f);
-
-    std::map<GLuint, GLuint> vbosToUpdate;
-    std::future<void> isDoneProcessing;
 
     // GO!
     while (TRUE)
@@ -719,7 +560,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
                 {
                     printf("ready to switch vbos\n");
                     std::vector<VERTEX_BUFFER_GROUP1>::iterator giter = lpctx->groups.begin();
-                    for(;giter != lpctx->groups.end(); ++giter)
+                    for (; giter != lpctx->groups.end(); ++giter)
                     {
                         GLuint oldVbo = giter->vbo;
                         GLuint newVbo = vbosToUpdate.at(oldVbo);
@@ -833,18 +674,12 @@ DWORD WINAPI RenderThread(LPVOID parm)
                         clock_t t = clock();
 
                         // remove faces
-                        //std::vector<GLuint> groupVbosToUpdate;
                         for (int gi = 0; gi < lpctx->groups.size(); gi++)
                         {
-                            //size_t sizeBefore = lpctx->groups[gi].vertices.size();
                             lpctx->groups[gi].vertices.erase(
                                 std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
                                     [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }),
                                 lpctx->groups[gi].vertices.end());
-                            //if (lpctx->groups[gi].vertices.size() != sizeBefore)
-                            //{
-                                //groupVbosToUpdate.push_back(lpctx->groups[gi].vbo);
-                            //}
                         }
 
                         int64_t hitBlockIndex = GRIDIDX(hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
@@ -870,23 +705,11 @@ DWORD WINAPI RenderThread(LPVOID parm)
                         // and update the face data for the surrounding blocks
                         update_surrounding_blocks(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
 
-                        //for (const auto& gidx : groupsToUpdate)
-                        //{
-                        //    lpctx->groups[gidx].vsize = lpctx->groups[gidx].vertices.size();
-                        //    glDeleteBuffers(1, &lpctx->groups[gidx].vbo);
-                        //    lpctx->groups[gidx].vbo = 0;
-                        //    glCreateBuffers(1, &lpctx->groups[gidx].vbo);
-                        //    glNamedBufferStorage(
-                        //        lpctx->groups[gidx].vbo, 
-                        //        sizeof(VERTEX2) * lpctx->groups[gidx].vertices.size(),
-                        //        lpctx->groups[gidx].vertices.data(),  0);
-                        //}
-
-                        isDoneProcessing = std::async([lpctx, &vbosToUpdate, hdc]()
+                        isDoneProcessing = std::async([lpctx, &vbosToUpdate, rctx]()
                             {
                                 printf("starting async proc\n");
-                                wglMakeCurrent(hdc, lpctx->hglrcAlt);
-                                for(const auto& vbg : lpctx->groups)
+                                wglMakeCurrent(rctx->hdc, lpctx->hglrcAlt);
+                                for (const auto& vbg : lpctx->groups)
                                 {
                                     GLuint newVbo = 0;
                                     glCreateBuffers(1, &newVbo);
@@ -896,7 +719,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
                                         vbg.vertices.data(), 0);
                                     vbosToUpdate.insert(std::pair<int, GLuint>(vbg.vbo, newVbo));
                                 }
-                                wglMakeCurrent(hdc, nullptr);
+                                wglMakeCurrent(rctx->hdc, nullptr);
                                 printf("async proc done\n");
                             }
                         );
@@ -937,19 +760,19 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glm::vec3 posLocation3 = glm::vec3(pos.x, pos.y, pos.z);
         glm::vec3 lightDir = glm::normalize(posLocation3 - lightLooking);
         glm::mat4 lightView = glm::lookAt(lightLooking, posLocation3, glm::vec3(0.0f, 0.0f, 1.0f));
-        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+        glm::mat4 lightSpaceMatrix = rctx->lightProjection * lightView;
         {
-            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-            glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+            glViewport(0, 0, rctx->shadowWidth, rctx->shadowHeight);
+            glBindFramebuffer(GL_FRAMEBUFFER, rctx->depthMapFBO);
             glClear(GL_DEPTH_BUFFER_BIT);
-            shadowProg.Use();
-            shadowProg.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
-            shadowProg.SetUniformMatrix4fv("model", &modelMatrix[0][0]);
+            rctx->shadowProg.Use();
+            rctx->shadowProg.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
+            rctx->shadowProg.SetUniformMatrix4fv("model", &rctx->modelMatrix[0][0]);
             glBindVertexArray(lpctx->vao);
             RenderScene(lpctx);
 
             // render model
-            for (const auto& modelVboItem : modelVboData)
+            for (const auto& modelVboItem : rctx->modelVboData)
             {
                 glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 12 * sizeof(GLfloat));
                 glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
@@ -974,31 +797,31 @@ DWORD WINAPI RenderThread(LPVOID parm)
             lpctx->viewportRatio,
             0.01f,
             500.0f);
-        
+
         // render the main scene (the voxels)
         {
             glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
             glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-            voxcProgram.Use();
-            voxcProgram.SetUniformMatrix4fv("model", &modelMatrix[0][0]);
-            voxcProgram.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
-            voxcProgram.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
-            voxcProgram.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
-            voxcProgram.SetUniform3fv("lightDir", &lightDir[0]);
-            voxcProgram.SetUniform1i("useDiffuseColor", 0);
+            rctx->voxcProgram.Use();
+            rctx->voxcProgram.SetUniformMatrix4fv("model", &rctx->modelMatrix[0][0]);
+            rctx->voxcProgram.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
+            rctx->voxcProgram.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
+            rctx->voxcProgram.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
+            rctx->voxcProgram.SetUniform3fv("lightDir", &lightDir[0]);
+            rctx->voxcProgram.SetUniform1i("useDiffuseColor", 0);
             glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, depthMap);
+            glBindTexture(GL_TEXTURE_2D, rctx->depthMap);
             glBindVertexArray(lpctx->vao);
             RenderScene(lpctx);
 
             // render model
-            voxcProgram.SetUniform1i("useDiffuseColor", 1);
+            rctx->voxcProgram.SetUniform1i("useDiffuseColor", 1);
             //glVertexArrayVertexBuffer(lpctx->vao, 0, modelVbo, 0, 8 * sizeof(GLfloat));
             //glDrawArrays(GL_TRIANGLES, 0, modelVertices.size());
             // render model
-            for (const auto& modelVboItem : modelVboData)
+            for (const auto& modelVboItem : rctx->modelVboData)
             {
-                voxcProgram.SetUniform4fv("diffuseColor", &modelVboItem.diffuseColor[0]);
+                rctx->voxcProgram.SetUniform4fv("diffuseColor", &modelVboItem.diffuseColor[0]);
                 glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 12 * sizeof(GLfloat));
                 glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
             }
@@ -1015,7 +838,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
         // render selection cube
         // player is as pos.xyz
         // direction is azimuth
-        if(hitStatus == true)
+        if (hitStatus == true)
         {
             // offset the cube from the player
             //glm::vec3 xpos(pos.x, pos.y, pos.z);
@@ -1047,11 +870,11 @@ DWORD WINAPI RenderThread(LPVOID parm)
                     floorf(gp.p[2]) + 0.5f));
 
             // draw selection cube
-            selCubeProg.Use();
-            selCubeProg.SetUniformMatrix4fv("model", &zeroCubeModelt[0][0]);
-            selCubeProg.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
-            selCubeProg.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
-            zeroCubeBuffer.draw();
+            rctx->selCubeProg.Use();
+            rctx->selCubeProg.SetUniformMatrix4fv("model", &zeroCubeModelt[0][0]);
+            rctx->selCubeProg.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
+            rctx->selCubeProg.SetUniformMatrix4fv("proj", &projMatrix[0][0]);
+            rctx->zeroCubeBuffer.draw();
             // end sel cube
 
         }
@@ -1062,35 +885,36 @@ DWORD WINAPI RenderThread(LPVOID parm)
             GetSystemTime(&systime);
             memset(textBuffer, 0, 256);
             sprintf_s(textBuffer, 256, "%02i:%02i:%02i %03i", systime.wHour, systime.wMinute, systime.wSecond, systime.wMilliseconds);
-            RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - 55.0f, 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+            RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - 55.0f, 0.3f, glm::vec3(0.5, 0.8f, 0.2f), 
+                rctx->fontVAO, rctx->fontVBO, rctx->Characters);
             memset(textBuffer, 0, 256);
             sprintf_s(textBuffer, 256, "FPS: %i", (int)floorf(1 / elapsed));
-            RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (1.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+            RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (1.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
             memset(textBuffer, 0, 256);
             sprintf_s(textBuffer, 256, "POS: %.1f %.1f %.1f  AZ %.1f  EL %.1f", pos.x, pos.y, pos.z, lpctx->azimuth, lpctx->elevation);
-            RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (2.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+            RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (2.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
             if (hitStatus)
             {
                 memset(textBuffer, 0, 256);
                 sprintf_s(textBuffer, 256, "HIT POS: %.1f %.1f %.1f", gp.p[0], gp.p[1], gp.p[2]);
-                RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (3.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+                RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (3.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
                 if (hitBlock != NULL)
                 {
                     memset(textBuffer, 0, 256);
-                    sprintf_s(textBuffer, 256, "T: %i F: %i A: %i S: %i H: 0x%08x", hitBlock->regType, hitBlock->faceMask, hitBlock->surroundAlphaMask, 
+                    sprintf_s(textBuffer, 256, "T: %i F: %i A: %i S: %i H: 0x%08x", hitBlock->regType, hitBlock->faceMask, hitBlock->surroundAlphaMask,
                         hitBlock->surroundExistsMask, (unsigned int)hitBlock->hashCode);
-                    RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (4.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+                    RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (4.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
                     memset(textBuffer, 0, 256);
                     sprintf_s(textBuffer, 256, "GRIDLOC: %i %i %i",
                         hitBlock->gridLocation.x,
                         hitBlock->gridLocation.y,
                         hitBlock->gridLocation.z);
-                    RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (5.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+                    RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (5.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
 
                     uint8_t regType = block_get_regtype(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z, false);
                     memset(textBuffer, 0, 256);
                     sprintf_s(textBuffer, 256, "REGTYPE: %i", regType);
-                    RenderText(lpctx, fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (6.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), fontVAO, fontVBO, Characters);
+                    RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (6.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
                 }
             }
         }
@@ -1099,12 +923,12 @@ DWORD WINAPI RenderThread(LPVOID parm)
         glDisable(GL_BLEND);
 
         // render depth map
-        ddProg.Use();
-        quadBuffer.draw();
+        rctx->ddProg.Use();
+        rctx->quadBuffer.draw();
 
         glFlush();
 
-        SwapBuffers(hdc);
+        SwapBuffers(rctx->hdc);
 
         glUseProgram(0);
 
@@ -1115,6 +939,183 @@ DWORD WINAPI RenderThread(LPVOID parm)
 
     free(textBuffer);
 
+}
+
+DWORD WINAPI RenderThread(LPVOID parm)
+{
+    // create the rendering contxt
+    HWND hwnd = (HWND)parm;
+    VOXC_WINDOW_CONTEXT* lpctx = (VOXC_WINDOW_CONTEXT*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    HDC hdc = GetDC(hwnd);
+    createRenderingContext2(hdc, lpctx);
+
+    // load all the xtension functions
+    if (FALSE == loadExtensionFunctions())
+    {
+        printf("Failed to load opengl extension functions.\n");
+        return 0;
+    }
+
+    // opengl configuration
+    glEnable(GL_MULTISAMPLE);
+    glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
+    glFrontFace(GL_CCW);
+    glClearDepth(1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glEnable(GL_CULL_FACE);
+    glShadeModel(GL_SMOOTH);
+    //glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+    //glEnable(GL_TEXTURE_2D);
+    //glEnable(GL_MULTISAMPLE);
+    //glEnable(GL_POLYGON_SMOOTH);
+    //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
+    // load programs
+    OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
+    voxcProgram.Use();
+    voxcProgram.SetUniform1i("texs", 0);        // one-time setup
+    voxcProgram.SetUniform1i("shadowMap", 1);   // one-time setup
+    OpenGlProgram shadowProg("vshadow.txt", "fshadow.txt");
+    OpenGlProgram ddProg("vsh2d.txt", "fsh2d.txt");
+    OpenGlProgram fontProg("vfont.txt", "ffont.txt");
+    OpenGlProgram selCubeProg("selcube.vert", "selcube.frag");
+
+    // if adding a new texture
+    // increase the count in load textures
+    // also, go to voxc.h and add another define
+    // also, in vertex buffer creation below, increase count
+    // also, createbuffers and loop below it
+    TEXTURE_SPEC tsArray[6] = { 0 };
+    tsArray[0].name = "vocxdirt.png"; tsArray[0].isTransparent = FALSE;
+    tsArray[1].name = "vocxdirtgrass.png"; tsArray[1].isTransparent = FALSE;
+    tsArray[2].name = "vocxgrass.png"; tsArray[2].isTransparent = FALSE;
+    tsArray[3].name = "vocxleaves_t.png"; tsArray[3].isTransparent = TRUE;
+    tsArray[4].name = "vocxwoodbark.png"; tsArray[4].isTransparent = FALSE;
+    tsArray[5].name = "vocxwoodrings.png"; tsArray[5].isTransparent = FALSE;
+    // after this, there will be one block group
+    // for each texture 
+    LoadTextures(tsArray, 6, lpctx);
+
+    // physics: must be done before create vertex buffer
+    glm::vec3 startingPosition(30, 30, 10);
+    initPhysics(lpctx, startingPosition);
+    // end physics
+
+    CreateVertexBuffer(lpctx);
+    for (int i = 0; i < 6; i++) {
+        printf("vb %i contains %zi vertices\n", i, lpctx->groups[i].vertices.size());
+    }
+
+    // vertex buffer
+    std::vector<GLuint> vbos(6);
+    glCreateBuffers(6, vbos.data());
+    for (int i = 0; i < 6; i++)
+    {
+        if (lpctx->groups[i].vertices.size() > 0) {
+            lpctx->groups[i].vsize = lpctx->groups[i].vertices.size();
+            glNamedBufferStorage(vbos[i], sizeof(VERTEX2) * lpctx->groups[i].vertices.size(),
+                lpctx->groups[i].vertices.data(), 0);
+            //lpctx->groups[i].vertices.clear();
+        }
+        else {
+            lpctx->groups[i].vsize = 0;
+        }
+        lpctx->groups[i].vbo = vbos[i];
+    }
+
+    // model
+    std::vector<VBO_DATA> modelVboData;
+    LoadModel(modelVboData);
+
+    // create the vertex array
+    glCreateVertexArrays(1, &lpctx->vao);
+    glVertexArrayAttribBinding(lpctx->vao, 0, 0);
+    glVertexArrayAttribBinding(lpctx->vao, 1, 0);
+    glVertexArrayAttribBinding(lpctx->vao, 2, 0);
+    glVertexArrayAttribFormat(lpctx->vao, 0, 3, GL_FLOAT, FALSE, 0);
+    glVertexArrayAttribFormat(lpctx->vao, 1, 2, GL_FLOAT, FALSE, 3 * sizeof(GLfloat));
+    glVertexArrayAttribFormat(lpctx->vao, 2, 3, GL_FLOAT, FALSE, 5 * sizeof(GLfloat));
+    glVertexArrayBindingDivisor(lpctx->vao, 0, 0);
+    glEnableVertexArrayAttrib(lpctx->vao, 0);
+    glEnableVertexArrayAttrib(lpctx->vao, 1);
+    glEnableVertexArrayAttrib(lpctx->vao, 2);
+    // end vertex array 
+
+    // create a frame buffer for shadows 
+    GLuint depthMapFBO = 0;
+    glGenFramebuffers(1, &depthMapFBO);
+
+    const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
+    GLuint depthMap = 0;
+    glGenTextures(1, &depthMap);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+        SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    float near_plane = 0.1f, far_plane = 500.0f;
+    glm::mat4 lightProjection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, near_plane, far_plane);
+    glm::vec3 eye1 = glm::vec3(0, 0, 200);
+    glm::vec3 cntr1 = glm::vec3(X_GRID_EXTENT / 3, Y_GRID_EXTENT / 3, 50);
+    glm::mat4 lightView1 = glm::lookAt(eye1, cntr1, glm::vec3(0.0f, 0.0f, 1.0f));
+    // end shadows
+
+    // vbo for 2d quad
+    OpenGlVertexBuffer<VERTEX2> quadBuffer(lpctx->vao, (GLsizei)6, &quadVerts[0]);
+    quadBuffer.setTextureInfo(GL_TEXTURE0, GL_TEXTURE_2D, depthMap);
+
+    // selection cube vertex buffer
+    std::vector<VERTEX2> zeroCubeVertices;
+    getZeroCubeVertices(zeroCubeVertices);
+    OpenGlVertexBuffer<VERTEX2> zeroCubeBuffer(lpctx->vao, (GLsizei)zeroCubeVertices.size(), zeroCubeVertices.data());
+    zeroCubeVertices.clear();
+
+    // add initial set of actors based on starting location
+    addActorsForCurrentLocation(lpctx,
+        (int64_t)startingPosition.x,
+        (int64_t)startingPosition.y,
+        (int64_t)startingPosition.z);
+
+    // freetype init
+    GLuint fontVAO = 0;
+    GLuint fontVBO = 0;
+    std::map<char, Character> Characters;
+    setupFreeType(Characters, &fontVAO, &fontVBO);
+
+    // final prep
+    glClearColor(0.9f, 0.9f, 1.0f, 1.0f);
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+
+
+    // ***********
+    // render loop
+    // ***********
+    RENDER_LOOP_CONTEXT rctx = {
+        hdc, lightProjection, SHADOW_WIDTH, SHADOW_HEIGHT,
+        depthMapFBO, shadowProg, modelMatrix, modelVboData, voxcProgram,
+        depthMap, selCubeProg, zeroCubeBuffer, fontProg, fontVAO, fontVBO,
+        Characters, ddProg, quadBuffer
+    };
+    render_loop(lpctx, &rctx);
+
+
+    // *******
+    // cleanup
+    // *******
     glUseProgram(0);
    
     glDeleteBuffers(1, &fontVBO);

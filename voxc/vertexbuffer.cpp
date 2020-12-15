@@ -456,10 +456,6 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
         // check for block on top (+z)
         if (sideToUpdate == 0 || sideToUpdate == SURR_ON_TOP)
         {
-            if (sideToUpdate == SURR_ON_TOP)
-            {
-                printf("!DEBUG!\n");
-            }
             if (!IS_BITSET(existsMask, SURR_ON_TOP) || IS_BITSET(alphaMask, SURR_ON_TOP)) {
                 if (!IS_BITSET(faceMask, SURR_ON_TOP)) {
                     for (int64_t v = 0; v < 6; v++) {
@@ -470,20 +466,8 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
                     }
                     SET_BIT(faceMask, SURR_ON_TOP);
                     facesAdded++;
-                    if (sideToUpdate == SURR_ON_TOP)
-                    {
-                        printf("!DEBUG IS ADDED!\n");
-                    }
                 }
-                else if (sideToUpdate == SURR_ON_TOP)
-                {
-                    printf("!DEBUG IS NOT ADDED!\n");
-                }
-            } else if (sideToUpdate == SURR_ON_TOP)
-            {
-                printf("!DEBUG IS NOT ADDED!\n");
             }
-
         }
 
         // check for block on +x
@@ -570,8 +554,9 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
     int texWidth = 0;
     int texHeight = 0;
     int texChannels = 0;
-    stbi_uc* pixels = stbi_load("c:\\temp\\height8.png", &texWidth, &texHeight,
-        &texChannels, 1);
+    stbi_uc* pixels = stbi_load("c:\\temp\\height8.png", &texWidth, &texHeight, &texChannels, 1);
+    if (!pixels)
+        throw new std::runtime_error("failed to load height map");
 
     printf("assigning block types\n");
     // assign blocks to level 0

@@ -1002,36 +1002,36 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
             GetSystemTime(&systime);
             memset(textBuffer, 0, 256);
             sprintf_s(textBuffer, 256, "%02i:%02i:%02i %03i", systime.wHour, systime.wMinute, systime.wSecond, systime.wMilliseconds);
-            RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - 55.0f, 0.3f, glm::vec3(0.5, 0.8f, 0.2f), 
+            RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - 14.0f, 0.3f, glm::vec3(0.5, 0.8f, 0.2f), 
                 rctx->fontVAO, rctx->fontVBO, rctx->Characters);
             memset(textBuffer, 0, 256);
             sprintf_s(textBuffer, 256, "FPS: %i", (int)floorf(1 / elapsed));
-            RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (1.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+            RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (1.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
             memset(textBuffer, 0, 256);
             sprintf_s(textBuffer, 256, "POS: %.1f %.1f %.1f  AZ %.1f  EL %.1f", pos.x, pos.y, pos.z, lpctx->azimuth, lpctx->elevation);
-            RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (2.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+            RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (2.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
             if (hitStatus)
             {
                 memset(textBuffer, 0, 256);
                 sprintf_s(textBuffer, 256, "HIT POS: %.1f %.1f %.1f", gp.p[0], gp.p[1], gp.p[2]);
-                RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (3.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+                RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (3.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
                 if (hitBlock != NULL)
                 {
                     memset(textBuffer, 0, 256);
                     sprintf_s(textBuffer, 256, "T: %i F: %i A: %i S: %i H: 0x%08x", hitBlock->regType, hitBlock->faceMask, hitBlock->surroundAlphaMask,
                         hitBlock->surroundExistsMask, (unsigned int)hitBlock->hashCode);
-                    RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (4.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+                    RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (4.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
                     memset(textBuffer, 0, 256);
                     sprintf_s(textBuffer, 256, "GRIDLOC: %i %i %i",
                         hitBlock->gridLocation.x,
                         hitBlock->gridLocation.y,
                         hitBlock->gridLocation.z);
-                    RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (5.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+                    RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (5.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
 
                     uint8_t regType = block_get_regtype(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z, false);
                     memset(textBuffer, 0, 256);
                     sprintf_s(textBuffer, 256, "REGTYPE: %i", regType);
-                    RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (55.0f + (6.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+                    RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (6.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
                 }
             }
         }

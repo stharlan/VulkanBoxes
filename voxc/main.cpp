@@ -97,7 +97,8 @@ void setup(HINSTANCE hInstance, VOXC_WINDOW_CONTEXT* lpctx)
         throw new std::runtime_error("failed to register main window class");
 
     DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;           // Window Extended Style
-    DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE; // Windows Style
+    //DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE; // Windows Style
+    DWORD dwStyle = WS_OVERLAPPEDWINDOW;
 
     RECT wr = { 0,0,1024,768 };
 
@@ -122,6 +123,9 @@ void setup(HINSTANCE hInstance, VOXC_WINDOW_CONTEXT* lpctx)
         lpctx);
 
     if (!hwnd) throw new std::runtime_error("failed to create window");
+
+    SetWindowLong(hwnd, GWL_STYLE, 0);
+    ShowWindow(hwnd, SW_MAXIMIZE);
 
     RAWINPUTDEVICE Rid[2];
 

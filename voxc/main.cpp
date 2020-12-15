@@ -3,14 +3,15 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "voxc.h"
 
-void init_opengl_ext()
+void init_opengl_ext(HINSTANCE hInstance)
 {
     WNDCLASS wc = { 0 };
     wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
     wc.lpfnWndProc = DefWindowProc;
     wc.hInstance = GetModuleHandle(0);
     wc.lpszClassName = L"DUMMY_WSL_jdmcnghr";
-    RegisterClass(&wc);
+    if (!RegisterClass(&wc))
+        throw new std::runtime_error("failed to register window class");
 
     HWND dummy = CreateWindowEx(
         0,
@@ -19,8 +20,10 @@ void init_opengl_ext()
         0,
         CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
         0, 0, wc.hInstance, 0);
+    if(!dummy) throw new std::runtime_error("failed to create dummy window");
 
     HDC ddc = GetDC(dummy);
+    if (!ddc) throw new std::runtime_error("failed to get dummy dc");
 
     PIXELFORMATDESCRIPTOR pfd = { 0 };
     pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
@@ -34,23 +37,33 @@ void init_opengl_ext()
     pfd.cStencilBits = 8;
 
     int pf = ChoosePixelFormat(ddc, &pfd);
+    if (!pf) throw new std::runtime_error("failed to get choose pixel format for dummy dc");
 
-    SetPixelFormat(ddc, pf, &pfd);
+    if (FALSE == SetPixelFormat(ddc, pf, &pfd))
+        throw new std::runtime_error("failed to set pixel format for dummy dc");
 
     HGLRC hrc = wglCreateContext(ddc);
+    if (!hrc) throw new std::runtime_error("failed to create temp rc");
 
-    wglMakeCurrent(ddc, hrc);
+    if (FALSE == wglMakeCurrent(ddc, hrc))
+        throw new std::runtime_error("failed to make dummy rc current");
 
     wglCreateContextAttribsARB = (wglCreateContextAttribsARBFN)wglGetProcAddress("wglCreateContextAttribsARB");
+    if (!wglCreateContextAttribsARB) throw new std::runtime_error("failed to get proc address for wglCreateContextAttribsARB");
+
     wglChoosePixelFormatARB = (wglChoosePixelFormatARBFN)wglGetProcAddress("wglChoosePixelFormatARB");
+    if (!wglChoosePixelFormatARB) throw new std::runtime_error("failed to get proc address for wglChoosePixelFormatARB");
 
-    //printf("wglCreateContextAttribsARB = %8x\n", wglCreateContextAttribsARB);
-    //printf("wglChoosePixelFormatARB = %8x\n", wglChoosePixelFormatARB);
-
-    wglMakeCurrent(ddc, 0);
-    wglDeleteContext(hrc);
-    ReleaseDC(dummy, ddc);
-    DestroyWindow(dummy);
+    if (FALSE == wglMakeCurrent(ddc, 0))
+        throw new std::runtime_error("failed to release dummy rc");
+    if (FALSE == wglDeleteContext(hrc))
+        throw new std::runtime_error("failed to delete dummy rc");
+    if (!ReleaseDC(dummy, ddc))
+        throw new std::runtime_error("failed to release dummy dc");
+    if (!DestroyWindow(dummy))
+        throw new std::runtime_error("failed to destroy dummy window");
+    if (!UnregisterClass(L"DUMMY_WSL_jdmcnghr", hInstance))
+        throw new std::runtime_error("failed to unregister dummy window class");
 
 }
 
@@ -62,7 +75,7 @@ int run(HINSTANCE hInstance)
     //freopen_s(&f, "CONOUT$", "w", stdout);
     //freopen_s(&f, "CONOUT$", "w", stderr);
 
-    init_opengl_ext();
+    init_opengl_ext(hInstance);
 
     const LPCWSTR WNDCLASS_VNAME = L"VOXC";
     WNDCLASS wc = {};
@@ -78,14 +91,16 @@ int run(HINSTANCE hInstance)
     wc.lpszClassName = WNDCLASS_VNAME;
     wc.lpszMenuName = NULL;
     wc.style = CS_HREDRAW | CS_VREDRAW;
-    RegisterClass(&wc);
+    if (!RegisterClass(&wc))
+        throw new std::runtime_error("failed to register main window class");
 
     DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;           // Window Extended Style
     DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE; // Windows Style
 
     RECT wr = { 0,0,1024,768 };
 
-    AdjustWindowRect(&wr, dwStyle, FALSE);
+    if (!AdjustWindowRect(&wr, dwStyle, FALSE))
+        throw new std::runtime_error("failed to adjust main window rect");
 
     VOXC_WINDOW_CONTEXT* lpctx = new VOXC_WINDOW_CONTEXT();
     lpctx->screenWidth = wr.right;
@@ -124,8 +139,10 @@ int run(HINSTANCE hInstance)
     }
 
     RECT cr;
-    GetWindowRect(hwnd, &cr);
-    ClipCursor(&cr);
+    if (!GetWindowRect(hwnd, &cr))
+        throw new std::runtime_error("failed to get main window rect");
+    if (!ClipCursor(&cr))
+        throw new std::runtime_error("failed to clip cursor");
     ShowCursor(FALSE);
 
     // start two message loops for two different windows
@@ -151,7 +168,8 @@ int run(HINSTANCE hInstance)
     }
 
     ShowCursor(TRUE);
-    ClipCursor(nullptr);
+    if (!ClipCursor(nullptr))
+        throw new std::runtime_error("failed to release clipped cursor");
 
     block_cleanup(lpctx);
     delete lpctx;

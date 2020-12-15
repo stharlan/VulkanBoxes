@@ -4,13 +4,16 @@
 void block_allocate(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z)
 {
 	lpctx->lpBlockEntities = new BLOCK_ENTITY[x * y * z];
+	if (lpctx->lpBlockEntities == nullptr)
+		throw new std::runtime_error("failed to allocate memory for blocks");
 	memset(lpctx->lpBlockEntities, 0, x * y * z * sizeof(BLOCK_ENTITY));
 	lpctx->numEntities = x * y * z;
 
 	for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
 		for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
 			for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
-				lpctx->lpBlockEntities[GRIDIDX(xc, yc, zc)].gridLocation = glm::uvec3(xc, yc, zc);
+				int64_t index = GRIDIDX(xc, yc, zc);
+				lpctx->lpBlockEntities[index].gridLocation = glm::uvec3(xc, yc, zc);
 			}
 		}
 	}
@@ -18,7 +21,8 @@ void block_allocate(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z)
 
 void block_cleanup(VOXC_WINDOW_CONTEXT* lpctx)
 {
-	delete[] lpctx->lpBlockEntities;
+	if(lpctx->lpBlockEntities)
+		delete[] lpctx->lpBlockEntities;
 }
 
 void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type)

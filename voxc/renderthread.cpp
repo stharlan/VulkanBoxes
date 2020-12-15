@@ -425,25 +425,34 @@ void setupFreeType(std::map<char, Character>& Characters, GLuint* pfontVAO, GLui
     //if (err != GL_NO_ERROR) printf("gl err %i\n", err);
 
     FT_Library ft;
-    FT_Init_FreeType(&ft);
+    if (FT_Init_FreeType(&ft))
+        throw new std::runtime_error("failed to init freetype");
+
     FT_Face face;
-    FT_New_Face(ft, "FiraCode-Regular.ttf", 0, &face);
-    FT_Set_Pixel_Sizes(face, 0, 48);
+    if (FT_New_Face(ft, "FiraCode-Regular.ttf", 0, &face))
+        throw new std::runtime_error("failed to load font");
+
+    if (FT_Set_Pixel_Sizes(face, 0, 48))
+        throw new std::runtime_error("failed to set pixel sizes");
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // disable byte-alignment restriction
+    HANDLE_GL_ERROR();
 
     for (unsigned char c = 0; c < 128; c++)
     {
         // load character glyph 
         if (FT_Load_Char(face, c, FT_LOAD_RENDER))
         {
-            printf("load char err\n");
             continue;
         }
         // generate texture
         GLuint texId;
         glGenTextures(1, &texId);
+        HANDLE_GL_ERROR();
+
         glBindTexture(GL_TEXTURE_2D, texId);
+        HANDLE_GL_ERROR();
+
         glTexImage2D(
             GL_TEXTURE_2D,
             0,
@@ -455,11 +464,21 @@ void setupFreeType(std::map<char, Character>& Characters, GLuint* pfontVAO, GLui
             GL_UNSIGNED_BYTE,
             face->glyph->bitmap.buffer
         );
+        HANDLE_GL_ERROR();
+
         // set texture options
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        HANDLE_GL_ERROR();
+
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        HANDLE_GL_ERROR();
+
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        HANDLE_GL_ERROR();
+
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        HANDLE_GL_ERROR();
+
         // now store character for later use
         Character character = {
             texId,
@@ -470,20 +489,32 @@ void setupFreeType(std::map<char, Character>& Characters, GLuint* pfontVAO, GLui
         Characters.insert(std::pair<char, Character>(c, character));
     }
 
-    FT_Done_Face(face);
-    FT_Done_FreeType(ft);
+    if (FT_Done_Face(face))
+        throw new std::runtime_error("failed to destroy font face");
+
+    if (FT_Done_FreeType(ft))
+        throw new std::runtime_error("failed to destroy freetype");
 
     glCreateVertexArrays(1, pfontVAO);
+    HANDLE_GL_ERROR();
+
     glVertexArrayAttribBinding(*pfontVAO, 0, 0);
+    HANDLE_GL_ERROR();
+
     glVertexArrayAttribFormat(*pfontVAO, 0, 4, GL_FLOAT, GL_FALSE, 0);
+    HANDLE_GL_ERROR();
+
     glVertexArrayBindingDivisor(*pfontVAO, 0, 0);
+    HANDLE_GL_ERROR();
+
     glEnableVertexArrayAttrib(*pfontVAO, 0);
+    HANDLE_GL_ERROR();
 
     glCreateBuffers(1, pfontVBO);
-    glNamedBufferStorage(*pfontVBO, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_STORAGE_BIT);
+    HANDLE_GL_ERROR();
 
-    //err = glGetError();
-    //if (err != GL_NO_ERROR) printf("gl err %i\n", err);
+    glNamedBufferStorage(*pfontVBO, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_STORAGE_BIT);
+    HANDLE_GL_ERROR();
 }
 
 void LoadModel(std::vector<VBO_DATA>& vboData)
@@ -493,85 +524,87 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
     std::string warn, err;
-    //if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, "Lowpoly_tree_sample.model"))
+
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, "tree.model"))
+        throw new std::runtime_error("failed to load obj file");
+
+    // find model bounds
+    float xmin = attrib.vertices[0], 
+        xmax = attrib.vertices[0], 
+        ymin = attrib.vertices[1], 
+        ymax = attrib.vertices[1], 
+        zmin = attrib.vertices[2], 
+        zmax = attrib.vertices[2];
+
+    size_t nverts = attrib.vertices.size() / 3;
+    for (int vi = 0; vi < nverts; vi++)
     {
-        printf("ERROR: Failed to load model\n");
+        if (attrib.vertices[vi * 3] < xmin) xmin = attrib.vertices[vi * 3];
+        if (attrib.vertices[vi * 3] < xmax) xmax = attrib.vertices[vi * 3];
+        if (attrib.vertices[(vi * 3) + 1] < ymin) ymin = attrib.vertices[(vi * 3) + 1];
+        if (attrib.vertices[(vi * 3) + 1] < ymax) ymax = attrib.vertices[(vi * 3) + 1];
+        if (attrib.vertices[(vi * 3) + 2] < zmin) zmin = attrib.vertices[(vi * 3) + 2];
+        if (attrib.vertices[(vi * 3) + 2] < zmax) zmax = attrib.vertices[(vi * 3) + 2];
     }
-    else {
 
-        // find model bounds
-        float xmin = attrib.vertices[0], 
-            xmax = attrib.vertices[0], 
-            ymin = attrib.vertices[1], 
-            ymax = attrib.vertices[1], 
-            zmin = attrib.vertices[2], 
-            zmax = attrib.vertices[2];
-        size_t nverts = attrib.vertices.size() / 3;
-        for (int vi = 0; vi < nverts; vi++)
+    glm::mat4 trans = glm::translate(glm::mat4(1.0f), glm::vec3(20, 20, -ymin + 1.0f));
+    glm::mat4 rot = glm::rotate(glm::mat4(1.0f), 3.14159f / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::mat4 tr = trans * rot;
+
+    for(int i=0; i<materials.size(); i++)
+    {
+        std::vector<VERTEX2> vertices;
+        for (const auto& shape : shapes)
         {
-            if (attrib.vertices[vi * 3] < xmin) xmin = attrib.vertices[vi * 3];
-            if (attrib.vertices[vi * 3] < xmax) xmax = attrib.vertices[vi * 3];
-            if (attrib.vertices[(vi * 3) + 1] < ymin) ymin = attrib.vertices[(vi * 3) + 1];
-            if (attrib.vertices[(vi * 3) + 1] < ymax) ymax = attrib.vertices[(vi * 3) + 1];
-            if (attrib.vertices[(vi * 3) + 2] < zmin) zmin = attrib.vertices[(vi * 3) + 2];
-            if (attrib.vertices[(vi * 3) + 2] < zmax) zmax = attrib.vertices[(vi * 3) + 2];
-        }
-
-        glm::mat4 trans = glm::translate(glm::mat4(1.0f), glm::vec3(20, 20, -ymin + 1.0f));
-        glm::mat4 rot = glm::rotate(glm::mat4(1.0f), 3.14159f / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-        glm::mat4 tr = trans * rot;
-
-        for(int i=0; i<materials.size(); i++)
-        {
-            std::vector<VERTEX2> vertices;
-            for (const auto& shape : shapes)
+            int64_t f = 0;
+            for (const auto& index : shape.mesh.indices)
             {
-                int64_t f = 0;
-                for (const auto& index : shape.mesh.indices)
-                {
 
-                    int64_t face = f / 3;
-                    int current_material_id = shape.mesh.material_ids[face];
-                    if (current_material_id == i) {
-                        //printf("diffuse %.1f, %.1f, %.1f\n",
-                        //    materials[current_material_id].diffuse[0],
-                        //    materials[current_material_id].diffuse[1],
-                        //    materials[current_material_id].diffuse[2]);
+                int64_t face = f / 3;
+                int current_material_id = shape.mesh.material_ids[face];
+                if (current_material_id == i) {
+                    //printf("diffuse %.1f, %.1f, %.1f\n",
+                    //    materials[current_material_id].diffuse[0],
+                    //    materials[current_material_id].diffuse[1],
+                    //    materials[current_material_id].diffuse[2]);
 
-                        VERTEX2 v;
-                        v.vertex = tr * glm::vec4(
-                            attrib.vertices[3 * index.vertex_index + 0],
-                            attrib.vertices[3 * index.vertex_index + 1],
-                            attrib.vertices[3 * index.vertex_index + 2],
-                            1.0f
-                        );
-                        v.texc = glm::vec2(
-                            attrib.texcoords[2 * index.texcoord_index + 0],
-                            attrib.texcoords[2 * index.texcoord_index + 1]
-                        );
-                        v.norm = rot * glm::vec4(
-                            attrib.normals[3 * index.normal_index + 0],
-                            attrib.normals[3 * index.normal_index + 1],
-                            attrib.normals[3 * index.normal_index + 2],
-                            1.0f
-                        );
-                        v.userData[0] = 0;
-                        v.userData[1] = 0;
-                        vertices.push_back(v);
-                    }
-                    f++;
+                    VERTEX2 v;
+                    v.vertex = tr * glm::vec4(
+                        attrib.vertices[3 * index.vertex_index + 0],
+                        attrib.vertices[3 * index.vertex_index + 1],
+                        attrib.vertices[3 * index.vertex_index + 2],
+                        1.0f
+                    );
+                    v.texc = glm::vec2(
+                        attrib.texcoords[2 * index.texcoord_index + 0],
+                        attrib.texcoords[2 * index.texcoord_index + 1]
+                    );
+                    v.norm = rot * glm::vec4(
+                        attrib.normals[3 * index.normal_index + 0],
+                        attrib.normals[3 * index.normal_index + 1],
+                        attrib.normals[3 * index.normal_index + 2],
+                        1.0f
+                    );
+                    v.userData[0] = 0;
+                    v.userData[1] = 0;
+                    vertices.push_back(v);
                 }
+                f++;
             }
-            if (vertices.size() > 0) {
-                VBO_DATA vboObject;
-                glCreateBuffers(1, &vboObject.vboId);
-                glNamedBufferStorage(vboObject.vboId, sizeof(VERTEX2) * vertices.size(), vertices.data(), 0);
-                vboObject.numVerts = (GLsizei)vertices.size();
-                vboObject.diffuseColor = glm::vec4(materials[i].diffuse[0], materials[i].diffuse[1], materials[i].diffuse[2], 1.0f);
-                printf("this material has %i vertices\n", vboObject.numVerts);
-                vboData.push_back(vboObject);
-            }
+        }
+        if (vertices.size() > 0) {
+            VBO_DATA vboObject;
+
+            glCreateBuffers(1, &vboObject.vboId);
+            HANDLE_GL_ERROR();
+
+            glNamedBufferStorage(vboObject.vboId, sizeof(VERTEX2) * vertices.size(), vertices.data(), 0);
+            HANDLE_GL_ERROR();
+
+            vboObject.numVerts = (GLsizei)vertices.size();
+            vboObject.diffuseColor = glm::vec4(materials[i].diffuse[0], materials[i].diffuse[1], materials[i].diffuse[2], 1.0f);
+
+            vboData.push_back(vboObject);
         }
     }
 }
@@ -595,23 +628,29 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
     physx::PxExtendedVec3 pos;
     char* textBuffer = (char*)malloc(256);
 
-    QueryPerformanceCounter(&perfCount);
+    if (false == QueryPerformanceCounter(&perfCount))
+        throw new std::runtime_error("failed to query perf ctr");
     lastCount = perfCount;
-    QueryPerformanceFrequency(&perfFreq); // counts per second
+    if (false == QueryPerformanceFrequency(&perfFreq)) // counts per second
+        throw new std::runtime_error("failed to query perf freq");
 
     // GO!
     while (TRUE)
     {
         // check if done
-        if (WAIT_OBJECT_0 == WaitForSingleObject(lpctx->hQuitEvent, 0)) break;
+        DWORD wfsoResult = WaitForSingleObject(lpctx->hQuitEvent, 0);
+        if (WAIT_FAILED == wfsoResult) throw new std::runtime_error("failed to wait for quit event");
+        if (WAIT_OBJECT_0 == wfsoResult) break;
 
+        // check to see if vertices need to be refreshed
+        // this will switch out the VBOs for the 
+        // block vertex arrays with new ones
         if (isDoneProcessing.valid())
         {
             if (std::future_status::ready == isDoneProcessing.wait_for(std::chrono::milliseconds(0)))
             {
                 if (!vbosToUpdate.empty())
                 {
-                    printf("ready to switch vbos\n");
                     std::vector<VERTEX_BUFFER_GROUP1>::iterator giter = lpctx->groups.begin();
                     for (; giter != lpctx->groups.end(); ++giter)
                     {
@@ -620,15 +659,18 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
                         giter->vbo = newVbo;
                         giter->vsize = giter->vertices.size();
                         glDeleteBuffers(1, &oldVbo);
+                        HANDLE_GL_ERROR();
                     }
                     vbosToUpdate.clear();
-                    printf("vbo switch done\n");
                 }
             }
         }
 
         // calculate elapsed seconds
-        QueryPerformanceCounter(&perfCount);
+        // use an average of the last ten values
+        // to smooth out the elapsed time
+        if (false == QueryPerformanceCounter(&perfCount))
+            throw new std::runtime_error("failed to query perf counter");
         elapsedTicks = perfCount.QuadPart - lastCount.QuadPart;
         lastCount = perfCount;
         elps[elpsCtr] = (float)elapsedTicks / (float)perfFreq.QuadPart;
@@ -672,7 +714,6 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
         }
 
         // move player
-        physx::PxExtendedVec3 posb = lpctx->mController->getPosition();
         physx::PxControllerCollisionFlags cflags = lpctx->mController->move(
             physx::PxVec3(mx, my, lpctx->vz * elapsed),
             0.00f, // min dist
@@ -687,7 +728,8 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
         // simulate physics and get results
         lpctx->mScene->simulate(elapsed);
-        lpctx->mScene->fetchResults(true);
+        if (false == lpctx->mScene->fetchResults(true))
+            throw new std::runtime_error("failed to fetch physx results");
         pos = lpctx->mController->getPosition();
 
         // process elevation to radians
@@ -761,18 +803,25 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
                         isDoneProcessing = std::async([lpctx, &vbosToUpdate, rctx]()
                             {
                                 printf("starting async proc\n");
-                                wglMakeCurrent(rctx->hdc, lpctx->hglrcAlt);
+                                if (FALSE == wglMakeCurrent(rctx->hdc, lpctx->hglrcAlt))
+                                    throw new std::runtime_error("failed to make rc current on async proc");
                                 for (const auto& vbg : lpctx->groups)
                                 {
                                     GLuint newVbo = 0;
+                                    
                                     glCreateBuffers(1, &newVbo);
+                                    HANDLE_GL_ERROR();
+
                                     glNamedBufferStorage(
                                         newVbo,
                                         sizeof(VERTEX2) * vbg.vertices.size(),
                                         vbg.vertices.data(), 0);
+                                    HANDLE_GL_ERROR();
+
                                     vbosToUpdate.insert(std::pair<int, GLuint>(vbg.vbo, newVbo));
                                 }
-                                wglMakeCurrent(rctx->hdc, nullptr);
+                                if (false == wglMakeCurrent(rctx->hdc, nullptr))
+                                    throw new std::runtime_error("failed to release rc on async proc");
                                 printf("async proc done\n");
                             }
                         );
@@ -816,23 +865,38 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
         glm::mat4 lightSpaceMatrix = rctx->lightProjection * lightView;
         {
             glViewport(0, 0, rctx->shadowWidth, rctx->shadowHeight);
+            HANDLE_GL_ERROR();
+
             glBindFramebuffer(GL_FRAMEBUFFER, rctx->depthMapFBO);
+            HANDLE_GL_ERROR();
+
             glClear(GL_DEPTH_BUFFER_BIT);
+            HANDLE_GL_ERROR();
+
             rctx->shadowProg.Use();
             rctx->shadowProg.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
             rctx->shadowProg.SetUniformMatrix4fv("model", &rctx->modelMatrix[0][0]);
+
             glBindVertexArray(lpctx->vao);
+            HANDLE_GL_ERROR();
+
             RenderScene(lpctx);
 
             // render model
             for (const auto& modelVboItem : rctx->modelVboData)
             {
                 glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 12 * sizeof(GLfloat));
+                HANDLE_GL_ERROR();
+
                 glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
+                HANDLE_GL_ERROR();
             }
 
             glBindVertexArray(0);
+            HANDLE_GL_ERROR();
+
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            HANDLE_GL_ERROR();
         }
 
         // configure player matrices (view and projection)
@@ -854,7 +918,11 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
         // render the main scene (the voxels)
         {
             glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
+            HANDLE_GL_ERROR();
+
             glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+            HANDLE_GL_ERROR();
+
             rctx->voxcProgram.Use();
             rctx->voxcProgram.SetUniformMatrix4fv("model", &rctx->modelMatrix[0][0]);
             rctx->voxcProgram.SetUniformMatrix4fv("view", &viewMatrix[0][0]);
@@ -862,9 +930,16 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
             rctx->voxcProgram.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
             rctx->voxcProgram.SetUniform3fv("lightDir", &lightDir[0]);
             rctx->voxcProgram.SetUniform1i("useDiffuseColor", 0);
+
             glActiveTexture(GL_TEXTURE1);
+            HANDLE_GL_ERROR();
+
             glBindTexture(GL_TEXTURE_2D, rctx->depthMap);
+            HANDLE_GL_ERROR();
+
             glBindVertexArray(lpctx->vao);
+            HANDLE_GL_ERROR();
+
             RenderScene(lpctx);
 
             // render model
@@ -875,18 +950,30 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
             for (const auto& modelVboItem : rctx->modelVboData)
             {
                 rctx->voxcProgram.SetUniform4fv("diffuseColor", &modelVboItem.diffuseColor[0]);
+
                 glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 12 * sizeof(GLfloat));
+                HANDLE_GL_ERROR();
+
                 glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
+                HANDLE_GL_ERROR();
             }
 
             glBindVertexArray(0);
+            HANDLE_GL_ERROR();
+
             glActiveTexture(GL_TEXTURE1);
+            HANDLE_GL_ERROR();
+
             glBindTexture(GL_TEXTURE_2D, 0);
+            HANDLE_GL_ERROR();
         }
 
         // need alpha blending for next two items
         glEnable(GL_BLEND);
+        HANDLE_GL_ERROR();
+
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        HANDLE_GL_ERROR();
 
         // render selection cube
         // player is as pos.xyz
@@ -974,19 +1061,20 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
         // disable blend
         glDisable(GL_BLEND);
+        HANDLE_GL_ERROR();
 
         // render depth map
         rctx->ddProg.Use();
         rctx->quadBuffer.draw();
 
         glFlush();
+        HANDLE_GL_ERROR();
 
-        SwapBuffers(rctx->hdc);
+        if (false == SwapBuffers(rctx->hdc))
+            throw new std::runtime_error("failed to swap buffers");
 
         glUseProgram(0);
-
-        GLenum err = glGetError();
-        if (err != GL_NO_ERROR) printf("GL ERROR %i\n", err);
+        HANDLE_GL_ERROR();
 
     }
 

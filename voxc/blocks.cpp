@@ -61,7 +61,13 @@ void block_create_new_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t x
 {
 	lpctx->lpBlockEntities[index].rigidStatic = lpctx->mPhysics->createRigidStatic(
 		physx::PxTransform(xc + 0.5f, yc + 0.5f, zc + 0.5f));
-	lpctx->lpBlockEntities[index].rigidStatic->attachShape(*lpctx->mBlockShape);
+
+	if (lpctx->lpBlockEntities[index].rigidStatic == nullptr)
+		throw new std::runtime_error("failed to create rigid static");
+
+	if (FALSE == lpctx->lpBlockEntities[index].rigidStatic->attachShape(*lpctx->mBlockShape))
+		throw new std::runtime_error("failed to attach shape to rigid static");
+
 	lpctx->lpBlockEntities[index].rigidStatic->userData = (void*)&lpctx->lpBlockEntities[GRIDIDX(xc, yc, zc)];
 }
 

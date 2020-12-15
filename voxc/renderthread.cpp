@@ -1147,6 +1147,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
     fontProg.Release();
     selCubeProg.Release();
 
+    quadBuffer.Release();
+    zeroCubeBuffer.Release();
+
     wglMakeCurrent(hdc, nullptr);
     ReleaseDC(hwnd, hdc);
     wglDeleteContext(lpctx->hglrc);

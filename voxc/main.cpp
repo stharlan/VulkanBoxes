@@ -69,11 +69,13 @@ void init_opengl_ext(HINSTANCE hInstance)
 
 void setup(HINSTANCE hInstance, VOXC_WINDOW_CONTEXT* lpctx)
 {
-    //if (!AllocConsole()) throw new std::runtime_error("allocconsole");
-    //FILE* f = nullptr;
-    //freopen_s(&f, "CONIN$", "r", stdin);
-    //freopen_s(&f, "CONOUT$", "w", stdout);
-    //freopen_s(&f, "CONOUT$", "w", stderr);
+#ifdef _DEBUG
+    if (!AllocConsole()) throw new std::runtime_error("allocconsole");
+    FILE* f = nullptr;
+    freopen_s(&f, "CONIN$", "r", stdin);
+    freopen_s(&f, "CONOUT$", "w", stdout);
+    freopen_s(&f, "CONOUT$", "w", stderr);
+#endif
 
     init_opengl_ext(hInstance);
 
@@ -179,9 +181,10 @@ void cleanup(VOXC_WINDOW_CONTEXT* lpctx)
 
     block_cleanup(lpctx);
 
-    //int throw_away = getchar();
-
-    //FreeConsole();
+#ifdef _DEBUG
+    int throw_away = getchar();
+    FreeConsole();
+#endif
 }
 
 int WINAPI WinMain(

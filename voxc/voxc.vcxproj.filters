@@ -54,6 +54,12 @@
     <ClCompile Include="OpenGlVertexBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="format.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="os.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="voxc.h">

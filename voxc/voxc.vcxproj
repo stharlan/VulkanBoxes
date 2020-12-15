@@ -116,8 +116,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Library\freetype-windows-binaries\include;C:\Library\glm;C:\Users\stuar\source\repos\PhysX\pxshared\include;C:\Users\stuar\source\repos\PhysX\physx\include;C:\VulkanSDK\1.2.154.1\Include;C:\Library\glfw-3.3.2.bin.WIN64\include</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>C:\Library\fmt\include;C:\Library\freetype-windows-binaries\include;C:\Library\glm;C:\Users\stuar\source\repos\PhysX\pxshared\include;C:\Users\stuar\source\repos\PhysX\physx\include;C:\VulkanSDK\1.2.154.1\Include;C:\Library\glfw-3.3.2.bin.WIN64\include</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -125,7 +125,8 @@
       <AdditionalDependencies>winmm.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "C:\Library\freetype-windows-binaries\release dll\win64\freetype.dll" $(OutDir)</Command>
+      <Command>copy "C:\Library\freetype-windows-binaries\release dll\win64\freetype.dll" $(OutDir)
+copy "C:\Users\stuar\source\repos\PhysX\physx\bin\win.x86_64.vc142.mt\debug\*.dll" $(OutDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -136,7 +137,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Library\freetype-windows-binaries\include;C:\Library\glm;C:\Users\stuar\source\repos\PhysX\pxshared\include;C:\Users\stuar\source\repos\PhysX\physx\include;C:\VulkanSDK\1.2.154.1\Include;C:\Library\glfw-3.3.2.bin.WIN64\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Library\fmt\include;C:\Library\freetype-windows-binaries\include;C:\Library\glm;C:\Users\stuar\source\repos\PhysX\pxshared\include;C:\Users\stuar\source\repos\PhysX\physx\include;C:\VulkanSDK\1.2.154.1\Include;C:\Library\glfw-3.3.2.bin.WIN64\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -152,10 +153,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="blocks.cpp" />
+    <ClCompile Include="format.cc" />
     <ClCompile Include="glextfn.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OpenGlProgram.cpp" />
     <ClCompile Include="OpenGlVertexBuffer.cpp" />
+    <ClCompile Include="os.cc" />
     <ClCompile Include="physics.cpp" />
     <ClCompile Include="renderthread.cpp" />
     <ClCompile Include="vertexbuffer.cpp" />

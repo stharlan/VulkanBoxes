@@ -105,6 +105,7 @@
 #include <map>
 #include <string>
 #include <algorithm>
+#include <future>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -197,6 +198,8 @@ typedef struct _BLOCK_REG
 
 typedef struct _VOXC_WINDOW_CONTEXT
 {
+    HGLRC hglrc;
+    HGLRC hglrcAlt;
     HANDLE hQuitEvent = 0;
     HANDLE hRenderThread = 0;
     BYTE* rawBuffer[48];

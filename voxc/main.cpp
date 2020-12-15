@@ -54,19 +54,13 @@ void init_opengl_ext()
 
 }
 
-int WINAPI WinMain(
-    HINSTANCE hInstance,
-    HINSTANCE hPrevInstance,
-    LPSTR     lpCmdLine,
-    int       nShowCmd
-)
-{   
-
-    AllocConsole();
-    FILE* f = nullptr;
-    freopen_s(&f, "CONIN$", "r", stdin);
-    freopen_s(&f, "CONOUT$", "w", stdout);
-    freopen_s(&f, "CONOUT$", "w", stderr);
+int run(HINSTANCE hInstance)
+{
+    //if (!AllocConsole()) throw new std::runtime_error("allocconsole");
+    //FILE* f = nullptr;
+    //freopen_s(&f, "CONIN$", "r", stdin);
+    //freopen_s(&f, "CONOUT$", "w", stdout);
+    //freopen_s(&f, "CONOUT$", "w", stderr);
 
     init_opengl_ext();
 
@@ -89,7 +83,7 @@ int WINAPI WinMain(
     DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;           // Window Extended Style
     DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE; // Windows Style
 
-    RECT wr = {0,0,1024,768};
+    RECT wr = { 0,0,1024,768 };
 
     AdjustWindowRect(&wr, dwStyle, FALSE);
 
@@ -111,12 +105,7 @@ int WINAPI WinMain(
         hInstance,
         lpctx);
 
-    if (!hwnd) {
-        printf("Failed to create visible window\n");
-        return 0;
-    }
-
-    ShowCursor(FALSE);
+    if (!hwnd) throw new std::runtime_error("failed to create window");
 
     RAWINPUTDEVICE Rid[2];
 
@@ -131,8 +120,13 @@ int WINAPI WinMain(
     Rid[1].hwndTarget = hwnd;
 
     if (RegisterRawInputDevices(Rid, 2, sizeof(Rid[0])) == FALSE) {
-        //registration failed. Call GetLastError for the cause of the error
+        throw new std::runtime_error("failed to register raw input devices");
     }
+
+    RECT cr;
+    GetWindowRect(hwnd, &cr);
+    ClipCursor(&cr);
+    ShowCursor(FALSE);
 
     // start two message loops for two different windows
     {
@@ -156,13 +150,31 @@ int WINAPI WinMain(
         }
     }
 
+    ShowCursor(TRUE);
+    ClipCursor(nullptr);
+
     block_cleanup(lpctx);
     delete lpctx;
 
-    getchar();
+    //int throw_away = getchar();
 
-    FreeConsole();
-    ShowCursor(TRUE);
+    //FreeConsole();
 
-    return 0;
+    return EXIT_SUCCESS;
+}
+
+int WINAPI WinMain(
+    _In_ HINSTANCE hInstance,
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_ PSTR szCmdLine,
+    _In_ int iCmdShow)    
+{   
+    try {
+        run(hInstance);
+    }
+    catch (const std::exception& e) {
+        printf("ERROR: %s\n", e.what());
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }

@@ -80,7 +80,7 @@ void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64
     lpctx->zblock = zint;
 }
 
-HGLRC createRenderingContext2(HDC hdc)
+void createRenderingContext2(HDC hdc, VOXC_WINDOW_CONTEXT* lpctx)
 {
     int attrs[] = {
         WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
@@ -109,18 +109,24 @@ HGLRC createRenderingContext2(HDC hdc)
         0
     };
 
-    HGLRC hglrc = wglCreateContextAttribsARB(hdc, 0, glverattribs);
-
-    if (hglrc == NULL) {
+    lpctx->hglrc = wglCreateContextAttribsARB(hdc, 0, glverattribs);
+    if (lpctx->hglrc == NULL) {
         printf("ERROR: Failed to create rendering context\n");
     }
     else {
         printf("Rendering context...ok.\n");
     }
 
-    wglMakeCurrent(hdc, hglrc);
+    lpctx->hglrcAlt = wglCreateContextAttribsARB(hdc, 0, glverattribs);
+    BOOL success = wglShareLists(lpctx->hglrc, lpctx->hglrcAlt);
+    if (!success) {
+        printf("ERROR: Failed to share resources between contexts\n");
+        wglDeleteContext(lpctx->hglrcAlt);
+        lpctx->hglrcAlt = nullptr;
+    }
 
-    return hglrc;
+    wglMakeCurrent(hdc, lpctx->hglrc);
+
 }
 
 HGLRC createRenderingContext1(HDC hdc)
@@ -523,7 +529,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     HWND hwnd = (HWND)parm;
     VOXC_WINDOW_CONTEXT* lpctx = (VOXC_WINDOW_CONTEXT*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     HDC hdc = GetDC(hwnd);
-    HGLRC hglrc = createRenderingContext2(hdc);
+    createRenderingContext2(hdc, lpctx);
 
     // load all the xtension functions
     if (FALSE == loadExtensionFunctions())
@@ -696,11 +702,36 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glClearColor(0.9f, 0.9f, 1.0f, 1.0f);
     glm::mat4 modelMatrix = glm::mat4(1.0f);
 
+    std::map<GLuint, GLuint> vbosToUpdate;
+    std::future<void> isDoneProcessing;
+
     // GO!
     while (TRUE)
     {
         // check if done
         if (WAIT_OBJECT_0 == WaitForSingleObject(lpctx->hQuitEvent, 0)) break;
+
+        if (isDoneProcessing.valid())
+        {
+            if (std::future_status::ready == isDoneProcessing.wait_for(std::chrono::milliseconds(0)))
+            {
+                if (!vbosToUpdate.empty())
+                {
+                    printf("ready to switch vbos\n");
+                    std::vector<VERTEX_BUFFER_GROUP1>::iterator giter = lpctx->groups.begin();
+                    for(;giter != lpctx->groups.end(); ++giter)
+                    {
+                        GLuint oldVbo = giter->vbo;
+                        GLuint newVbo = vbosToUpdate.at(oldVbo);
+                        giter->vbo = newVbo;
+                        giter->vsize = giter->vertices.size();
+                        glDeleteBuffers(1, &oldVbo);
+                    }
+                    vbosToUpdate.clear();
+                    printf("vbo switch done\n");
+                }
+            }
+        }
 
         // calculate elapsed seconds
         QueryPerformanceCounter(&perfCount);
@@ -793,90 +824,90 @@ DWORD WINAPI RenderThread(LPVOID parm)
                 // hitBlock is the block to update
                 if (lpctx->keys[6] == 1)
                 {
-                    int64_t hashCode = hitBlock->hashCode;
                     lpctx->keys[6] = 0;
-
-                    // instead of removing the faces
-                    // create an entirely new vertex buffer
-                    // for the changes
-                    // then switch the buffer
-
-                    // remove faces
-                    std::vector<int> groupsToUpdate(lpctx->groups.size());
-                    for (int gi = 0; gi < lpctx->groups.size(); gi++)
+                    if (vbosToUpdate.empty())
                     {
-                        size_t sizeBefore = lpctx->groups[gi].vertices.size();
-                        lpctx->groups[gi].vertices.erase(
-                            std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
-                                [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }), 
-                            lpctx->groups[gi].vertices.end());
-                        if (lpctx->groups[gi].vertices.size() != sizeBefore)
+
+                        int64_t hashCode = hitBlock->hashCode;
+
+                        clock_t t = clock();
+
+                        // remove faces
+                        //std::vector<GLuint> groupVbosToUpdate;
+                        for (int gi = 0; gi < lpctx->groups.size(); gi++)
                         {
-                            groupsToUpdate.push_back(gi);
+                            //size_t sizeBefore = lpctx->groups[gi].vertices.size();
+                            lpctx->groups[gi].vertices.erase(
+                                std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
+                                    [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }),
+                                lpctx->groups[gi].vertices.end());
+                            //if (lpctx->groups[gi].vertices.size() != sizeBefore)
+                            //{
+                                //groupVbosToUpdate.push_back(lpctx->groups[gi].vbo);
+                            //}
                         }
+
+                        int64_t hitBlockIndex = GRIDIDX(hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
+
+                        // setting block to air
+                        block_set_regtype(lpctx, hitBlockIndex, REG_AIR);
+
+                        // refreshing actors and disabling refresh later
+                        // since this block is now air, it will not be added to the scene
+                        addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+
+                        // do not add actors below
+                        shouldAddActors = false;
+
+                        // reset the block
+                        block_release_actor(lpctx, hitBlockIndex);
+                        block_set_surround_face_mask(lpctx, hitBlockIndex, 0);
+                        block_set_surround_alpha_mask(lpctx, hitBlockIndex, 0);
+                        block_set_surround_exists_mask(lpctx, hitBlockIndex, 0);
+
+                        // update the masks for the block removed
+                        // and update the masks for the surrounding blocks
+                        // and update the face data for the surrounding blocks
+                        update_surrounding_blocks(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
+
+                        //for (const auto& gidx : groupsToUpdate)
+                        //{
+                        //    lpctx->groups[gidx].vsize = lpctx->groups[gidx].vertices.size();
+                        //    glDeleteBuffers(1, &lpctx->groups[gidx].vbo);
+                        //    lpctx->groups[gidx].vbo = 0;
+                        //    glCreateBuffers(1, &lpctx->groups[gidx].vbo);
+                        //    glNamedBufferStorage(
+                        //        lpctx->groups[gidx].vbo, 
+                        //        sizeof(VERTEX2) * lpctx->groups[gidx].vertices.size(),
+                        //        lpctx->groups[gidx].vertices.data(),  0);
+                        //}
+
+                        isDoneProcessing = std::async([lpctx, &vbosToUpdate, hdc]()
+                            {
+                                printf("starting async proc\n");
+                                wglMakeCurrent(hdc, lpctx->hglrcAlt);
+                                for(const auto& vbg : lpctx->groups)
+                                {
+                                    GLuint newVbo = 0;
+                                    glCreateBuffers(1, &newVbo);
+                                    glNamedBufferStorage(
+                                        newVbo,
+                                        sizeof(VERTEX2) * vbg.vertices.size(),
+                                        vbg.vertices.data(), 0);
+                                    vbosToUpdate.insert(std::pair<int, GLuint>(vbg.vbo, newVbo));
+                                }
+                                wglMakeCurrent(hdc, nullptr);
+                                printf("async proc done\n");
+                            }
+                        );
+
+                        t = clock() - t;
+                        double time_taken = ((double)t) / CLOCKS_PER_SEC; // calculate the elapsed time
+                        printf("Elapsed %f seconds", time_taken);
+
+                        // the hit block is invalid now - it's gone
+                        hitBlock = NULL;
                     }
-
-                    int64_t hitBlockIndex = GRIDIDX(hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
-
-                    // setting block to air
-                    //hitBlock->regType = REG_AIR;
-                    block_set_regtype(lpctx, hitBlockIndex, REG_AIR);
-
-                    // refreshing actors and disabling refresh later
-                    // since this block is now air, it will not be added to the scene
-                    addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
-
-                    // do not add actors below
-                    shouldAddActors = false;
-
-                    // reset the block
-                    //hitBlock->faceMask = 0;
-                    //if (hitBlock->rigidStatic) hitBlock->rigidStatic->release();
-                    //hitBlock->rigidStatic = NULL;
-                    //hitBlock->surroundAlphaMask = 0;
-                    //hitBlock->surroundExistsMask = 0;
-                    block_release_actor(lpctx, hitBlockIndex);
-                    block_set_surround_face_mask(lpctx, hitBlockIndex, 0);
-                    block_set_surround_alpha_mask(lpctx, hitBlockIndex, 0);
-                    block_set_surround_exists_mask(lpctx, hitBlockIndex, 0);
-
-                    // update the masks for the block removed
-                    // and update the masks for the surrounding blocks
-                    // and update the face data for the surrounding blocks
-                    update_surrounding_blocks(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
-
-                    for (const auto& gidx : groupsToUpdate)
-                    {
-                        lpctx->groups[gidx].vsize = lpctx->groups[gidx].vertices.size();
-                        glDeleteBuffers(1, &lpctx->groups[gidx].vbo);
-                        lpctx->groups[gidx].vbo = 0;
-                        glCreateBuffers(1, &lpctx->groups[gidx].vbo);
-                        glNamedBufferStorage(
-                            lpctx->groups[gidx].vbo, 
-                            sizeof(VERTEX2) * lpctx->groups[gidx].vertices.size(),
-                            lpctx->groups[gidx].vertices.data(),  0);
-                    }
-
-                    // update the vertex buffers based on new face data
-                    //for (int gi = 0; gi < lpctx->groups.size(); gi++)
-                    //{
-                        //printf("verts after after %i\n", lpctx->groups[gi].vertices.size());
-                        //glNamedBufferSubData(lpctx->groups[gi].vbo, 0,
-                            //sizeof(VERTEX2) * lpctx->groups[gi].vertices.size(),
-                            //lpctx->groups[gi].vertices.data());
-
-                        // create an array of threads
-                    //}
-
-                    // TODO bug
-                    // the problem is, the vertex buffers may get
-                    // more or less data
-                    // a new vertex buffer needs to be created and
-                    // swapped out
-                    // i could use libuv and do it asynchronously
-
-                    // the hit block is invalid now - it's gone
-                    hitBlock = NULL;
                 }
 
                 // keys 7 right button
@@ -1115,7 +1146,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
 
     wglMakeCurrent(hdc, nullptr);
     ReleaseDC(hwnd, hdc);
-    wglDeleteContext(hglrc);
+    wglDeleteContext(lpctx->hglrc);
+    if (lpctx->hglrcAlt) wglDeleteContext(lpctx->hglrcAlt);
 
     block_release_all_actors(lpctx);
 

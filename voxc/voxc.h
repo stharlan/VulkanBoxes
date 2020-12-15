@@ -83,7 +83,7 @@
 
 #define HANDLE_GL_ERROR() {GLenum glerr=glGetError();if(glerr!=GL_NO_ERROR) throw new std::runtime_error(fmt::format("opengl error {}",glerr));}
 
-#define GETPROC(_t,_v,_vs) {_v = (_t)wglGetProcAddress(_vs);if(_v == NULL){printf("ERR: wglproc %s",_vs);goto cleanup;}}
+#define GETPROC(_t,_v,_vs) {_v = (_t)wglGetProcAddress(_vs);if(_v == NULL){throw new std::runtime_error(fmt::format("error loading proc {}",_vs));}}
 
 #define DEG2RAD(d) (d * 3.14159f / 180.0f)
 
@@ -314,7 +314,7 @@ extern wglChoosePixelFormatARBFN wglChoosePixelFormatARB;
 
 DWORD WINAPI RenderThread(LPVOID parm);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-BOOL loadExtensionFunctions();
+void loadExtensionFunctions();
 void CreateVertexBuffer(VOXC_WINDOW_CONTEXT*);
 void update_surrounding_blocks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc); 
 void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition);

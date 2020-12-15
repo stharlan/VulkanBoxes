@@ -950,11 +950,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     createRenderingContext2(hdc, lpctx);
 
     // load all the xtension functions
-    if (FALSE == loadExtensionFunctions())
-    {
-        printf("Failed to load opengl extension functions.\n");
-        return 0;
-    }
+    loadExtensionFunctions();
 
     // opengl configuration
     glEnable(GL_MULTISAMPLE);

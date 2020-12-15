@@ -57,7 +57,7 @@ PFNGLNAMEDBUFFERSUBDATAPROC glNamedBufferSubData = NULL;
 wglCreateContextAttribsARBFN wglCreateContextAttribsARB = NULL;
 wglChoosePixelFormatARBFN wglChoosePixelFormatARB = NULL;
 
-BOOL loadExtensionFunctions()
+void loadExtensionFunctions()
 {
     GETPROC(PFNGLACTIVETEXTUREPROC, glActiveTexture, "glActiveTexture");
     GETPROC(PFNGLBINDIMAGETEXTUREPROC, glBindImageTexture, "glBindImageTexture");
@@ -111,8 +111,4 @@ BOOL loadExtensionFunctions()
     GETPROC(PFNGLUNIFORM3FPROC, glUniform3f, "glUniform3f");
     GETPROC(PFNGLBUFFERSUBDATAPROC, glBufferSubData, "glBufferSubData");
     GETPROC(PFNGLNAMEDBUFFERSUBDATAPROC, glNamedBufferSubData, "glNamedBufferSubData");
-
-    return TRUE;
-cleanup:
-    return FALSE;
 }

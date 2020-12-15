@@ -282,7 +282,7 @@ void createRenderingContext2(HDC hdc, VOXC_WINDOW_CONTEXT* lpctx)
 //    return textureID;
 //}
 
-void LoadTextures(TEXTURE_SPEC tsArray[], int numFilenames, VOXC_WINDOW_CONTEXT* lpctx)
+void load_textures_2(TEXTURE_SPEC tsArray[], int numFilenames, VOXC_WINDOW_CONTEXT* lpctx)
 {
     std::vector<GLuint> texids(numFilenames);
     lpctx->groups.resize(numFilenames);
@@ -659,7 +659,6 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
                         giter->vbo = newVbo;
                         giter->vsize = giter->vertices.size();
                         glDeleteBuffers(1, &oldVbo);
-                        HANDLE_GL_ERROR();
                     }
                     vbosToUpdate.clear();
                 }
@@ -810,13 +809,11 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
                                     GLuint newVbo = 0;
                                     
                                     glCreateBuffers(1, &newVbo);
-                                    HANDLE_GL_ERROR();
 
                                     glNamedBufferStorage(
                                         newVbo,
                                         sizeof(VERTEX2) * vbg.vertices.size(),
                                         vbg.vertices.data(), 0);
-                                    HANDLE_GL_ERROR();
 
                                     vbosToUpdate.insert(std::pair<int, GLuint>(vbg.vbo, newVbo));
                                 }
@@ -865,20 +862,16 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
         glm::mat4 lightSpaceMatrix = rctx->lightProjection * lightView;
         {
             glViewport(0, 0, rctx->shadowWidth, rctx->shadowHeight);
-            HANDLE_GL_ERROR();
 
             glBindFramebuffer(GL_FRAMEBUFFER, rctx->depthMapFBO);
-            HANDLE_GL_ERROR();
 
             glClear(GL_DEPTH_BUFFER_BIT);
-            HANDLE_GL_ERROR();
 
             rctx->shadowProg.Use();
             rctx->shadowProg.SetUniformMatrix4fv("lightSpaceMatrix", &lightSpaceMatrix[0][0]);
             rctx->shadowProg.SetUniformMatrix4fv("model", &rctx->modelMatrix[0][0]);
 
             glBindVertexArray(lpctx->vao);
-            HANDLE_GL_ERROR();
 
             RenderScene(lpctx);
 
@@ -886,17 +879,13 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
             for (const auto& modelVboItem : rctx->modelVboData)
             {
                 glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 12 * sizeof(GLfloat));
-                HANDLE_GL_ERROR();
 
                 glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
-                HANDLE_GL_ERROR();
             }
 
             glBindVertexArray(0);
-            HANDLE_GL_ERROR();
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            HANDLE_GL_ERROR();
         }
 
         // configure player matrices (view and projection)
@@ -918,10 +907,8 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
         // render the main scene (the voxels)
         {
             glViewport(0, 0, lpctx->screenWidth, lpctx->screenHeight);
-            HANDLE_GL_ERROR();
 
             glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-            HANDLE_GL_ERROR();
 
             rctx->voxcProgram.Use();
             rctx->voxcProgram.SetUniformMatrix4fv("model", &rctx->modelMatrix[0][0]);
@@ -932,13 +919,10 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
             rctx->voxcProgram.SetUniform1i("useDiffuseColor", 0);
 
             glActiveTexture(GL_TEXTURE1);
-            HANDLE_GL_ERROR();
 
             glBindTexture(GL_TEXTURE_2D, rctx->depthMap);
-            HANDLE_GL_ERROR();
 
             glBindVertexArray(lpctx->vao);
-            HANDLE_GL_ERROR();
 
             RenderScene(lpctx);
 
@@ -952,28 +936,21 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
                 rctx->voxcProgram.SetUniform4fv("diffuseColor", &modelVboItem.diffuseColor[0]);
 
                 glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 12 * sizeof(GLfloat));
-                HANDLE_GL_ERROR();
 
                 glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
-                HANDLE_GL_ERROR();
             }
 
             glBindVertexArray(0);
-            HANDLE_GL_ERROR();
 
             glActiveTexture(GL_TEXTURE1);
-            HANDLE_GL_ERROR();
 
             glBindTexture(GL_TEXTURE_2D, 0);
-            HANDLE_GL_ERROR();
         }
 
         // need alpha blending for next two items
         glEnable(GL_BLEND);
-        HANDLE_GL_ERROR();
 
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        HANDLE_GL_ERROR();
 
         // render selection cube
         // player is as pos.xyz
@@ -1061,19 +1038,18 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
         // disable blend
         glDisable(GL_BLEND);
-        HANDLE_GL_ERROR();
 
         // render depth map
         rctx->ddProg.Use();
         rctx->quadBuffer.draw();
 
         glFlush();
-        HANDLE_GL_ERROR();
 
         if (false == SwapBuffers(rctx->hdc))
             throw new std::runtime_error("failed to swap buffers");
 
         glUseProgram(0);
+
         HANDLE_GL_ERROR();
 
     }
@@ -1082,12 +1058,32 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
 }
 
+void load_textures(VOXC_WINDOW_CONTEXT* lpctx)
+{
+    // if adding a new texture
+    // increase the count in load textures
+    // also, go to voxc.h and add another define
+    // also, in vertex buffer creation below, increase count
+    // also, createbuffers and loop below it
+    TEXTURE_SPEC tsArray[6] = { 0 };
+    tsArray[0].name = "vocxdirt.png"; tsArray[0].isTransparent = FALSE;
+    tsArray[1].name = "vocxdirtgrass.png"; tsArray[1].isTransparent = FALSE;
+    tsArray[2].name = "vocxgrass.png"; tsArray[2].isTransparent = FALSE;
+    tsArray[3].name = "vocxleaves_t.png"; tsArray[3].isTransparent = TRUE;
+    tsArray[4].name = "vocxwoodbark.png"; tsArray[4].isTransparent = FALSE;
+    tsArray[5].name = "vocxwoodrings.png"; tsArray[5].isTransparent = FALSE;
+    // after this, there will be one block group
+    // for each texture 
+    load_textures_2(tsArray, 6, lpctx);
+}
+
 DWORD WINAPI RenderThread(LPVOID parm)
 {
     // create the rendering contxt
     HWND hwnd = (HWND)parm;
     VOXC_WINDOW_CONTEXT* lpctx = (VOXC_WINDOW_CONTEXT*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     HDC hdc = GetDC(hwnd);
+
     createRenderingContext2(hdc, lpctx);
 
     // load all the xtension functions
@@ -1102,6 +1098,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_CULL_FACE);
     glShadeModel(GL_SMOOTH);
+    HANDLE_GL_ERROR();
+
     //glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     //glEnable(GL_TEXTURE_2D);
     //glEnable(GL_MULTISAMPLE);
@@ -1121,47 +1119,33 @@ DWORD WINAPI RenderThread(LPVOID parm)
     OpenGlProgram fontProg("vfont.txt", "ffont.txt");
     OpenGlProgram selCubeProg("selcube.vert", "selcube.frag");
 
-    // if adding a new texture
-    // increase the count in load textures
-    // also, go to voxc.h and add another define
-    // also, in vertex buffer creation below, increase count
-    // also, createbuffers and loop below it
-    TEXTURE_SPEC tsArray[6] = { 0 };
-    tsArray[0].name = "vocxdirt.png"; tsArray[0].isTransparent = FALSE;
-    tsArray[1].name = "vocxdirtgrass.png"; tsArray[1].isTransparent = FALSE;
-    tsArray[2].name = "vocxgrass.png"; tsArray[2].isTransparent = FALSE;
-    tsArray[3].name = "vocxleaves_t.png"; tsArray[3].isTransparent = TRUE;
-    tsArray[4].name = "vocxwoodbark.png"; tsArray[4].isTransparent = FALSE;
-    tsArray[5].name = "vocxwoodrings.png"; tsArray[5].isTransparent = FALSE;
-    // after this, there will be one block group
-    // for each texture 
-    LoadTextures(tsArray, 6, lpctx);
+    load_textures(lpctx);
 
     // physics: must be done before create vertex buffer
     glm::vec3 startingPosition(30, 30, 10);
     initPhysics(lpctx, startingPosition);
     // end physics
 
-    CreateVertexBuffer(lpctx);
-    for (int i = 0; i < 6; i++) {
-        printf("vb %i contains %zi vertices\n", i, lpctx->groups[i].vertices.size());
-    }
-
     // vertex buffer
-    std::vector<GLuint> vbos(6);
-    glCreateBuffers(6, vbos.data());
-    for (int i = 0; i < 6; i++)
     {
-        if (lpctx->groups[i].vertices.size() > 0) {
-            lpctx->groups[i].vsize = lpctx->groups[i].vertices.size();
-            glNamedBufferStorage(vbos[i], sizeof(VERTEX2) * lpctx->groups[i].vertices.size(),
-                lpctx->groups[i].vertices.data(), 0);
-            //lpctx->groups[i].vertices.clear();
+        CreateVertexBuffer(lpctx);
+        std::vector<GLuint> vbos(6);
+        glCreateBuffers(6, vbos.data());
+        HANDLE_GL_ERROR();
+
+        for (int i = 0; i < 6; i++)
+        {
+            if (lpctx->groups[i].vertices.size() > 0) {
+                lpctx->groups[i].vsize = lpctx->groups[i].vertices.size();
+                glNamedBufferStorage(vbos[i], sizeof(VERTEX2) * lpctx->groups[i].vertices.size(),
+                    lpctx->groups[i].vertices.data(), 0);
+                HANDLE_GL_ERROR();
+            }
+            else {
+                lpctx->groups[i].vsize = 0;
+            }
+            lpctx->groups[i].vbo = vbos[i];
         }
-        else {
-            lpctx->groups[i].vsize = 0;
-        }
-        lpctx->groups[i].vbo = vbos[i];
     }
 
     // model
@@ -1180,11 +1164,13 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glEnableVertexArrayAttrib(lpctx->vao, 0);
     glEnableVertexArrayAttrib(lpctx->vao, 1);
     glEnableVertexArrayAttrib(lpctx->vao, 2);
+    HANDLE_GL_ERROR();
     // end vertex array 
 
     // create a frame buffer for shadows 
     GLuint depthMapFBO = 0;
     glGenFramebuffers(1, &depthMapFBO);
+    HANDLE_GL_ERROR();
 
     const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
     GLuint depthMap = 0;
@@ -1197,12 +1183,14 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    HANDLE_GL_ERROR();
 
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    HANDLE_GL_ERROR();
 
     float near_plane = 0.1f, far_plane = 500.0f;
     glm::mat4 lightProjection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, near_plane, far_plane);
@@ -1236,7 +1224,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     // final prep
     glClearColor(0.9f, 0.9f, 1.0f, 1.0f);
     glm::mat4 modelMatrix = glm::mat4(1.0f);
-
+    HANDLE_GL_ERROR();
 
     // ***********
     // render loop
@@ -1290,6 +1278,8 @@ DWORD WINAPI RenderThread(LPVOID parm)
 
     quadBuffer.Release();
     zeroCubeBuffer.Release();
+
+    HANDLE_GL_ERROR();
 
     wglMakeCurrent(hdc, nullptr);
     ReleaseDC(hwnd, hdc);

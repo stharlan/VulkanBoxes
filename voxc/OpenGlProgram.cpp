@@ -2,32 +2,62 @@
 
 char* readShaderSource(const char* filename)
 {
+    HANDLE hFile = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ,
+        nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE)
+        throw new std::runtime_error("failed to open shader source file");
+
+    DWORD sizeHigh = 0;
+    DWORD fsize = GetFileSize(hFile, &sizeHigh);
+    if (fsize == INVALID_FILE_SIZE)
+        throw new std::runtime_error("failed to get file size");
+
     char* shaderSource = NULL;
-    FILE* f = NULL;
-    long l = 0;
-    fopen_s(&f, filename, "r");
-    if (f != NULL) {
-        fseek(f, 0, SEEK_END);
-        l = ftell(f);
-        fseek(f, 0, SEEK_SET);
-        shaderSource = (char*)malloc(l);
-        if (shaderSource != NULL) {
-            memset(shaderSource, 0, l);
-            fread(shaderSource, 1, l, f);
-            fclose(f);
-            f = NULL;
-        }
-        else {
-            printf("Failed to allocate memory for shader source code\n");
-            fclose(f);
-            f = NULL;
-            return NULL;
-        }
-    }
-    else {
-        printf("Failed to open shader source file\n");
-        return NULL;
-    }
+    shaderSource = (char*)malloc(fsize+1);
+    if (shaderSource == nullptr)
+        throw new std::runtime_error("failed to allocate memory for shader source");
+    memset(shaderSource, 0, fsize+1);
+
+    DWORD nbr = 0;
+    if (!ReadFile(hFile, shaderSource, fsize, &nbr, NULL))
+        throw new std::runtime_error("failed to read file");
+
+    if (false == CloseHandle(hFile))
+        throw new std::runtime_error("failed to close shader source file");
+
+    //FILE* f = NULL;
+    //long l = 0;
+    //errno_t err = fopen_s(&f, filename, "r");
+    //if (err != 0)
+        //throw new std::runtime_error("failed to open shader source file");
+    //if (f == nullptr)
+        //throw new std::runtime_error("failed to open shader source file");
+
+    //int res = fseek(f, 0, SEEK_END);
+    //if (res != 0)
+        //throw new std::runtime_error("failed to seek end of file");
+
+    //l = ftell(f);
+
+    //res = fseek(f, 0, SEEK_SET);
+    //if (res != 0)
+        //throw new std::runtime_error("failed to seek start of file");
+
+
+    //size_t nread = fread(shaderSource, 1, l, f);
+    //if (nread != l) {
+        //if (!feof(f))
+        //{
+            //throw new std::runtime_error("failed to read shader source from file");
+        //}
+    //}
+
+    //res = fclose(f);
+    //if(res != 0)
+        //throw new std::runtime_error("failed to seek start of file");
+
+    //f = NULL;
+
     return shaderSource;
 }
 

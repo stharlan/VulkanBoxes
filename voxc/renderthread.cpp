@@ -1141,6 +1141,12 @@ DWORD WINAPI RenderThread(LPVOID parm)
 
     glDeleteVertexArrays(1, &lpctx->vao);
 
+    voxcProgram.Release();
+    shadowProg.Release();
+    ddProg.Release();
+    fontProg.Release();
+    selCubeProg.Release();
+
     wglMakeCurrent(hdc, nullptr);
     ReleaseDC(hwnd, hdc);
     wglDeleteContext(lpctx->hglrc);

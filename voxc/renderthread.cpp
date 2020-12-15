@@ -97,11 +97,16 @@ void createRenderingContext2(HDC hdc, VOXC_WINDOW_CONTEXT* lpctx)
 
     int pf = 0;
     UINT numfmts = 0;
-    wglChoosePixelFormatARB(hdc, attrs, 0, 1, &pf, &numfmts);
+    if (FALSE == wglChoosePixelFormatARB(hdc, attrs, 0, 1, &pf, &numfmts))
+        throw new std::runtime_error("failed to choose pixel format");
 
     PIXELFORMATDESCRIPTOR pfd = { 0 };
-    DescribePixelFormat(hdc, pf, sizeof(pfd), &pfd);
-    SetPixelFormat(hdc, pf, &pfd);
+    if (!DescribePixelFormat(hdc, pf, sizeof(pfd), &pfd))
+        throw new std::runtime_error("failed to describe pixel format");
+
+    if (FALSE == SetPixelFormat(hdc, pf, &pfd))
+        throw new std::runtime_error("failed to set pixel format");
+
 
     int glverattribs[] = {
         WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
@@ -111,70 +116,71 @@ void createRenderingContext2(HDC hdc, VOXC_WINDOW_CONTEXT* lpctx)
 
     lpctx->hglrc = wglCreateContextAttribsARB(hdc, 0, glverattribs);
     if (lpctx->hglrc == NULL) {
-        printf("ERROR: Failed to create rendering context\n");
+        throw new std::runtime_error("failed to create gl context");
     }
     else {
         printf("Rendering context...ok.\n");
     }
 
     lpctx->hglrcAlt = wglCreateContextAttribsARB(hdc, 0, glverattribs);
+    if (lpctx->hglrcAlt == NULL)
+        throw new std::runtime_error("failed to create gl alt context");
+
     BOOL success = wglShareLists(lpctx->hglrc, lpctx->hglrcAlt);
-    if (!success) {
-        printf("ERROR: Failed to share resources between contexts\n");
-        wglDeleteContext(lpctx->hglrcAlt);
-        lpctx->hglrcAlt = nullptr;
-    }
+    if (!success)
+        throw new std::runtime_error("failed to share context lists");
 
-    wglMakeCurrent(hdc, lpctx->hglrc);
+    if (FALSE == wglMakeCurrent(hdc, lpctx->hglrc))
+        throw new std::runtime_error("failed to make gl context current");
 
 }
 
-HGLRC createRenderingContext1(HDC hdc)
-{
-    HGLRC hglrc = NULL;
-    PIXELFORMATDESCRIPTOR pfd =
-    {
-        sizeof(PIXELFORMATDESCRIPTOR),
-        1,
-        PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    // Flags
-        PFD_TYPE_RGBA,        // The kind of framebuffer. RGBA or palette.
-        32,                   // Colordepth of the framebuffer.
-        0, 0, 0, 0, 0, 0,
-        0,
-        0,
-        0,
-        0, 0, 0, 0,
-        24,                   // Number of bits for the depthbuffer
-        8,                    // Number of bits for the stencilbuffer
-        0,                    // Number of Aux buffers in the framebuffer.
-        PFD_MAIN_PLANE,
-        0,
-        0, 0, 0
-    };
-    int pf = ChoosePixelFormat(hdc, &pfd);
-
-    if (pf == 0) {
-        printf("Failed to find pixel format\n");
-        return hglrc;
-    }
-    if (!SetPixelFormat(hdc, pf, &pfd))
-    {
-        printf("Failed to set pixel format\n");
-        return hglrc;
-    }
-
-    hglrc = wglCreateContext(hdc);
-    if (hglrc == NULL) {
-        printf("Failed to create gl context\n");
-        return hglrc;
-    }
-    if (!wglMakeCurrent(hdc, hglrc))
-    {
-        printf("Failed to make gl context current\n");
-    }
-
-    return hglrc;
-}
+//HGLRC createRenderingContext1(HDC hdc)
+//{
+//    HGLRC hglrc = NULL;
+//    PIXELFORMATDESCRIPTOR pfd =
+//    {
+//        sizeof(PIXELFORMATDESCRIPTOR),
+//        1,
+//        PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    // Flags
+//        PFD_TYPE_RGBA,        // The kind of framebuffer. RGBA or palette.
+//        32,                   // Colordepth of the framebuffer.
+//        0, 0, 0, 0, 0, 0,
+//        0,
+//        0,
+//        0,
+//        0, 0, 0, 0,
+//        24,                   // Number of bits for the depthbuffer
+//        8,                    // Number of bits for the stencilbuffer
+//        0,                    // Number of Aux buffers in the framebuffer.
+//        PFD_MAIN_PLANE,
+//        0,
+//        0, 0, 0
+//    };
+//    int pf = ChoosePixelFormat(hdc, &pfd);
+//
+//    if (pf == 0) {
+//        printf("Failed to find pixel format\n");
+//        return hglrc;
+//    }
+//    if (!SetPixelFormat(hdc, pf, &pfd))
+//    {
+//        printf("Failed to set pixel format\n");
+//        return hglrc;
+//    }
+//
+//    hglrc = wglCreateContext(hdc);
+//    if (hglrc == NULL) {
+//        printf("Failed to create gl context\n");
+//        return hglrc;
+//    }
+//    if (!wglMakeCurrent(hdc, hglrc))
+//    {
+//        printf("Failed to make gl context current\n");
+//    }
+//
+//    return hglrc;
+//}
 
 
 //#define noiseWidth 64
@@ -280,25 +286,49 @@ void LoadTextures(TEXTURE_SPEC tsArray[], int numFilenames, VOXC_WINDOW_CONTEXT*
 {
     std::vector<GLuint> texids(numFilenames);
     lpctx->groups.resize(numFilenames);
+
     glGenTextures(numFilenames, texids.data());
+    HANDLE_GL_ERROR();
+
     int texWidth, texHeight, texChannels;
     for (int i = 0; i < numFilenames; i++) {
-        stbi_uc* pixels = stbi_load(tsArray[i].name, &texWidth, &texHeight,
-            &texChannels, STBI_rgb_alpha);
+
+        stbi_uc* pixels = stbi_load(tsArray[i].name, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        if (!pixels)
+            throw new std::runtime_error("failed to load texture");
+
         glActiveTexture(GL_TEXTURE0);
+        HANDLE_GL_ERROR();
+
         glBindTexture(GL_TEXTURE_2D, texids[i]);
+        HANDLE_GL_ERROR();
+
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        HANDLE_GL_ERROR();
+
         if (TRUE == tsArray[i].isTransparent) { // this is a transparent texture, no mipmaps
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            HANDLE_GL_ERROR();
+
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            HANDLE_GL_ERROR();
         }
         else {
             glGenerateMipmap(GL_TEXTURE_2D);
+            HANDLE_GL_ERROR();
+
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            HANDLE_GL_ERROR();
+
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+            HANDLE_GL_ERROR();
         }
         stbi_image_free(pixels);
-        lpctx->groups[i] = { texids[i], 0, {} };
+
+        lpctx->groups[i].tid = texids[i];
+        lpctx->groups[i].vbo = 0;
+        lpctx->groups[i].vertices.clear();
+        lpctx->groups[i].vsize = 0;
     }
 }
 
@@ -310,9 +340,15 @@ void RenderText(VOXC_WINDOW_CONTEXT* lpctx, OpenGlProgram& prog, std::string tex
     glm::mat4 fontProjection = glm::ortho(0.0f, (float)lpctx->screenWidth, 0.0f, (float)lpctx->screenHeight);
     prog.SetUniform3f("textColor", color.x, color.y, color.z);
     prog.SetUniformMatrix4fv("projection", &fontProjection[0][0]);
+
     glActiveTexture(GL_TEXTURE0);
+    HANDLE_GL_ERROR();
+
     glBindVertexArray(VAO);
+    HANDLE_GL_ERROR();
+
     glVertexArrayVertexBuffer(VAO, 0, VBO, 0, 4 * sizeof(GLfloat));
+    HANDLE_GL_ERROR();
 
     // iterate through all characters
     std::string::const_iterator c;
@@ -337,32 +373,49 @@ void RenderText(VOXC_WINDOW_CONTEXT* lpctx, OpenGlProgram& prog, std::string tex
         };
         // render glyph texture over quad
         glBindTexture(GL_TEXTURE_2D, ch.TextureID);
+        HANDLE_GL_ERROR();
         // update content of VBO memory
         glNamedBufferSubData(VBO, 0, sizeof(vertices), vertices);
+        HANDLE_GL_ERROR();
         // render quad
         glDrawArrays(GL_TRIANGLES, 0, 6);
+        HANDLE_GL_ERROR();
         // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
         x += (ch.Advance >> 6) * scale; // bitshift by 6 to get value in pixels (2^6 = 64)
     }
     glBindVertexArray(0);
+    HANDLE_GL_ERROR();
+
     glBindTexture(GL_TEXTURE_2D, 0);
+    HANDLE_GL_ERROR();
+
     glUseProgram(0);
+    HANDLE_GL_ERROR();
 }
 
 void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
 {
     std::vector<VERTEX_BUFFER_GROUP1>::iterator iter = lpctx->groups.begin();
+
     glActiveTexture(GL_TEXTURE0);
+    HANDLE_GL_ERROR();
+
     for (; iter != lpctx->groups.end(); ++iter)
     {
         if(iter->vsize > 0) 
         {
             glVertexArrayVertexBuffer(lpctx->vao, 0, iter->vbo, 0, 12 * sizeof(GLfloat));
+            HANDLE_GL_ERROR();
+
             glBindTexture(GL_TEXTURE_2D, iter->tid);
+            HANDLE_GL_ERROR();
+
             glDrawArrays(GL_TRIANGLES, 0, (GLsizei)iter->vsize);
+            HANDLE_GL_ERROR();
         }
     }
     glBindTexture(GL_TEXTURE_2D, 0);
+    HANDLE_GL_ERROR();
 }
 
 void setupFreeType(std::map<char, Character>& Characters, GLuint* pfontVAO, GLuint* pfontVBO)

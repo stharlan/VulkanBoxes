@@ -100,12 +100,28 @@
 
 #define GRIDIDX(ix,iy,iz) (((iz) * X_GRID_EXTENT * Y_GRID_EXTENT) + ((iy) * X_GRID_EXTENT) + (ix))
 
-#define SURR_ON_TOP    0x01
-#define SURR_PLUS_X    0x02
-#define SURR_MINUS_X   0x04
-#define SURR_PLUS_Y    0x08
-#define SURR_MINUS_Y   0x10
-#define SURR_ON_BOTTOM 0x20
+#define EXISTS_ON_TOP    0x01
+#define EXISTS_PLUS_X    0x02
+#define EXISTS_MINUS_X   0x04
+#define EXISTS_PLUS_Y    0x08
+#define EXISTS_MINUS_Y   0x10
+#define EXISTS_ON_BOTTOM 0x20
+#define ALPHA_ON_TOP    0x40
+#define ALPHA_PLUS_X    0x80
+#define ALPHA_MINUS_X   0x100
+#define ALPHA_PLUS_Y    0x200
+#define ALPHA_MINUS_Y   0x400
+#define ALPHA_ON_BOTTOM 0x800
+#define FACE_ON_TOP    0x1000
+#define FACE_PLUS_X    0x2000
+#define FACE_MINUS_X   0x4000
+#define FACE_PLUS_Y    0x8000
+#define FACE_MINUS_Y   0x10000
+#define FACE_ON_BOTTOM 0x20000
+
+#define EXISTS_ALL 0x3F // all the exists bits
+#define ALPHA_ALL 0xFC0 // all the alpha bits
+#define FACES_ALL 0x3F000 // all the face bits
 
 #include <Windows.h>
 #include <gl/GL.h>
@@ -176,9 +192,10 @@ typedef struct _BLOCK_ENTITY
     glm::uvec3 gridLocation;
     int8_t regType = 0; 
     physx::PxRigidStatic* rigidStatic = NULL;
-    uint8_t surroundExistsMask = 0; // block exists on side
-    uint8_t surroundAlphaMask = 0; // block is transparenton side (by default, exists will also be true if this is true)
-    uint8_t faceMask = 0; // face on this side of this block
+    //uint8_t surroundExistsMask = 0; // block exists on side
+    //uint8_t surroundAlphaMask = 0; // block is transparenton side (by default, exists will also be true if this is true)
+    //uint8_t faceMask = 0; // face on this side of this block
+    uint64_t flags;
     int64_t hashCode = 0;
 } BLOCK_ENTITY, * PBLOCK_ENTITY;
 
@@ -331,15 +348,10 @@ void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx);
 
 void block_allocate(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z);
 void block_cleanup(VOXC_WINDOW_CONTEXT* lpctx);
-uint8_t block_get_surround_exists_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
-uint8_t block_get_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
-void block_set_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value);
 void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode);
-uint8_t block_get_surround_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
-void block_set_surround_exists_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value);
-void block_set_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value);
-void block_set_surround_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value);
 void block_release_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
+uint64_t block_get_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index);
+void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index, uint64_t value);
 
 #include "OpenGlProgram.h"
 #include "OpenGlVertexBuffer.h"

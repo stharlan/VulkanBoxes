@@ -798,9 +798,10 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
                         // reset the block
                         block_release_actor(lpctx, hitBlockIndex);
-                        block_set_surround_face_mask(lpctx, hitBlockIndex, 0);
-                        block_set_surround_alpha_mask(lpctx, hitBlockIndex, 0);
-                        block_set_surround_exists_mask(lpctx, hitBlockIndex, 0);
+                        //block_set_surround_face_mask(lpctx, hitBlockIndex, 0);
+                        //block_set_surround_alpha_mask(lpctx, hitBlockIndex, 0);
+                        //block_set_surround_exists_mask(lpctx, hitBlockIndex, 0);
+                        block_set_flags(lpctx, hitBlockIndex, 0);
 
                         // update the masks for the block removed
                         // and update the masks for the surrounding blocks
@@ -1030,8 +1031,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
                 if (hitBlock != NULL)
                 {
                     memset(textBuffer, 0, 256);
-                    sprintf_s(textBuffer, 256, "T: %i F: %i A: %i S: %i H: 0x%08x", hitBlock->regType, hitBlock->faceMask, hitBlock->surroundAlphaMask,
-                        hitBlock->surroundExistsMask, (unsigned int)hitBlock->hashCode);
+                    sprintf_s(textBuffer, 256, "T: %i F: %i H: 0x%08x", hitBlock->regType, hitBlock->flags, (unsigned int)hitBlock->hashCode);
                     RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (4.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
                     memset(textBuffer, 0, 256);
                     sprintf_s(textBuffer, 256, "GRIDLOC: %i %i %i",

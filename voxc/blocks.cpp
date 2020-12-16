@@ -94,42 +94,17 @@ void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx)
 	}
 }
 
-uint8_t block_get_surround_exists_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
+uint64_t block_get_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index)
 {
-	return lpctx->lpBlockEntities[index].surroundExistsMask;
+	return lpctx->lpBlockEntities[index].flags;
 }
 
-uint8_t block_get_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
+void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index, uint64_t value)
 {
-	return lpctx->lpBlockEntities[index].surroundAlphaMask;
-}
-
-uint8_t block_get_surround_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index)
-{
-	return lpctx->lpBlockEntities[index].faceMask;
-}
-
-void block_set_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value)
-{
-	lpctx->lpBlockEntities[index].faceMask = value;
+	lpctx->lpBlockEntities[index].flags = value;
 }
 
 void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode)
 {
 	lpctx->lpBlockEntities[index].hashCode = hashCode;
-}
-
-void block_set_surround_exists_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value)
-{
-	lpctx->lpBlockEntities[index].surroundExistsMask = value;
-}
-
-void block_set_surround_alpha_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value)
-{
-	lpctx->lpBlockEntities[index].surroundAlphaMask = value;
-}
-
-void block_set_surround_face_mask(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, uint8_t value)
-{
-	lpctx->lpBlockEntities[index].faceMask = value;
 }

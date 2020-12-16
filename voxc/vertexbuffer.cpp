@@ -338,32 +338,42 @@ void getZeroCubeVertices(std::vector<VERTEX2>& zeroCubeVerts)
 }
 
 // update the exists and alpha mask for a block adjacent to another block
+// target side is an exists flag
 void update_mask_surround(VOXC_WINDOW_CONTEXT * lpctx, int64_t srcx, int64_t srcy, int64_t srcz, int64_t indexToUpdate,
-    uint8_t targetSide)
+    uint8_t existsFlag)
 {
+    uint64_t alphaFlag = existsFlag << 6;
     int8_t srcBlockType = block_get_regtype(lpctx, srcx, srcy, srcz, false);
-    int8_t existsMaskToUpdate = block_get_surround_exists_mask(lpctx, indexToUpdate);
-    int8_t alphaMaskToUpdate = block_get_surround_alpha_mask(lpctx, indexToUpdate);
+    //int8_t existsMaskToUpdate = block_get_surround_exists_mask(lpctx, indexToUpdate);
+    //int8_t alphaMaskToUpdate = block_get_surround_alpha_mask(lpctx, indexToUpdate);
+    uint64_t flags = block_get_flags(lpctx, indexToUpdate);
     if (srcBlockType) {
-        SET_BIT(existsMaskToUpdate, targetSide);
+        SET_BIT(flags, existsFlag);
         std::vector<BLOCK_REG>::iterator ifb = std::find_if(
             vBlockRegistry.begin(),
             vBlockRegistry.end(),
             [srcBlockType](const BLOCK_REG& item) { return item.regType == srcBlockType; });
         if (ifb != vBlockRegistry.end()) {
-            if (TRUE == ifb->isTransparent) SET_BIT(alphaMaskToUpdate, targetSide);
+            if (TRUE == ifb->isTransparent) {
+                SET_BIT(flags, alphaFlag);
+            }
+            else {
+                CLEAR_BIT(flags, alphaFlag);
+            }
         }
     }
     else {
-        CLEAR_BIT(existsMaskToUpdate, targetSide);
-        CLEAR_BIT(alphaMaskToUpdate, targetSide);
+        CLEAR_BIT(flags, existsFlag);
+        CLEAR_BIT(flags, alphaFlag);
     }
-    block_set_surround_exists_mask(lpctx, indexToUpdate, existsMaskToUpdate);
-    block_set_surround_alpha_mask(lpctx, indexToUpdate, alphaMaskToUpdate);
+    //block_set_surround_exists_mask(lpctx, indexToUpdate, existsMaskToUpdate);
+    //block_set_surround_alpha_mask(lpctx, indexToUpdate, alphaMaskToUpdate);
+    block_set_flags(lpctx, indexToUpdate, flags);
 }
 
 // update exists and alpha mask for all blocks surrounding a block
 // TODO update this to allow specifying only one side to update (optimization)
+// THE SIDE TO UPDATE FLAG IS AN EXISTS FLAG
 void update_masks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
     uint8_t sideToUpdate)
 {
@@ -376,20 +386,21 @@ void update_masks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
     }
 
     int64_t idx = GRIDIDX(xc, yc, zc);
-    if(sideToUpdate == 0 || sideToUpdate == SURR_ON_TOP) 
-        if (zc < (Z_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc, yc, zc + 1, idx, SURR_ON_TOP);
-    if (sideToUpdate == 0 || sideToUpdate == SURR_ON_BOTTOM)
-        if (zc > 0) update_mask_surround(lpctx, xc, yc, zc - 1, idx, SURR_ON_BOTTOM);
-    if (sideToUpdate == 0 || sideToUpdate == SURR_PLUS_X)
-        if (xc < (X_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc + 1, yc, zc, idx, SURR_PLUS_X);
-    if (sideToUpdate == 0 || sideToUpdate == SURR_MINUS_X)
-        if (xc > 0) update_mask_surround(lpctx, xc - 1, yc, zc, idx, SURR_MINUS_X);
-    if (sideToUpdate == 0 || sideToUpdate == SURR_PLUS_Y)
-        if (yc < (Y_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc, yc + 1, zc, idx, SURR_PLUS_Y);
-    if (sideToUpdate == 0 || sideToUpdate == SURR_MINUS_Y)
-        if (yc > 0) update_mask_surround(lpctx, xc, yc - 1, zc, idx, SURR_MINUS_Y);
+    if(sideToUpdate == 0 || sideToUpdate == EXISTS_ON_TOP) 
+        if (zc < (Z_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc, yc, zc + 1, idx, EXISTS_ON_TOP);
+    if (sideToUpdate == 0 || sideToUpdate == EXISTS_ON_BOTTOM)
+        if (zc > 0) update_mask_surround(lpctx, xc, yc, zc - 1, idx, EXISTS_ON_BOTTOM);
+    if (sideToUpdate == 0 || sideToUpdate == EXISTS_PLUS_X)
+        if (xc < (X_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc + 1, yc, zc, idx, EXISTS_PLUS_X);
+    if (sideToUpdate == 0 || sideToUpdate == EXISTS_MINUS_X)
+        if (xc > 0) update_mask_surround(lpctx, xc - 1, yc, zc, idx, EXISTS_MINUS_X);
+    if (sideToUpdate == 0 || sideToUpdate == EXISTS_PLUS_Y)
+        if (yc < (Y_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc, yc + 1, zc, idx, EXISTS_PLUS_Y);
+    if (sideToUpdate == 0 || sideToUpdate == EXISTS_MINUS_Y)
+        if (yc > 0) update_mask_surround(lpctx, xc, yc - 1, zc, idx, EXISTS_MINUS_Y);
 }
 
+// THE SIDE TO UPDATE FLAG IS AN EXISTS FLAG
 int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc, uint8_t sideToUpdate)
 {
 
@@ -413,9 +424,10 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
         glm::mat4 xlate = glm::translate(glm::mat4(1.0f), translateVector);
 
         // get the existing masks
-        uint8_t existsMask = block_get_surround_exists_mask(lpctx, idx);
-        uint8_t alphaMask = block_get_surround_alpha_mask(lpctx, idx);
-        uint8_t faceMask = block_get_surround_alpha_mask(lpctx, idx);
+        //uint8_t existsMask = block_get_surround_exists_mask(lpctx, idx);
+        //uint8_t alphaMask = block_get_surround_alpha_mask(lpctx, idx);
+        //uint8_t faceMask = block_get_surround_alpha_mask(lpctx, idx);
+        uint64_t flags = block_get_flags(lpctx, idx);
 
         // find the registry information for block type
         std::vector<BLOCK_REG>::iterator ifoundBlock = std::find_if(
@@ -437,113 +449,115 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
         //   if alpha on bottom, add a face
 
         // check for block on bottom (-z)
-        if (sideToUpdate == 0 || sideToUpdate == SURR_ON_BOTTOM)
+        if (sideToUpdate == 0 || sideToUpdate == EXISTS_ON_BOTTOM)
         {
-            if (!IS_BITSET(existsMask, SURR_ON_BOTTOM) || IS_BITSET(alphaMask, SURR_ON_BOTTOM)) {
-                if (!IS_BITSET(faceMask, SURR_ON_BOTTOM)) {
+            if (!IS_BITSET(flags, EXISTS_ON_BOTTOM) || IS_BITSET(flags, ALPHA_ON_BOTTOM)) {
+                if (!IS_BITSET(flags, FACE_ON_BOTTOM)) {
                     for (int64_t v = 0; v < 6; v++) {
                         lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_BOTTOM]].vertices.push_back({
                             glm::vec3(xlate * locs[bottomVertexIndices[v]]),
                             texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]], {idx,0}
                             });
                     }
-                    SET_BIT(faceMask, SURR_ON_BOTTOM);
+                    SET_BIT(flags, FACE_ON_BOTTOM);
                     facesAdded++;
                 }
             }
         }
 
         // check for block on top (+z)
-        if (sideToUpdate == 0 || sideToUpdate == SURR_ON_TOP)
+        if (sideToUpdate == 0 || sideToUpdate == EXISTS_ON_TOP)
         {
-            if (!IS_BITSET(existsMask, SURR_ON_TOP) || IS_BITSET(alphaMask, SURR_ON_TOP)) {
-                if (!IS_BITSET(faceMask, SURR_ON_TOP)) {
+            if (!IS_BITSET(flags, EXISTS_ON_TOP) || IS_BITSET(flags, ALPHA_ON_TOP)) {
+                if (!IS_BITSET(flags, FACE_ON_TOP)) {
                     for (int64_t v = 0; v < 6; v++) {
                         lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_TOP]].vertices.push_back({
                             glm::vec3(xlate * locs[topVertexIndices[v]]),
                             texcrds[topVertexIndices[v]],normals[topVertexIndices[v]], {idx,0}
                             });
                     }
-                    SET_BIT(faceMask, SURR_ON_TOP);
+                    SET_BIT(flags, FACE_ON_TOP);
                     facesAdded++;
                 }
             }
         }
 
         // check for block on +x
-        if (sideToUpdate == 0 || sideToUpdate == SURR_PLUS_X)
+        if (sideToUpdate == 0 || sideToUpdate == EXISTS_PLUS_X)
         {
-            if (!IS_BITSET(existsMask, SURR_PLUS_X) || IS_BITSET(alphaMask, SURR_PLUS_X)) {
-                if (!IS_BITSET(faceMask, SURR_PLUS_X)) {
+            if (!IS_BITSET(flags, EXISTS_PLUS_X) || IS_BITSET(flags, ALPHA_PLUS_X)) {
+                if (!IS_BITSET(flags, FACE_PLUS_X)) {
                     for (int64_t v = 0; v < 6; v++) {
                         lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSX]].vertices.push_back({
                             glm::vec3(xlate * locs[plusxVertexIndices[v]]),
                             texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]], {idx,0}
                             });
                     }
-                    SET_BIT(faceMask, SURR_PLUS_X);
+                    SET_BIT(flags, FACE_PLUS_X);
                     facesAdded++;
                 }
             }
         }
 
         // check for block on -x
-        if (sideToUpdate == 0 || sideToUpdate == SURR_MINUS_X)
+        if (sideToUpdate == 0 || sideToUpdate == EXISTS_MINUS_X)
         {
-            if (!IS_BITSET(existsMask, SURR_MINUS_X) || IS_BITSET(alphaMask, SURR_MINUS_X)) {
-                if (!IS_BITSET(faceMask, SURR_MINUS_X)) {
+            if (!IS_BITSET(flags, EXISTS_MINUS_X) || IS_BITSET(flags, ALPHA_MINUS_X)) {
+                if (!IS_BITSET(flags, FACE_MINUS_X)) {
                     for (int64_t v = 0; v < 6; v++) {
                         lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSX]].vertices.push_back({
                             glm::vec3(xlate * locs[minusxVertexIndices[v]]),
                             texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]], {idx,0}
                             });
                     }
-                    SET_BIT(faceMask, SURR_MINUS_X);
+                    SET_BIT(flags, FACE_MINUS_X);
                     facesAdded++;
                 }
             }
         }
 
         // check for block on +y
-        if (sideToUpdate == 0 || sideToUpdate == SURR_PLUS_Y)
+        if (sideToUpdate == 0 || sideToUpdate == EXISTS_PLUS_Y)
         {
-            if (!IS_BITSET(existsMask, SURR_PLUS_Y) || IS_BITSET(alphaMask, SURR_PLUS_Y)) {
-                if (!IS_BITSET(faceMask, SURR_PLUS_Y)) {
+            if (!IS_BITSET(flags, EXISTS_PLUS_Y) || IS_BITSET(flags, ALPHA_PLUS_Y)) {
+                if (!IS_BITSET(flags, FACE_PLUS_Y)) {
                     for (int64_t v = 0; v < 6; v++) {
                         lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSY]].vertices.push_back({
                             glm::vec3(xlate * locs[plusyVertexIndices[v]]),
                             texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]], {idx,0}
                             });
                     }
-                    SET_BIT(faceMask, SURR_PLUS_Y);
+                    SET_BIT(flags, FACE_PLUS_Y);
                     facesAdded++;
                 }
             }
         }
 
         // check for block on -y
-        if (sideToUpdate == 0 || sideToUpdate == SURR_MINUS_Y)
+        if (sideToUpdate == 0 || sideToUpdate == EXISTS_MINUS_Y)
         {
-            if (!IS_BITSET(existsMask, SURR_MINUS_Y) || IS_BITSET(alphaMask, SURR_MINUS_Y)) {
-                if (!IS_BITSET(faceMask, SURR_MINUS_Y)) {
+            if (!IS_BITSET(flags, EXISTS_MINUS_Y) || IS_BITSET(flags, ALPHA_MINUS_Y)) {
+                if (!IS_BITSET(flags, FACE_MINUS_Y)) {
                     for (int64_t v = 0; v < 6; v++) {
                         lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSY]].vertices.push_back({
                             glm::vec3(xlate * locs[minusyVertexIndices[v]]),
                             texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]], {idx,0}
                             });
                     }
-                    SET_BIT(faceMask, SURR_MINUS_Y);
+                    SET_BIT(flags, FACE_MINUS_Y);
                     facesAdded++;
                 }
             }
         }
 
-        if (faceMask && block_get_actor(lpctx, idx) == NULL)
+        // if any faces are set
+        if ((flags & FACES_ALL) && block_get_actor(lpctx, idx) == NULL)
         {
             block_create_new_actor(lpctx, idx, xc, yc, zc);
         }
 
-        block_set_face_mask(lpctx, idx, faceMask);
+        //block_set_face_mask(lpctx, idx, faceMask);
+        block_set_flags(lpctx, idx, flags);
     }
 
     return facesAdded;
@@ -668,12 +682,12 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 
 // side to update is opposide the offset
 int64_t blocksToAddress[] = {
-    0,0,-1,SURR_ON_TOP,
-    0,0,1,SURR_ON_BOTTOM,
-    1,0,0,SURR_MINUS_X,
-    -1,0,0,SURR_PLUS_X,
-    0,1,0,SURR_MINUS_Y,
-    0,-1,0,SURR_PLUS_Y
+    0,0,-1,EXISTS_ON_TOP,
+    0,0,1,EXISTS_ON_BOTTOM,
+    1,0,0,EXISTS_MINUS_X,
+    -1,0,0,EXISTS_PLUS_X,
+    0,1,0,EXISTS_MINUS_Y,
+    0,-1,0,EXISTS_PLUS_Y
 };
 
 void update_surrounding_blocks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc)

@@ -1,7 +1,5 @@
 #include "voxc.h"
 
-// ISSUE: when a block is removed, the block below is not getting an entity
-//        it's getting a face, but, not an entity?
 // ISSUE: when jump and hit a ceiling, set upward velocity to zero
 // ISSUE: jump and hit ceiling, head goes out of map
 // ISSUE: select block ray is too low, raise it up
@@ -15,29 +13,14 @@ const VERTEX2 quadVerts[] = {
     { { 0.5, 1, 0 },{ 0, 1 }, {0,0,0}, { 0, 0 } }
 };
 
-//void addAllActors(VOXC_WINDOW_CONTEXT* lpctx)
-//{
-//    for (const BLOCK_ENTITY& entity : lpctx->blockEntities)
-//    {
-//        if (entity.type && entity.rigidStatic)
-//        {
-//            lpctx->mScene->addActor(*entity.rigidStatic);
-//        }
-//    }
-//}
-
 void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64_t yint, int64_t zint)
 {
-
-    //printf("add actors\n");
 
     int64_t idx = 0;
 
     // create all the rigid static actors
     // as an array in the crate vertex buffer algo
     // then, just pull them out of the array in this method
-
-    //printf("location has changed; add new actors\n");
 
     // remove current actors
     if (lpctx->blocksAroundMe.size() > (size_t)0) {
@@ -141,54 +124,6 @@ void createRenderingContext2(HDC hdc, VOXC_WINDOW_CONTEXT* lpctx)
 
 }
 
-//HGLRC createRenderingContext1(HDC hdc)
-//{
-//    HGLRC hglrc = NULL;
-//    PIXELFORMATDESCRIPTOR pfd =
-//    {
-//        sizeof(PIXELFORMATDESCRIPTOR),
-//        1,
-//        PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    // Flags
-//        PFD_TYPE_RGBA,        // The kind of framebuffer. RGBA or palette.
-//        32,                   // Colordepth of the framebuffer.
-//        0, 0, 0, 0, 0, 0,
-//        0,
-//        0,
-//        0,
-//        0, 0, 0, 0,
-//        24,                   // Number of bits for the depthbuffer
-//        8,                    // Number of bits for the stencilbuffer
-//        0,                    // Number of Aux buffers in the framebuffer.
-//        PFD_MAIN_PLANE,
-//        0,
-//        0, 0, 0
-//    };
-//    int pf = ChoosePixelFormat(hdc, &pfd);
-//
-//    if (pf == 0) {
-//        printf("Failed to find pixel format\n");
-//        return hglrc;
-//    }
-//    if (!SetPixelFormat(hdc, pf, &pfd))
-//    {
-//        printf("Failed to set pixel format\n");
-//        return hglrc;
-//    }
-//
-//    hglrc = wglCreateContext(hdc);
-//    if (hglrc == NULL) {
-//        printf("Failed to create gl context\n");
-//        return hglrc;
-//    }
-//    if (!wglMakeCurrent(hdc, hglrc))
-//    {
-//        printf("Failed to make gl context current\n");
-//    }
-//
-//    return hglrc;
-//}
-
-
 //#define noiseWidth 64
 //#define noiseHeight 64
 //double noise[noiseHeight][noiseWidth]; //the noise array
@@ -239,54 +174,6 @@ void createRenderingContext2(HDC hdc, VOXC_WINDOW_CONTEXT* lpctx)
 //    return(128.0 * value / initialSize);
 //}
 //
-//GLuint GenerateDirtTexture()
-//{
-//    srand((unsigned int)time(NULL));
-//
-//    GLuint textureID;
-//    glGenTextures(1, &textureID);
-//    glBindTexture(GL_TEXTURE_2D, textureID);
-//
-//    // create pixels here
-//    uint64_t npixels = 64 * 64;
-//    uint64_t nbytes = npixels * 4;
-//    BYTE* pixels = (BYTE*)malloc(nbytes);
-//    memset(pixels, 0, nbytes);
-//
-//    uint32_t b1 = 0xff052940;
-//    uint32_t bc[4] = {
-//        0xff2b5576,
-//        0xff28556b,
-//        0xff659eb5,
-//        0xffa9d1eb
-//    };
-//    //for (uint64_t i = 0; i < nbytes; i+=4)
-//    //{
-//    //    if (rand() % 10 == 1) {
-//    //        memcpy(pixels + i, &bc[rand() % 4], 4);
-//    //    }
-//    //    else {
-//    //        memcpy(pixels + i, &b1, 4);
-//    //    }        
-//    //}
-//    generateNoise();
-//    for (int y = 0; y < 64; y++) {
-//        for (int x = 0; x < 64; x++) {
-//            BYTE b = turbulence(x, y, 64);
-//            uint32_t clr = 0xff000000 + (b << 16) + (b << 8) + b;
-//            memcpy(pixels + (y * 64 * 4) + (x * 4), &clr, 4);
-//        }
-//    }
-//
-//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-//    glGenerateMipmap(GL_TEXTURE_2D);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-//
-//    free(pixels);
-//
-//    return textureID;
-//}
 
 void load_textures_2(TEXTURE_SPEC tsArray[], int numFilenames, VOXC_WINDOW_CONTEXT* lpctx)
 {
@@ -427,9 +314,6 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
 void setupFreeType(std::map<char, Character>& Characters, GLuint* pfontVAO, GLuint* pfontVBO)
 {
 
-    //GLenum err = glGetError();
-    //if (err != GL_NO_ERROR) printf("gl err %i\n", err);
-
     FT_Library ft;
     if (FT_Init_FreeType(&ft))
         throw new std::runtime_error("failed to init freetype");
@@ -569,10 +453,6 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
                 int64_t face = f / 3;
                 int current_material_id = shape.mesh.material_ids[face];
                 if (current_material_id == i) {
-                    //printf("diffuse %.1f, %.1f, %.1f\n",
-                    //    materials[current_material_id].diffuse[0],
-                    //    materials[current_material_id].diffuse[1],
-                    //    materials[current_material_id].diffuse[2]);
 
                     VERTEX2 v;
                     v.vertex = tr * glm::vec4(
@@ -798,9 +678,6 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
                         // reset the block
                         block_release_actor(lpctx, hitBlockIndex);
-                        //block_set_surround_face_mask(lpctx, hitBlockIndex, 0);
-                        //block_set_surround_alpha_mask(lpctx, hitBlockIndex, 0);
-                        //block_set_surround_exists_mask(lpctx, hitBlockIndex, 0);
                         block_set_flags(lpctx, hitBlockIndex, 0);
 
                         // update the masks for the block removed
@@ -941,8 +818,6 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
             // render model
             rctx->voxcProgram.SetUniform1i("useDiffuseColor", 1);
-            //glVertexArrayVertexBuffer(lpctx->vao, 0, modelVbo, 0, 8 * sizeof(GLfloat));
-            //glDrawArrays(GL_TRIANGLES, 0, modelVertices.size());
             // render model
             for (const auto& modelVboItem : rctx->modelVboData)
             {
@@ -970,27 +845,6 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
         // direction is azimuth
         if (hitStatus == true)
         {
-            // offset the cube from the player
-            //glm::vec3 xpos(pos.x, pos.y, pos.z);
-            //int azmod = abs((int)lpctx->azimuth % 360);
-            //if (azmod <= 45) {
-            //    xpos.x += 2.0f;
-            //}
-            //else if (azmod <= 135) {
-            //    xpos.y += 2.0f;
-            //}
-            //else if (azmod <= 225) {
-            //    xpos.x -= 2.0f;
-            //}
-            //else if (azmod <= 315) {
-            //    xpos.y -= 2.0f;
-            //}
-            //else {
-            //    xpos.x += 1.0f;
-            //}
-            //glm::vec3 xlatevec = glm::vec3(floorf(xpos.x) + 0.5f, floorf(xpos.y) + 0.5f, floorf(xpos.z) - 1.5f);
-            //glm::mat4 zeroCubeModelt = glm::translate(glm::mat4(1.0f), xlatevec);
-
             // raycast
             glm::mat4 zeroCubeModelt = glm::translate(
                 glm::mat4(1.0f),
@@ -1111,15 +965,6 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glEnable(GL_CULL_FACE);
     glShadeModel(GL_SMOOTH);
     HANDLE_GL_ERROR();
-
-    //glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-    //glEnable(GL_TEXTURE_2D);
-    //glEnable(GL_MULTISAMPLE);
-    //glEnable(GL_POLYGON_SMOOTH);
-    //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
-    //glEnable(GL_BLEND);
-    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 
     // load programs
     OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
@@ -1258,11 +1103,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glDeleteBuffers(1, &fontVBO);
     glDeleteVertexArrays(1, &fontVAO);
 
-    //std::map<char, Character> Characters;
-    std::map<char, Character>::iterator citer = Characters.begin();
-    for (; citer != Characters.end(); ++citer)
+    for (const auto& c : Characters)
     {
-        glDeleteTextures(1, &citer->second.TextureID);
+        glDeleteTextures(1, &c.second.TextureID);
     }
 
     for (const auto& modelVboItem : modelVboData)
@@ -1273,11 +1116,10 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glDeleteTextures(1, &depthMap);
     glDeleteFramebuffers(1, &depthMapFBO);
 
-    std::vector<VERTEX_BUFFER_GROUP1>::iterator titer = lpctx->groups.begin();
-    for (; titer != lpctx->groups.end(); ++titer)
+    for (const auto& gp : lpctx->groups)
     {
-        glDeleteTextures(1, &titer->tid);
-        glDeleteBuffers(1, &titer->vbo);
+        glDeleteTextures(1, &gp.tid);
+        glDeleteBuffers(1, &gp.vbo);
     }
 
     glDeleteVertexArrays(1, &lpctx->vao);

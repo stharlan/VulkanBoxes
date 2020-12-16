@@ -94,8 +94,8 @@
 #define TOGL_BIT(t,b) (t ^= b)
 #define IS_BITSET(t,b) (t & b)
 
-#define X_GRID_EXTENT 512ll
-#define Y_GRID_EXTENT 512ll
+#define X_GRID_EXTENT 256ll
+#define Y_GRID_EXTENT 256ll
 #define Z_GRID_EXTENT 256ll
 
 #define GRIDIDX(ix,iy,iz) (((iz) * X_GRID_EXTENT * Y_GRID_EXTENT) + ((iy) * X_GRID_EXTENT) + (ix))

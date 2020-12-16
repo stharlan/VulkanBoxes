@@ -1,5 +1,11 @@
 #include "voxc.h"
 
+// ISSUE: when a block is removed, the block below is not getting an entity
+//        it's getting a face, but, not an entity?
+// ISSUE: when jump and hit a ceiling, set upward velocity to zero
+// ISSUE: jump and hit ceiling, head goes out of map
+// ISSUE: select block ray is too low, raise it up
+
 const VERTEX2 quadVerts[] = {
     { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0, 0 } },
     { { 1, 0.5, 0 },{ 1, 0 }, {0,0,0}, { 0, 0 } },
@@ -740,7 +746,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
         bool hitStatus = FALSE;
         physx::PxTransform gp;
         BLOCK_ENTITY* hitBlock = NULL;
-        bool shouldAddActors = TRUE;
+        bool checkAddActors = true;
         {
             physx::PxVec3 origin = physx::PxVec3((float)pos.x, (float)pos.y, (float)pos.z);
             physx::PxVec3 unitDir = physx::PxVec3(
@@ -765,7 +771,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
                         int64_t hashCode = hitBlock->hashCode;
 
-                        clock_t t = clock();
+                        //clock_t t = clock();
 
                         // remove faces
                         for (int gi = 0; gi < lpctx->groups.size(); gi++)
@@ -781,12 +787,14 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
                         // setting block to air
                         block_set_regtype(lpctx, hitBlockIndex, REG_AIR);
 
-                        // refreshing actors and disabling refresh later
-                        // since this block is now air, it will not be added to the scene
-                        addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
-
-                        // do not add actors below
-                        shouldAddActors = false;
+                        // since this block is now air, it must be removed from the scene
+                        physx::PxRigidStatic* actor = block_get_actor(lpctx, hitBlockIndex);
+                        lpctx->mScene->removeActor(*actor);
+                        lpctx->blocksAroundMe.erase(
+                            std::find(
+                                lpctx->blocksAroundMe.begin(),
+                                lpctx->blocksAroundMe.end(),
+                                actor));
 
                         // reset the block
                         block_release_actor(lpctx, hitBlockIndex);
@@ -798,6 +806,9 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
                         // and update the masks for the surrounding blocks
                         // and update the face data for the surrounding blocks
                         update_surrounding_blocks(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
+
+                        addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+                        checkAddActors = false;
 
                         isDoneProcessing = std::async([lpctx, &vbosToUpdate, rctx]()
                             {
@@ -823,9 +834,9 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
                             }
                         );
 
-                        t = clock() - t;
-                        double time_taken = ((double)t) / CLOCKS_PER_SEC; // calculate the elapsed time
-                        printf("Elapsed %f seconds", time_taken);
+                        //t = clock() - t;
+                        //double time_taken = ((double)t) / CLOCKS_PER_SEC; // calculate the elapsed time
+                        //printf("Elapsed %f seconds", time_taken);
 
                         // the hit block is invalid now - it's gone
                         hitBlock = NULL;
@@ -838,7 +849,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
         }
 
         // refresh physics actors based on location
-        if (shouldAddActors)
+        if (true == checkAddActors)
         {
             if (abs(lpctx->xblock - (int64_t)pos.x) > 5) {
                 addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
@@ -856,7 +867,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
         // render the shadow buffer
         glm::vec3 lightLooking = glm::vec3(pos.x - 100, pos.y - 100, pos.z + 100);
-        glm::vec3 posLocation3 = glm::vec3(pos.x, pos.y, pos.z);
+        glm::vec3 posLocation3 = glm::vec3(pos.x, pos.y, pos.z + 1.0f);
         glm::vec3 lightDir = glm::normalize(posLocation3 - lightLooking);
         glm::mat4 lightView = glm::lookAt(lightLooking, posLocation3, glm::vec3(0.0f, 0.0f, 1.0f));
         glm::mat4 lightSpaceMatrix = rctx->lightProjection * lightView;
@@ -890,12 +901,13 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
         // configure player matrices (view and projection)
         // based on current location
+        glm::vec3 lookVector(
+            (cosf(DEG2RAD(lpctx->azimuth))* invSinfElevation),
+            (sinf(DEG2RAD(lpctx->azimuth))* invSinfElevation),
+            sinfElevation);
         glm::mat4 viewMatrix = glm::lookAt(
             posLocation3,
-            glm::vec3(
-                pos.x + (cosf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
-                pos.y + (sinf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
-                pos.z + sinfElevation),
+            posLocation3 + lookVector,
             glm::vec3(0, 0, 1)
         );
         glm::mat4 projMatrix = glm::perspective(

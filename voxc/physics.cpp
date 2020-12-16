@@ -86,8 +86,8 @@ void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition)
     PxCapsuleControllerDesc cDesc;
     cDesc.material = lpctx->pMaterial;
     cDesc.position = physx::PxExtendedVec3(startingPosition.x, startingPosition.y, startingPosition.z);
-    cDesc.height = 2.0f;
-    cDesc.radius = 1.0f;
+    cDesc.height = 0.5f;
+    cDesc.radius = 0.45f;
     cDesc.slopeLimit = 0.0f;
     cDesc.contactOffset = 0.1f;
     cDesc.stepOffset = 0.02f;

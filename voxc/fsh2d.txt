@@ -9,4 +9,5 @@ uniform sampler2D texs;
 void main()
 {
 	outColor = texture(texs, UV);
+	outColor.a = 0.5f;
 }

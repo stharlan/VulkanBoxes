@@ -1048,12 +1048,12 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
             }
         }
 
-        // disable blend
-        glDisable(GL_BLEND);
-
         // render depth map
         rctx->ddProg.Use();
         rctx->quadBuffer.draw();
+
+        // disable blend
+        glDisable(GL_BLEND);
 
         glFlush();
 

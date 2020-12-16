@@ -81,7 +81,11 @@
     #pragma comment(lib, "C:\\Library\\freetype-windows-binaries\\release dll\\win64\\freetype.lib")
 #endif
 
+#ifdef _DEBUG
 #define HANDLE_GL_ERROR() {GLenum glerr=glGetError();if(glerr!=GL_NO_ERROR) throw new std::runtime_error(fmt::format("opengl error {}",glerr));}
+#else
+#define HANDLE_GL_ERROR() {}
+#endif
 
 #define GETPROC(_t,_v,_vs) {_v = (_t)wglGetProcAddress(_vs);if(_v == NULL){throw new std::runtime_error(fmt::format("error loading proc {}",_vs));}}
 
@@ -192,9 +196,6 @@ typedef struct _BLOCK_ENTITY
     glm::uvec3 gridLocation;
     int8_t regType = 0; 
     physx::PxRigidStatic* rigidStatic = NULL;
-    //uint8_t surroundExistsMask = 0; // block exists on side
-    //uint8_t surroundAlphaMask = 0; // block is transparenton side (by default, exists will also be true if this is true)
-    //uint8_t faceMask = 0; // face on this side of this block
     uint64_t flags;
     int64_t hashCode = 0;
 } BLOCK_ENTITY, * PBLOCK_ENTITY;
@@ -297,9 +298,6 @@ extern PFNGLUNIFORM4FVPROC glUniform4fv;
 extern PFNGLUNIFORM3FVPROC glUniform3fv;
 extern PFNGLUNIFORM2FVPROC glUniform2fv;
 extern PFNGLUNIFORM1IPROC glUniform1i;
-//extern PFNGLGENBUFFERSPROC glGenBuffers;
-//extern PFNGLBINDBUFFERPROC glBindBuffer;
-//extern PFNGLBUFFERDATAPROC glBufferData;
 extern PFNGLGETATTRIBLOCATIONPROC glGetAttribLocation;
 extern PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer;
 extern PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray;
@@ -377,25 +375,3 @@ typedef struct _RENDER_LOOP_CONTEXT
     OpenGlProgram& ddProg;
     OpenGlVertexBuffer<VERTEX2>& quadBuffer;
 } RENDER_LOOP_CONTEXT;
-
-
-//class VertexFindByHash : public std::unary_function<VERTEX2, bool> {
-//    int64_t hashcode;
-//public:
-//    explicit VertexFindByHash(const int64_t value) : hashcode(value) {}
-//    bool operator() (const VERTEX2& item) const { return item.userData[0] == hashcode; }
-//};
-//
-//class BlockEntityByHash : public std::unary_function<BLOCK_ENTITY, bool> {
-//    int64_t hashcode;
-//public:
-//    explicit BlockEntityByHash(const int64_t value) : hashcode(value) {}
-//    bool operator() (const BLOCK_ENTITY& item) const { return item.hashCode == hashcode; }
-//};
-//
-//class BlockRegFindById : public std::unary_function<BLOCK_REG, bool> {
-//    int64_t regtype;
-//public:
-//    explicit BlockRegFindById(const int64_t type) : regtype(type) {}
-//    bool operator() (const BLOCK_REG& item) const { return item.regType == regtype; }
-//};

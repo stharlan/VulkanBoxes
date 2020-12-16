@@ -68,17 +68,6 @@ void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition)
     if (!lpctx->pMaterial)
         throw new std::runtime_error("failed to create material");
 
-    // create player
-    //lpctx->mPlayerCapsuleActor = lpctx->mPhysics->createRigidDynamic(PxTransform(ex, ey, ez));    
-    //PxTransform relativePose(PxQuat(PxHalfPi, PxVec3(0, 1, 0)));    
-    //lpctx->mPlayerCapsuleShape = PxRigidActorExt::createExclusiveShape(*lpctx->mPlayerCapsuleActor,
-    //    PxCapsuleGeometry(0.5f, 1.0f), *pMaterial);
-    //lpctx->mPlayerCapsuleShape->setLocalPose(relativePose);
-    //lpctx->mPlayerCapsuleShape->setRestOffset(0.1f);
-    //lpctx->mPlayerCapsuleShape->setContactOffset(0.2f);
-    //PxRigidBodyExt::updateMassAndInertia(*lpctx->mPlayerCapsuleActor, 1.0f);
-    //lpctx->mScene->addActor(*lpctx->mPlayerCapsuleActor);
-
     lpctx->mManager = PxCreateControllerManager(*lpctx->mScene);
     if (!lpctx->mManager)
         throw new std::runtime_error("failed to create physx controller manager");
@@ -86,8 +75,8 @@ void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition)
     PxCapsuleControllerDesc cDesc;
     cDesc.material = lpctx->pMaterial;
     cDesc.position = physx::PxExtendedVec3(startingPosition.x, startingPosition.y, startingPosition.z);
-    cDesc.height = 0.5f;
-    cDesc.radius = 0.45f;
+    cDesc.height = 0.55f;
+    cDesc.radius = 0.4f;
     cDesc.slopeLimit = 0.0f;
     cDesc.contactOffset = 0.1f;
     cDesc.stepOffset = 0.02f;
@@ -114,14 +103,6 @@ void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition)
 
 }
 
-//void addBlockRigidBody(float bx, float by, float bz)
-//{
-//    PxRigidStatic* block = lpctx->mPhysics->createRigidStatic(PxTransform(bx + 0.5f, by + 0.5f, bz + 0.5f));
-//    block->attachShape(*lpctx->mBlockShape);
-//    lpctx->mScene->addActor(*block);
-//    lpctx->blocks.push_back(block);
-//}
-
 void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx)
 {
     lpctx->mPvd->disconnect();
@@ -134,67 +115,3 @@ void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx)
     if (lpctx->mPvd) lpctx->mPvd->release();
     if (lpctx->mFoundation) lpctx->mFoundation->release();
 }
-
-//void initPhysics()
-//{
-//	lpctx->world = lpctx->physicsCommon.createPhysicsWorld();
-//    reactphysics3d::Vector3 gravity(0.0f, 0.0f, -9.8f);
-//    lpctx->world->setGravity(gravity);
-//
-//    reactphysics3d::Vector3 position(ex, ey, ez);
-//    reactphysics3d::Quaternion orientation = reactphysics3d::Quaternion::identity();
-//    reactphysics3d::Transform transform(position, orientation);
-//    lpctx->player = world->createRigidBody(transform);
-//
-//    float radius = 0.5f;
-//    float height = 2.0f;
-//    lpctx->playerShape = lpctx->physicsCommon.createCapsuleShape(radius, height);
-//
-//    // rotate 90 deg around x
-//    reactphysics3d::Vector3 colliderRotation(3.14159f / 2.0f, 0.0f, 0.0f);
-//    reactphysics3d::Vector3 colliderPosition(0, 0, 0);
-//    reactphysics3d::Quaternion colliderOrientation =
-//        reactphysics3d::Quaternion::fromEulerAngles(colliderRotation);
-//    reactphysics3d::Transform colliderTransform(colliderPosition, colliderOrientation);
-//    lpctx->playerCollider = lpctx->player->addCollider(lpctx->playerShape, colliderTransform);
-//    reactphysics3d::Material& mat = lpctx->playerCollider->getMaterial();
-//    mat.setBounciness(0.0f);
-//    lpctx->playerCollider->setMaterial(mat);
-//
-//    reactphysics3d::Vector3 blockExtent(0.5f, 0.5f, 0.5f);
-//    lpctx->blockShape = lpctx->physicsCommon.createBoxShape(blockExtent);
-//}
-//
-//void addBlockRigidBody(float bx, float by, float bz)
-//{
-//    // Initial position and orientation of the collision body 
-//    reactphysics3d::Vector3 position(bx + 0.5f, by + 0.5f, bz + 0.5f);
-//    reactphysics3d::Quaternion orientation = reactphysics3d::Quaternion::identity();
-//    reactphysics3d::Transform transform(position, orientation);
-//
-//    // Create a collision body in the world 
-//    reactphysics3d::RigidBody* blockBody = world->createRigidBody(transform);
-//    blockBody->setType(reactphysics3d::BodyType::STATIC);
-//
-//    reactphysics3d::Transform colliderTransform = reactphysics3d::Transform::identity();
-//    reactphysics3d::Collider* pBlockCollider = 
-//        blockBody->addCollider(lpctx->blockShape, colliderTransform);
-//    reactphysics3d::Material& mat = pBlockCollider->getMaterial();
-//    mat.setBounciness(0.0f);
-//    pBlockCollider->setMaterial(mat);
-//
-//    lpctx->blocks.push_back(blockBody);
-//}
-//
-//void cleanupPhysics()
-//{
-//    std::vector<reactphysics3d::RigidBody*>::iterator iter = lpctx->blocks.begin();
-//    for (; iter != lpctx->blocks.end(); ++iter)
-//    {
-//        lpctx->world->destroyRigidBody(*iter);
-//    }
-//    lpctx->world->destroyRigidBody(lpctx->player);
-//    lpctx->physicsCommon.destroyBoxShape(lpctx->blockShape);
-//    lpctx->physicsCommon.destroyCapsuleShape(lpctx->playerShape);
-//    lpctx->physicsCommon.destroyPhysicsWorld(lpctx->world);
-//}

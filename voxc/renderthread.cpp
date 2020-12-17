@@ -954,6 +954,16 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
                 }
             }
         }
+        int tctr = 0;
+        for (const auto& vb : lpctx->vertex_buffers)
+        {
+            for (const auto& chnk : vb.chunks)
+            {
+                memset(textBuffer, 0, 256);
+                sprintf_s(textBuffer, 256, "chnk %i perc free %.1f", chnk.texture_id, (float)chnk.bfree * 100.0f / (float)chnk.blength);
+                RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + ((7.0f + (tctr++)) * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+            }
+        }
 
         // render depth map
         rctx->ddProg.Use();

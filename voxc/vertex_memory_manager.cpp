@@ -1,6 +1,8 @@
 
 #include "voxc.h"
 
+// 16 MB
+//#define CHUNK_SIZE_BYTES 16777216
 // 32 MB
 #define CHUNK_SIZE_BYTES 33554432ll
 // 64 MB

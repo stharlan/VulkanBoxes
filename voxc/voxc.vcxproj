@@ -162,6 +162,7 @@ copy "C:\Users\stuar\source\repos\PhysX\physx\bin\win.x86_64.vc142.mt\debug\*.dl
     <ClCompile Include="physics.cpp" />
     <ClCompile Include="renderthread.cpp" />
     <ClCompile Include="vertexbuffer.cpp" />
+    <ClCompile Include="vertex_memory_manager.cpp" />
     <ClCompile Include="windowproc.cpp" />
   </ItemGroup>
   <ItemGroup>

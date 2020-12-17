@@ -4,13 +4,13 @@
 // ISSUE: jump and hit ceiling, head goes out of map
 // ISSUE: select block ray is too low, raise it up
 
-const VERTEX2 quadVerts[] = {
-    { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0, 0 } },
-    { { 1, 0.5, 0 },{ 1, 0 }, {0,0,0}, { 0, 0 } },
-    { { 1, 1, 0 },{ 1, 1 }, {0,0,0}, { 0, 0 } },
-    { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0, 0 } },
-    { { 1, 1, 0 },{ 1, 1 }, {0,0,0}, { 0, 0 } },
-    { { 0.5, 1, 0 },{ 0, 1 }, {0,0,0}, { 0, 0 } }
+const VERTEX3 quadVerts[] = {
+    { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0,0,0,0 } },
+    { { 1, 0.5, 0 },{ 1, 0 }, {0,0,0}, { 0,0,0,0 } },
+    { { 1, 1, 0 },{ 1, 1 }, {0,0,0}, { 0,0,0,0 } },
+    { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0,0,0,0 } },
+    { { 1, 1, 0 },{ 1, 1 }, {0,0,0}, { 0,0,0,0 } },
+    { { 0.5, 1, 0 },{ 0, 1 }, {0,0,0}, { 0,0,0,0 } }
 };
 
 void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64_t yint, int64_t zint)
@@ -178,7 +178,7 @@ void createRenderingContext2(HDC hdc, VOXC_WINDOW_CONTEXT* lpctx)
 void load_textures_2(TEXTURE_SPEC tsArray[], int numFilenames, VOXC_WINDOW_CONTEXT* lpctx)
 {
     std::vector<GLuint> texids(numFilenames);
-    lpctx->groups.resize(numFilenames);
+    //lpctx->groups.resize(numFilenames);
 
     glGenTextures(numFilenames, texids.data());
     HANDLE_GL_ERROR();
@@ -218,11 +218,15 @@ void load_textures_2(TEXTURE_SPEC tsArray[], int numFilenames, VOXC_WINDOW_CONTE
         }
         stbi_image_free(pixels);
 
-        lpctx->groups[i].tid = texids[i];
-        lpctx->groups[i].vbo = 0;
-        lpctx->groups[i].vertices.clear();
-        lpctx->groups[i].vsize = 0;
+        //lpctx->groups[i].tid = texids[i];
+        //lpctx->groups[i].vertexBlocks.clear();
+        //lpctx->groups[i].vbo = 0;
+        //lpctx->groups[i].vertices.clear();
+        //lpctx->groups[i].vsize = 0;
     }
+    
+    vmm_allocate_buffer(lpctx, texids);
+
 }
 
 void RenderText(VOXC_WINDOW_CONTEXT* lpctx, OpenGlProgram& prog, std::string text, float x, float y, float scale, glm::vec3 color,
@@ -288,27 +292,75 @@ void RenderText(VOXC_WINDOW_CONTEXT* lpctx, OpenGlProgram& prog, std::string tex
 
 void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
 {
-    std::vector<VERTEX_BUFFER_GROUP1>::iterator iter = lpctx->groups.begin();
 
     glActiveTexture(GL_TEXTURE0);
     HANDLE_GL_ERROR();
 
-    for (; iter != lpctx->groups.end(); ++iter)
+    for (const auto& vertex_buffer : lpctx->vertex_buffers)    
     {
-        if(iter->vsize > 0) 
+        for (const auto& chunk : vertex_buffer.chunks)
         {
-            glVertexArrayVertexBuffer(lpctx->vao, 0, iter->vbo, 0, 12 * sizeof(GLfloat));
-            HANDLE_GL_ERROR();
+            if (chunk.num_vertices > 0) {
 
-            glBindTexture(GL_TEXTURE_2D, iter->tid);
-            HANDLE_GL_ERROR();
+                glBindTexture(GL_TEXTURE_2D, chunk.texture_id);
+                HANDLE_GL_ERROR();
 
-            glDrawArrays(GL_TRIANGLES, 0, (GLsizei)iter->vsize);
-            HANDLE_GL_ERROR();
+                glVertexArrayVertexBuffer(
+                    lpctx->vao,
+                    0,
+                    vertex_buffer.vbo,
+                    chunk.boffset,
+                    sizeof(VERTEX3));
+                HANDLE_GL_ERROR();
+
+                glDrawArrays(GL_TRIANGLES, 0, chunk.num_vertices);
+                HANDLE_GL_ERROR();
+            }
         }
     }
+
     glBindTexture(GL_TEXTURE_2D, 0);
     HANDLE_GL_ERROR();
+
+    //glActiveTexture(GL_TEXTURE0);
+    //HANDLE_GL_ERROR();
+
+    //for (const auto& group : lpctx->groups)
+    //{
+    //    if (group.vertexBlocks.size() > 0) {
+    //        glBindTexture(GL_TEXTURE_2D, group.tid);
+    //        HANDLE_GL_ERROR();
+    //        for (const auto& vblk : group.vertexBlocks)
+    //        {
+    //            if (vblk.second.vsize > 0) {
+    //                glVertexArrayVertexBuffer(lpctx->vao, 0, vblk.second.vbo, 0, 12 * sizeof(GLfloat));
+    //                HANDLE_GL_ERROR();
+    //                glDrawArrays(GL_TRIANGLES, 0, (GLsizei)vblk.second.vsize);
+    //                HANDLE_GL_ERROR();
+    //            }
+    //        }
+    //    }
+    //}
+
+    //glBindTexture(GL_TEXTURE_2D, 0);
+    //HANDLE_GL_ERROR();
+
+    //for (; iter != lpctx->groups.end(); ++iter)
+    //{
+    //    if(iter->vsize > 0) 
+    //    {
+    //        glVertexArrayVertexBuffer(lpctx->vao, 0, iter->vbo, 0, 12 * sizeof(GLfloat));
+    //        HANDLE_GL_ERROR();
+
+    //        glBindTexture(GL_TEXTURE_2D, iter->tid);
+    //        HANDLE_GL_ERROR();
+
+    //        glDrawArrays(GL_TRIANGLES, 0, (GLsizei)iter->vsize);
+    //        HANDLE_GL_ERROR();
+    //    }
+    //}
+    //glBindTexture(GL_TEXTURE_2D, 0);
+    //HANDLE_GL_ERROR();
 }
 
 void setupFreeType(std::map<char, Character>& Characters, GLuint* pfontVAO, GLuint* pfontVBO)
@@ -443,7 +495,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
 
     for(int i=0; i<materials.size(); i++)
     {
-        std::vector<VERTEX2> vertices;
+        std::vector<VERTEX3> vertices;
         for (const auto& shape : shapes)
         {
             int64_t f = 0;
@@ -454,7 +506,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
                 int current_material_id = shape.mesh.material_ids[face];
                 if (current_material_id == i) {
 
-                    VERTEX2 v;
+                    VERTEX3 v;
                     v.vertex = tr * glm::vec4(
                         attrib.vertices[3 * index.vertex_index + 0],
                         attrib.vertices[3 * index.vertex_index + 1],
@@ -471,8 +523,9 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
                         attrib.normals[3 * index.normal_index + 2],
                         1.0f
                     );
-                    v.userData[0] = 0;
-                    v.userData[1] = 0;
+                    //v.userData[0] = 0;
+                    //v.userData[1] = 0;
+                    v.blockId = glm::u8vec4(0, 0, 0, 0);
                     vertices.push_back(v);
                 }
                 f++;
@@ -484,7 +537,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
             glCreateBuffers(1, &vboObject.vboId);
             HANDLE_GL_ERROR();
 
-            glNamedBufferStorage(vboObject.vboId, sizeof(VERTEX2) * vertices.size(), vertices.data(), 0);
+            glNamedBufferStorage(vboObject.vboId, sizeof(VERTEX3) * vertices.size(), vertices.data(), 0);
             HANDLE_GL_ERROR();
 
             vboObject.numVerts = (GLsizei)vertices.size();
@@ -531,25 +584,25 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
         // check to see if vertices need to be refreshed
         // this will switch out the VBOs for the 
         // block vertex arrays with new ones
-        if (isDoneProcessing.valid())
-        {
-            if (std::future_status::ready == isDoneProcessing.wait_for(std::chrono::milliseconds(0)))
-            {
-                if (!vbosToUpdate.empty())
-                {
-                    std::vector<VERTEX_BUFFER_GROUP1>::iterator giter = lpctx->groups.begin();
-                    for (; giter != lpctx->groups.end(); ++giter)
-                    {
-                        GLuint oldVbo = giter->vbo;
-                        GLuint newVbo = vbosToUpdate.at(oldVbo);
-                        giter->vbo = newVbo;
-                        giter->vsize = giter->vertices.size();
-                        glDeleteBuffers(1, &oldVbo);
-                    }
-                    vbosToUpdate.clear();
-                }
-            }
-        }
+        //if (isDoneProcessing.valid())
+        //{
+        //    if (std::future_status::ready == isDoneProcessing.wait_for(std::chrono::milliseconds(0)))
+        //    {
+        //        if (!vbosToUpdate.empty())
+        //        {
+        //            std::vector<VERTEX_BUFFER_GROUP1>::iterator giter = lpctx->groups.begin();
+        //            for (; giter != lpctx->groups.end(); ++giter)
+        //            {
+        //                GLuint oldVbo = giter->vbo;
+        //                GLuint newVbo = vbosToUpdate.at(oldVbo);
+        //                giter->vbo = newVbo;
+        //                giter->vsize = giter->vertices.size();
+        //                glDeleteBuffers(1, &oldVbo);
+        //            }
+        //            vbosToUpdate.clear();
+        //        }
+        //    }
+        //}
 
         // calculate elapsed seconds
         // use an average of the last ten values
@@ -627,104 +680,104 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
         physx::PxTransform gp;
         BLOCK_ENTITY* hitBlock = NULL;
         bool checkAddActors = true;
-        {
-            physx::PxVec3 origin = physx::PxVec3((float)pos.x, (float)pos.y, (float)pos.z);
-            physx::PxVec3 unitDir = physx::PxVec3(
-                cosf(DEG2RAD(lpctx->azimuth)) * invSinfElevation,
-                (sinf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
-                sinfElevation);
-            unitDir.normalize();
-            physx::PxRaycastBuffer hit;
-            hitStatus = lpctx->mScene->raycast(origin + unitDir, unitDir, 5, hit);
-            if (hitStatus) {
+        //{
+        //    physx::PxVec3 origin = physx::PxVec3((float)pos.x, (float)pos.y, (float)pos.z);
+        //    physx::PxVec3 unitDir = physx::PxVec3(
+        //        cosf(DEG2RAD(lpctx->azimuth)) * invSinfElevation,
+        //        (sinf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
+        //        sinfElevation);
+        //    unitDir.normalize();
+        //    physx::PxRaycastBuffer hit;
+        //    hitStatus = lpctx->mScene->raycast(origin + unitDir, unitDir, 5, hit);
+        //    if (hitStatus) {
 
-                gp = hit.block.actor->getGlobalPose();
-                hitBlock = (BLOCK_ENTITY*)hit.block.actor->userData;
+        //        gp = hit.block.actor->getGlobalPose();
+        //        hitBlock = (BLOCK_ENTITY*)hit.block.actor->userData;
 
-                // keys 6 left button destroys block
-                // hitBlock is the block to update
-                if (lpctx->keys[6] == 1)
-                {
-                    lpctx->keys[6] = 0;
-                    if (vbosToUpdate.empty())
-                    {
+        //        // keys 6 left button destroys block
+        //        // hitBlock is the block to update
+        //        if (lpctx->keys[6] == 1)
+        //        {
+        //            lpctx->keys[6] = 0;
+        //            if (vbosToUpdate.empty())
+        //            {
 
-                        int64_t hashCode = hitBlock->hashCode;
+        //                int64_t hashCode = hitBlock->hashCode;
 
-                        //clock_t t = clock();
+        //                //clock_t t = clock();
 
-                        // remove faces
-                        for (int gi = 0; gi < lpctx->groups.size(); gi++)
-                        {
-                            lpctx->groups[gi].vertices.erase(
-                                std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
-                                    [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }),
-                                lpctx->groups[gi].vertices.end());
-                        }
+        //                // remove faces
+        //                for (int gi = 0; gi < lpctx->groups.size(); gi++)
+        //                {
+        //                    lpctx->groups[gi].vertices.erase(
+        //                        std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
+        //                            [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }),
+        //                        lpctx->groups[gi].vertices.end());
+        //                }
 
-                        int64_t hitBlockIndex = GRIDIDX(hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
+        //                int64_t hitBlockIndex = GRIDIDX(hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
 
-                        // setting block to air
-                        block_set_regtype(lpctx, hitBlockIndex, REG_AIR);
+        //                // setting block to air
+        //                block_set_regtype(lpctx, hitBlockIndex, REG_AIR);
 
-                        // since this block is now air, it must be removed from the scene
-                        physx::PxRigidStatic* actor = block_get_actor(lpctx, hitBlockIndex);
-                        lpctx->mScene->removeActor(*actor);
-                        lpctx->blocksAroundMe.erase(
-                            std::find(
-                                lpctx->blocksAroundMe.begin(),
-                                lpctx->blocksAroundMe.end(),
-                                actor));
+        //                // since this block is now air, it must be removed from the scene
+        //                physx::PxRigidStatic* actor = block_get_actor(lpctx, hitBlockIndex);
+        //                lpctx->mScene->removeActor(*actor);
+        //                lpctx->blocksAroundMe.erase(
+        //                    std::find(
+        //                        lpctx->blocksAroundMe.begin(),
+        //                        lpctx->blocksAroundMe.end(),
+        //                        actor));
 
-                        // reset the block
-                        block_release_actor(lpctx, hitBlockIndex);
-                        block_set_flags(lpctx, hitBlockIndex, 0);
+        //                // reset the block
+        //                block_release_actor(lpctx, hitBlockIndex);
+        //                block_set_flags(lpctx, hitBlockIndex, 0);
 
-                        // update the masks for the block removed
-                        // and update the masks for the surrounding blocks
-                        // and update the face data for the surrounding blocks
-                        update_surrounding_blocks(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
+        //                // update the masks for the block removed
+        //                // and update the masks for the surrounding blocks
+        //                // and update the face data for the surrounding blocks
+        //                update_surrounding_blocks(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z);
 
-                        addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
-                        checkAddActors = false;
+        //                addActorsForCurrentLocation(lpctx, (int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z);
+        //                checkAddActors = false;
 
-                        isDoneProcessing = std::async([lpctx, &vbosToUpdate, rctx]()
-                            {
-                                printf("starting async proc\n");
-                                if (FALSE == wglMakeCurrent(rctx->hdc, lpctx->hglrcAlt))
-                                    throw new std::runtime_error("failed to make rc current on async proc");
-                                for (const auto& vbg : lpctx->groups)
-                                {
-                                    GLuint newVbo = 0;
-                                    
-                                    glCreateBuffers(1, &newVbo);
+        //                isDoneProcessing = std::async([lpctx, &vbosToUpdate, rctx]()
+        //                    {
+        //                        printf("starting async proc\n");
+        //                        if (FALSE == wglMakeCurrent(rctx->hdc, lpctx->hglrcAlt))
+        //                            throw new std::runtime_error("failed to make rc current on async proc");
+        //                        for (const auto& vbg : lpctx->groups)
+        //                        {
+        //                            GLuint newVbo = 0;
+        //                            
+        //                            glCreateBuffers(1, &newVbo);
 
-                                    glNamedBufferStorage(
-                                        newVbo,
-                                        sizeof(VERTEX2) * vbg.vertices.size(),
-                                        vbg.vertices.data(), 0);
+        //                            glNamedBufferStorage(
+        //                                newVbo,
+        //                                sizeof(VERTEX2) * vbg.vertices.size(),
+        //                                vbg.vertices.data(), 0);
 
-                                    vbosToUpdate.insert(std::pair<int, GLuint>(vbg.vbo, newVbo));
-                                }
-                                if (false == wglMakeCurrent(rctx->hdc, nullptr))
-                                    throw new std::runtime_error("failed to release rc on async proc");
-                                printf("async proc done\n");
-                            }
-                        );
+        //                            vbosToUpdate.insert(std::pair<int, GLuint>(vbg.vbo, newVbo));
+        //                        }
+        //                        if (false == wglMakeCurrent(rctx->hdc, nullptr))
+        //                            throw new std::runtime_error("failed to release rc on async proc");
+        //                        printf("async proc done\n");
+        //                    }
+        //                );
 
-                        //t = clock() - t;
-                        //double time_taken = ((double)t) / CLOCKS_PER_SEC; // calculate the elapsed time
-                        //printf("Elapsed %f seconds", time_taken);
+        //                //t = clock() - t;
+        //                //double time_taken = ((double)t) / CLOCKS_PER_SEC; // calculate the elapsed time
+        //                //printf("Elapsed %f seconds", time_taken);
 
-                        // the hit block is invalid now - it's gone
-                        hitBlock = NULL;
-                    }
-                }
+        //                // the hit block is invalid now - it's gone
+        //                hitBlock = NULL;
+        //            }
+        //        }
 
-                // keys 7 right button
+        //        // keys 7 right button
 
-            }
-        }
+        //    }
+        //}
 
         // refresh physics actors based on location
         if (true == checkAddActors)
@@ -767,7 +820,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
             // render model
             for (const auto& modelVboItem : rctx->modelVboData)
             {
-                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 12 * sizeof(GLfloat));
+                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, sizeof(VERTEX3));
 
                 glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
             }
@@ -823,7 +876,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
             {
                 rctx->voxcProgram.SetUniform4fv("diffuseColor", &modelVboItem.diffuseColor[0]);
 
-                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, 12 * sizeof(GLfloat));
+                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, sizeof(VERTEX3));
 
                 glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
             }
@@ -986,23 +1039,54 @@ DWORD WINAPI RenderThread(LPVOID parm)
     // vertex buffer
     {
         CreateVertexBuffer(lpctx);
-        std::vector<GLuint> vbos(6);
-        glCreateBuffers(6, vbos.data());
-        HANDLE_GL_ERROR();
 
-        for (int i = 0; i < 6; i++)
+        for (const auto& vertex_buffer : lpctx->vertex_buffers)
         {
-            if (lpctx->groups[i].vertices.size() > 0) {
-                lpctx->groups[i].vsize = lpctx->groups[i].vertices.size();
-                glNamedBufferStorage(vbos[i], sizeof(VERTEX2) * lpctx->groups[i].vertices.size(),
-                    lpctx->groups[i].vertices.data(), 0);
-                HANDLE_GL_ERROR();
-            }
-            else {
-                lpctx->groups[i].vsize = 0;
-            }
-            lpctx->groups[i].vbo = vbos[i];
+            glNamedBufferStorage(
+                vertex_buffer.vbo,
+                vertex_buffer.mem_size,
+                vertex_buffer.mem,
+                GL_DYNAMIC_STORAGE_BIT);
+            HANDLE_GL_ERROR();
         }
+
+        //std::vector<GLuint> vbos(6);
+        //glCreateBuffers(6, vbos.data());
+        //HANDLE_GL_ERROR();
+
+        //std::vector<VERTEX_BUFFER_GROUP1>::iterator vbgIter = lpctx->groups.begin();
+        //for(;vbgIter != lpctx->groups.end(); ++vbgIter)
+        //{
+        //    std::map<uint16_t, VERTEX_BLOCK>::iterator blockIter = vbgIter->vertexBlocks.begin();
+        //    for (; blockIter != vbgIter->vertexBlocks.end(); ++blockIter)
+        //    {
+        //        if (blockIter->second.vertices.size() > 0) {
+        //            GLuint vbo = 0;
+        //            glCreateBuffers(1, &vbo);
+
+        //            blockIter->second.vsize = blockIter->second.vertices.size();
+        //            glNamedBufferStorage(vbo, sizeof(VERTEX2) * blockIter->second.vsize,
+        //                blockIter->second.vertices.data(), 0);
+        //            HANDLE_GL_ERROR();
+
+        //            blockIter->second.vbo = vbo;
+        //        }
+        //        else {
+        //            blockIter->second.vsize = 0;
+        //        }
+        //    }
+
+        //    //if (lpctx->groups[i].vertices.size() > 0) {
+        //    //    lpctx->groups[i].vsize = lpctx->groups[i].vertices.size();
+        //    //    glNamedBufferStorage(vbos[i], sizeof(VERTEX2) * lpctx->groups[i].vertices.size(),
+        //    //        lpctx->groups[i].vertices.data(), 0);
+        //    //    HANDLE_GL_ERROR();
+        //    //}
+        //    //else {
+        //    //    lpctx->groups[i].vsize = 0;
+        //    //}
+        //    //lpctx->groups[i].vbo = vbos[i];
+        //}
     }
 
     // model
@@ -1057,13 +1141,13 @@ DWORD WINAPI RenderThread(LPVOID parm)
     // end shadows
 
     // vbo for 2d quad
-    OpenGlVertexBuffer<VERTEX2> quadBuffer(lpctx->vao, (GLsizei)6, &quadVerts[0]);
+    OpenGlVertexBuffer<VERTEX3> quadBuffer(lpctx->vao, (GLsizei)6, &quadVerts[0]);
     quadBuffer.setTextureInfo(GL_TEXTURE0, GL_TEXTURE_2D, depthMap);
 
     // selection cube vertex buffer
-    std::vector<VERTEX2> zeroCubeVertices;
+    std::vector<VERTEX3> zeroCubeVertices;
     getZeroCubeVertices(zeroCubeVertices);
-    OpenGlVertexBuffer<VERTEX2> zeroCubeBuffer(lpctx->vao, (GLsizei)zeroCubeVertices.size(), zeroCubeVertices.data());
+    OpenGlVertexBuffer<VERTEX3> zeroCubeBuffer(lpctx->vao, (GLsizei)zeroCubeVertices.size(), zeroCubeVertices.data());
     zeroCubeVertices.clear();
 
     // add initial set of actors based on starting location
@@ -1116,10 +1200,19 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glDeleteTextures(1, &depthMap);
     glDeleteFramebuffers(1, &depthMapFBO);
 
-    for (const auto& gp : lpctx->groups)
+    //for (const auto& gp : lpctx->groups)
+    //{
+    //    glDeleteTextures(1, &gp.tid);
+    //    for (const auto& vblk : gp.vertexBlocks)
+    //    {
+    //        glDeleteBuffers(1, &vblk.second.vbo);
+    //    }
+    //}
+
+    for (const auto& vertex_buffer : lpctx->vertex_buffers)
     {
-        glDeleteTextures(1, &gp.tid);
-        glDeleteBuffers(1, &gp.vbo);
+        glDeleteBuffers(1, &vertex_buffer.vbo);
+        free(vertex_buffer.mem);
     }
 
     glDeleteVertexArrays(1, &lpctx->vao);

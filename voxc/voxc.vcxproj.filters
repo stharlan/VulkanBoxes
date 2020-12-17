@@ -60,6 +60,9 @@
     <ClCompile Include="os.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="vertex_memory_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="voxc.h">

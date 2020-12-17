@@ -314,23 +314,23 @@ const glm::vec3 normals[40] = {
 //    return zeroCubeId;
 //}
 
-void getZeroCubeVertices(std::vector<VERTEX2>& zeroCubeVerts)
+void getZeroCubeVertices(std::vector<VERTEX3>& zeroCubeVerts)
 {
     glm::mat4 xz = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, -0.5f, -0.5f));
     glm::mat4 sc = glm::scale(glm::mat4(1.0f), glm::vec3(1.1f, 1.1f, 1.1f));
     //std::vector<VERTEX2> zeroCubeVerts;
     for (int i = 0; i < 6; i++) 
-        zeroCubeVerts.push_back({ sc * (xz * locs[topVertexIndices[i]]), texcrds[topVertexIndices[i]], normals[topVertexIndices[i]], {0,0} });
+        zeroCubeVerts.push_back({ sc * (xz * locs[topVertexIndices[i]]), texcrds[topVertexIndices[i]], normals[topVertexIndices[i]], {0,0,0,0} });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[bottomVertexIndices[i]]), texcrds[bottomVertexIndices[i]], normals[bottomVertexIndices[i]], {0,0} });
+        zeroCubeVerts.push_back({ sc * (xz * locs[bottomVertexIndices[i]]), texcrds[bottomVertexIndices[i]], normals[bottomVertexIndices[i]], {0,0,0,0} });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[plusxVertexIndices[i]]), texcrds[plusxVertexIndices[i]], normals[plusxVertexIndices[i]], {0,0} });
+        zeroCubeVerts.push_back({ sc * (xz * locs[plusxVertexIndices[i]]), texcrds[plusxVertexIndices[i]], normals[plusxVertexIndices[i]], {0,0,0,0} });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[minusxVertexIndices[i]]), texcrds[minusxVertexIndices[i]], normals[minusxVertexIndices[i]], {0,0} });
+        zeroCubeVerts.push_back({ sc * (xz * locs[minusxVertexIndices[i]]), texcrds[minusxVertexIndices[i]], normals[minusxVertexIndices[i]], {0,0,0,0} });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[plusyVertexIndices[i]]), texcrds[plusyVertexIndices[i]], normals[plusyVertexIndices[i]], {0,0} });
+        zeroCubeVerts.push_back({ sc * (xz * locs[plusyVertexIndices[i]]), texcrds[plusyVertexIndices[i]], normals[plusyVertexIndices[i]], {0,0,0,0} });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[minusyVertexIndices[i]]), texcrds[minusyVertexIndices[i]], normals[minusyVertexIndices[i]], {0,0} });
+        zeroCubeVerts.push_back({ sc * (xz * locs[minusyVertexIndices[i]]), texcrds[minusyVertexIndices[i]], normals[minusyVertexIndices[i]], {0,0,0,0} });
     //GLuint zeroCubeId = 0;
     //glCreateBuffers(1, &zeroCubeId);
     //glNamedBufferStorage(zeroCubeId, sizeof(VERTEX2) * 36, zeroCubeVerts.data(), 0);
@@ -340,9 +340,9 @@ void getZeroCubeVertices(std::vector<VERTEX2>& zeroCubeVerts)
 // update the exists and alpha mask for a block adjacent to another block
 // target side is an exists flag
 void update_mask_surround(VOXC_WINDOW_CONTEXT * lpctx, int64_t srcx, int64_t srcy, int64_t srcz, int64_t indexToUpdate,
-    uint8_t existsFlag)
+    uint64_t existsFlag)
 {
-    uint64_t alphaFlag = existsFlag << 6;
+    uint64_t alphaFlag = existsFlag << 6ll;
     int8_t srcBlockType = block_get_regtype(lpctx, srcx, srcy, srcz, false);
     //int8_t existsMaskToUpdate = block_get_surround_exists_mask(lpctx, indexToUpdate);
     //int8_t alphaMaskToUpdate = block_get_surround_alpha_mask(lpctx, indexToUpdate);
@@ -400,11 +400,89 @@ void update_masks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
         if (yc > 0) update_mask_surround(lpctx, xc, yc - 1, zc, idx, EXISTS_MINUS_Y);
 }
 
+void add_vertex(VOXC_WINDOW_CONTEXT* lpctx, BLOCK_REG& fndBlock, uint16_t gridLocationId,
+    glm::mat4& xlate, int64_t idx, uint32_t textureIndexConst, const GLuint vertexIndices[],
+    glm::u8vec4& blockId)
+{
+    for (int64_t v = 0; v < 6; v++) {
+        // TODO find out what vertex block this belongs to
+        // vertex blocks will be 8x8x8 with the origin at zero
+        // so block position will be x / 8, y / 8, z / 8
+        int64_t textureConst = fndBlock.textureIndex[textureIndexConst];
+
+        VERTEX3 vtx;
+        vtx.blockId = blockId;
+        vtx.vertex = glm::vec3(xlate * locs[vertexIndices[v]]);
+        vtx.norm = normals[vertexIndices[v]];
+        vtx.texc = texcrds[vertexIndices[v]];
+        int result = vmm_add_vertex(lpctx, textureConst, &vtx);
+
+        if (result == 1)
+        {
+            // need new allocation
+            uint32_t numBuffers = lpctx->vertex_buffers.size();
+            for (int i = 0; i < numBuffers; i++)
+            {
+                std::vector<VERTEX_BUFFER_CHUNK>::iterator vbchnk = std::find_if(
+                    lpctx->vertex_buffers[i].chunks.begin(),
+                    lpctx->vertex_buffers[i].chunks.end(),
+                    [textureConst](const VERTEX_BUFFER_CHUNK& vbufch) {
+                        return (vbufch.texture_const == textureConst);
+                    }
+                );
+                if (vbchnk != lpctx->vertex_buffers[i].chunks.end())
+                {
+                    vmm_allocate_single_buffer(lpctx, vbchnk->texture_id, vbchnk->texture_const);
+                    result = vmm_add_vertex(lpctx, textureConst, &vtx);
+                    if (result != 0) throw std::runtime_error("failed to aded vertex after adding new chunk");
+                    i = numBuffers; // quit for
+                }
+            }
+            if (result == 1)
+            {
+                // can't find chunk with texture id
+                // shouldn't happen
+                throw new std::runtime_error("failed to find chunk with tex id");
+            }
+        }
+
+        //VERTEX_BUFFER_GROUP1& group = lpctx->groups[textureIndex];
+        //std::map<uint16_t, VERTEX_BLOCK>::iterator vBlock = group.vertexBlocks.find(gridLocationId);
+        //if (vBlock == group.vertexBlocks.end())
+        //{
+        //    std::vector<VERTEX2> vertices;
+        //    VERTEX_BLOCK newvBlock;
+        //    newvBlock.gridLocationId = gridLocationId;
+        //    newvBlock.vbo = 0;
+        //    newvBlock.vsize = 0;
+        //    newvBlock.vertices.push_back({
+        //        glm::vec3(xlate * locs[vertexIndices[v]]),
+        //        texcrds[vertexIndices[v]],normals[vertexIndices[v]], {idx,0}
+        //        });
+        //    group.vertexBlocks.insert(std::pair<int16_t, VERTEX_BLOCK>(gridLocationId, newvBlock));
+        //}
+        //else {
+        //    vBlock->second.vertices.push_back({
+        //        glm::vec3(xlate * locs[vertexIndices[v]]),
+        //        texcrds[vertexIndices[v]],normals[vertexIndices[v]], {idx,0}
+        //        });
+        //}
+
+        //group.vertices.push_back({
+        //    glm::vec3(xlate * locs[bottomVertexIndices[v]]),
+        //    texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]], {idx,0}
+        //    });
+    }
+
+}
+
 // THE SIDE TO UPDATE FLAG IS AN EXISTS FLAG
 int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc, uint8_t sideToUpdate)
 {
 
     int64_t idx = GRIDIDX(xc, yc, zc);
+    int16_t gridLocationId = VERTEX_BLOCK_ID(xc, yc, zc);
+    glm::u8vec4 blockId = glm::u8vec4(0, xc, yc, zc);
 
     int8_t blockType = block_get_regtype(lpctx, idx, false);
 
@@ -453,13 +531,9 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
         {
             if (!IS_BITSET(flags, EXISTS_ON_BOTTOM) || IS_BITSET(flags, ALPHA_ON_BOTTOM)) {
                 if (!IS_BITSET(flags, FACE_ON_BOTTOM)) {
-                    for (int64_t v = 0; v < 6; v++) {
-                        lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_BOTTOM]].vertices.push_back({
-                            glm::vec3(xlate * locs[bottomVertexIndices[v]]),
-                            texcrds[bottomVertexIndices[v]],normals[bottomVertexIndices[v]], {idx,0}
-                            });
-                    }
                     SET_BIT(flags, FACE_ON_BOTTOM);
+                    // texture index bottom
+                    add_vertex(lpctx, fndBlock, gridLocationId, xlate, idx, TEXTURE_INDEX_BOTTOM, bottomVertexIndices, blockId);
                     facesAdded++;
                 }
             }
@@ -471,10 +545,11 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
             if (!IS_BITSET(flags, EXISTS_ON_TOP) || IS_BITSET(flags, ALPHA_ON_TOP)) {
                 if (!IS_BITSET(flags, FACE_ON_TOP)) {
                     for (int64_t v = 0; v < 6; v++) {
-                        lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_TOP]].vertices.push_back({
-                            glm::vec3(xlate * locs[topVertexIndices[v]]),
-                            texcrds[topVertexIndices[v]],normals[topVertexIndices[v]], {idx,0}
-                            });
+                        //lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_TOP]].vertices.push_back({
+                        //    glm::vec3(xlate * locs[topVertexIndices[v]]),
+                        //    texcrds[topVertexIndices[v]],normals[topVertexIndices[v]], {idx,0}
+                        //    });
+                        add_vertex(lpctx, fndBlock, gridLocationId, xlate, idx, TEXTURE_INDEX_TOP, topVertexIndices, blockId);
                     }
                     SET_BIT(flags, FACE_ON_TOP);
                     facesAdded++;
@@ -488,10 +563,11 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
             if (!IS_BITSET(flags, EXISTS_PLUS_X) || IS_BITSET(flags, ALPHA_PLUS_X)) {
                 if (!IS_BITSET(flags, FACE_PLUS_X)) {
                     for (int64_t v = 0; v < 6; v++) {
-                        lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSX]].vertices.push_back({
-                            glm::vec3(xlate * locs[plusxVertexIndices[v]]),
-                            texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]], {idx,0}
-                            });
+                        //lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSX]].vertices.push_back({
+                            //glm::vec3(xlate * locs[plusxVertexIndices[v]]),
+                            //texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]], {idx,0}
+                            //});
+                        add_vertex(lpctx, fndBlock, gridLocationId, xlate, idx, TEXTURE_INDEX_PLUSX, plusxVertexIndices, blockId);
                     }
                     SET_BIT(flags, FACE_PLUS_X);
                     facesAdded++;
@@ -505,10 +581,11 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
             if (!IS_BITSET(flags, EXISTS_MINUS_X) || IS_BITSET(flags, ALPHA_MINUS_X)) {
                 if (!IS_BITSET(flags, FACE_MINUS_X)) {
                     for (int64_t v = 0; v < 6; v++) {
-                        lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSX]].vertices.push_back({
-                            glm::vec3(xlate * locs[minusxVertexIndices[v]]),
-                            texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]], {idx,0}
-                            });
+                        //lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSX]].vertices.push_back({
+                        //    glm::vec3(xlate * locs[minusxVertexIndices[v]]),
+                        //    texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]], {idx,0}
+                        //    });
+                        add_vertex(lpctx, fndBlock, gridLocationId, xlate, idx, TEXTURE_INDEX_MINUSX, minusxVertexIndices, blockId);
                     }
                     SET_BIT(flags, FACE_MINUS_X);
                     facesAdded++;
@@ -522,10 +599,11 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
             if (!IS_BITSET(flags, EXISTS_PLUS_Y) || IS_BITSET(flags, ALPHA_PLUS_Y)) {
                 if (!IS_BITSET(flags, FACE_PLUS_Y)) {
                     for (int64_t v = 0; v < 6; v++) {
-                        lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSY]].vertices.push_back({
-                            glm::vec3(xlate * locs[plusyVertexIndices[v]]),
-                            texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]], {idx,0}
-                            });
+                        //lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_PLUSY]].vertices.push_back({
+                        //    glm::vec3(xlate * locs[plusyVertexIndices[v]]),
+                        //    texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]], {idx,0}
+                        //    });
+                        add_vertex(lpctx, fndBlock, gridLocationId, xlate, idx, TEXTURE_INDEX_PLUSY, plusyVertexIndices, blockId);
                     }
                     SET_BIT(flags, FACE_PLUS_Y);
                     facesAdded++;
@@ -539,10 +617,11 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
             if (!IS_BITSET(flags, EXISTS_MINUS_Y) || IS_BITSET(flags, ALPHA_MINUS_Y)) {
                 if (!IS_BITSET(flags, FACE_MINUS_Y)) {
                     for (int64_t v = 0; v < 6; v++) {
-                        lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSY]].vertices.push_back({
-                            glm::vec3(xlate * locs[minusyVertexIndices[v]]),
-                            texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]], {idx,0}
-                            });
+                        //lpctx->groups[fndBlock.textureIndex[TEXTURE_INDEX_MINUSY]].vertices.push_back({
+                        //    glm::vec3(xlate * locs[minusyVertexIndices[v]]),
+                        //    texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]], {idx,0}
+                        //    });
+                        add_vertex(lpctx, fndBlock, gridLocationId, xlate, idx, TEXTURE_INDEX_MINUSY, minusyVertexIndices, blockId);
                     }
                     SET_BIT(flags, FACE_MINUS_Y);
                     facesAdded++;

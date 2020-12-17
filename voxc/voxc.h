@@ -93,6 +93,15 @@
 
 #define FCLAMP(v,i,x) (v < i ? i : (v > x ? x : v))
 
+// g, x, y and z range from 0 to 255
+// g is the grid number
+// +-----------+
+// |   0 -  15 |
+// | ...       |
+// | 240 - 255 |
+// +-----------+
+#define COMPUTE_BLOCK_ID(g,x,y,z) ((g << 24) + (x << 16) + (y << 8) + z)
+
 #define CLEAR_BIT(t,b) (t &= ~(b))
 #define SET_BIT(t,b) (t |= b)
 #define TOGL_BIT(t,b) (t ^= b)
@@ -103,6 +112,7 @@
 #define Z_GRID_EXTENT 256ll
 
 #define GRIDIDX(ix,iy,iz) (((iz) * X_GRID_EXTENT * Y_GRID_EXTENT) + ((iy) * X_GRID_EXTENT) + (ix))
+#define VERTEX_BLOCK_ID(X,Y,Z) (((X / 8) << 10) + ((Y / 8) << 5) + (Z / 8))
 
 #define EXISTS_ON_TOP    0x01
 #define EXISTS_PLUS_X    0x02
@@ -179,15 +189,36 @@ typedef struct _VERTEX
     glm::vec3 vertex;
     glm::vec2 texc;
     glm::vec3 norm;
-    int64_t userData[2];
-} VERTEX2;
+    glm::u8vec4 blockId;
+    //int64_t userData[2];
+} VERTEX3;
+
+// each vertex block will handle
+// a 8x8x8 block area (origin at 0,0,0)
+// each map block will hold 256x256x256 blocks in the world
+// so, the vertex block size is 256/8 x 256/8 x 256/8
+// or, 32x32x32
+// that's a 5-bit number
+// the ID is composed of the x/y/z of that 32x32x32 grid
+// x << 10 bits
+// y << 5 bits
+// z << 0 bits
+// that fits into a 16 bit number
+typedef struct _VERTEX_BLOCK
+{
+    std::vector<VERTEX3> vertices;
+    uint16_t gridLocationId;
+    GLuint vbo;
+    int64_t vsize;
+} VERTEX_BLOCK;
 
 typedef struct _VERTEX_BUFFER_GROUP1
 {
     GLuint tid;
-    GLuint vbo;
-    std::vector<VERTEX2> vertices;
-    int64_t vsize;
+    std::map<uint16_t, VERTEX_BLOCK> vertexBlocks;
+    //GLuint vbo;
+    //std::vector<VERTEX2> vertices;
+    //int64_t vsize;
 } VERTEX_BUFFER_GROUP1;
 
 // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
@@ -227,6 +258,24 @@ typedef struct _BLOCK_REG
     BOOL isTransparent = FALSE;
 } BLOCK_REG, * PBLOCK_REG;
 
+typedef struct _VERTEX_BUFFER_CHUNK
+{
+    GLuint texture_id = 0;
+    int64_t texture_const = 0;
+    int64_t boffset = 0;
+    int64_t blength = 0;
+    int64_t bfree = 0;
+    GLsizei num_vertices = 0;
+} VERTEX_BUFFER_CHUNK;
+
+typedef struct _VERTEX_BUFFER
+{
+    GLuint vbo = 0;
+    BYTE* mem = nullptr;
+    int64_t mem_size = 0;
+    std::vector<VERTEX_BUFFER_CHUNK> chunks;
+} VERTEX_BUFFER;
+
 typedef struct _VOXC_WINDOW_CONTEXT
 {
     HGLRC hglrc;
@@ -240,7 +289,8 @@ typedef struct _VOXC_WINDOW_CONTEXT
     float azimuth = 0.0f;
     BLOCK_ENTITY* lpBlockEntities = NULL;
     int64_t numEntities = 0;
-    std::vector<VERTEX_BUFFER_GROUP1> groups;
+    //std::vector<VERTEX_BUFFER_GROUP1> groups;
+    std::vector<VERTEX_BUFFER> vertex_buffers;
     float viewportRatio = 0.0f;
     bool isFullscreen = 0;
     int screenWidth = 0;
@@ -334,7 +384,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT*);
 void update_surrounding_blocks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc); 
 void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition);
 void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx);
-void getZeroCubeVertices(std::vector<VERTEX2>& zeroCubeVerts);
+void getZeroCubeVertices(std::vector<VERTEX3>& zeroCubeVerts);
 
 void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type);
 void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int8_t type);
@@ -367,11 +417,15 @@ typedef struct _RENDER_LOOP_CONTEXT
     OpenGlProgram& voxcProgram;
     GLuint depthMap;
     OpenGlProgram& selCubeProg;
-    OpenGlVertexBuffer<VERTEX2>& zeroCubeBuffer;
+    OpenGlVertexBuffer<VERTEX3>& zeroCubeBuffer;
     OpenGlProgram& fontProg;
     GLuint fontVAO;
     GLuint fontVBO;
     std::map<char, Character>& Characters;
     OpenGlProgram& ddProg;
-    OpenGlVertexBuffer<VERTEX2>& quadBuffer;
+    OpenGlVertexBuffer<VERTEX3>& quadBuffer;
 } RENDER_LOOP_CONTEXT;
+
+void vmm_allocate_buffer(VOXC_WINDOW_CONTEXT* lpctx, std::vector<GLuint> textureIds);
+int vmm_add_vertex(VOXC_WINDOW_CONTEXT* lpctx, int64_t textureConst, VERTEX3* vertex);
+void vmm_allocate_single_buffer(VOXC_WINDOW_CONTEXT* lpctx, GLuint textureId, int64_t texture_const);

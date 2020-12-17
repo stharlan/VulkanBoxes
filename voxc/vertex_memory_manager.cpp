@@ -1,14 +1,20 @@
 
 #include "voxc.h"
 
-// 16 MB
-//#define CHUNK_SIZE_BYTES 16777216
+// 4 MB
+//#define CHUNK_SIZE_BYTES 4194304ll
+// 8 MB
+//#define CHUNK_SIZE_BYTES 8388608ll
+// 16 MB BUG!
+//#define CHUNK_SIZE_BYTES 16777216ll
+//#define CHUNK_SIZE_BYTES 16777188ll
 // 32 MB
 #define CHUNK_SIZE_BYTES 33554432ll
 // 64 MB
 //#define CHUNK_SIZE_BYTES 67108864ll
 // 128 MB
 //#define CHUNK_SIZE_BYTES 134217728ll
+
 
 int vmm_add_vertex(VOXC_WINDOW_CONTEXT* lpctx, int64_t textureConst, VERTEX3* vertex)
 {
@@ -20,7 +26,7 @@ int vmm_add_vertex(VOXC_WINDOW_CONTEXT* lpctx, int64_t textureConst, VERTEX3* ve
 			lpctx->vertex_buffers[i].chunks.end(),
 			[textureConst](const VERTEX_BUFFER_CHUNK& vbufch) {
 				return (vbufch.texture_const == textureConst
-					&& vbufch.bfree > sizeof(VERTEX3));
+					&& vbufch.bfree >= sizeof(VERTEX3));
 			}
 		);
 		if (vbchnk != lpctx->vertex_buffers[i].chunks.end())

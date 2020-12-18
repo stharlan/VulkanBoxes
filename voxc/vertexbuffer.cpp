@@ -785,11 +785,11 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
     //    }
     //}
 
-    for (int64_t zz = 0; zz < 256; zz += 16)
+    for (int64_t zz = 0; zz < Z_GRID_EXTENT; zz += 16)
     {
-        for (int64_t yy = 0; yy < 256; yy += 16)
+        for (int64_t yy = 0; yy < Y_GRID_EXTENT; yy += 16)
         {
-            for (int64_t xx = 0; xx < 256; xx += 16)
+            for (int64_t xx = 0; xx < X_GRID_EXTENT; xx += 16)
             {
 
                 VBLOCK_16 v16;
@@ -819,6 +819,8 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                         VBLOCK_SUBVERT sv;
                         sv.tex_id = vItem.first;
                         sv.num_vertices = vItem.second.size();
+                        sv.centroid = glm::vec2(xx + 8.0f, yy + 8.0f);
+                      
                         //lpctx->draw.subverts.push_back(sv);
                         v16.subverts.push_back(sv);
                     }

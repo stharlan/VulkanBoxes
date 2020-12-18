@@ -292,7 +292,7 @@ void RenderText(VOXC_WINDOW_CONTEXT* lpctx, OpenGlProgram& prog, std::string tex
     HANDLE_GL_ERROR();
 }
 
-void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
+void RenderScene(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3& pos)
 {
 
     glActiveTexture(GL_TEXTURE0);
@@ -300,21 +300,24 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
 
     for (const auto& dv : lpctx->drawVector)
     {
-        int64_t vertsDrawn = 0;
+        int64_t voffset = 0;
         for (const auto& sv : dv.subverts)
         {
-            glBindTexture(GL_TEXTURE_2D, sv.tex_id);
+            float dist = glm::length(sv.centroid - glm::vec2(pos));
+            if (dist < 256.0f)
+            {
+                glBindTexture(GL_TEXTURE_2D, sv.tex_id);
 
-            glVertexArrayVertexBuffer(
-                lpctx->vao,
-                0,
-                dv.vbo,
-                vertsDrawn * sizeof(VERTEX4),
-                sizeof(VERTEX4));
+                glVertexArrayVertexBuffer(
+                    lpctx->vao,
+                    0,
+                    dv.vbo,
+                    voffset * sizeof(VERTEX4),
+                    sizeof(VERTEX4));
 
-            glDrawArrays(GL_TRIANGLES, 0, sv.num_vertices);
-
-            vertsDrawn += sv.num_vertices;
+                glDrawArrays(GL_TRIANGLES, 0, sv.num_vertices);
+            }
+            voffset += sv.num_vertices;
         }
     }
 
@@ -844,7 +847,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
             glBindVertexArray(lpctx->vao);
 
-            RenderScene(lpctx);
+            RenderScene(lpctx, posLocation3);
 
             // render model
             for (const auto& modelVboItem : rctx->modelVboData)
@@ -896,7 +899,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
             glBindVertexArray(lpctx->vao);
 
-            RenderScene(lpctx);
+            RenderScene(lpctx, posLocation3);
 
             // render model
             rctx->voxcProgram.SetUniform1i("useDiffuseColor", 1);
@@ -985,18 +988,21 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
         }
 
         memset(textBuffer, 0, 256);
-        sprintf_s(textBuffer, 256, "draw vector has %i items", lpctx->drawVector.size());
+        sprintf_s(textBuffer, 256, "draw vector has %zi items", lpctx->drawVector.size());
         RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (7.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
-        //int tctr = 0;
-        //for (const auto& vb : lpctx->vertex_buffers)
-        //{
-        //    for (const auto& chnk : vb.chunks)
-        //    {
-        //        memset(textBuffer, 0, 256);
-        //        sprintf_s(textBuffer, 256, "chnk %i perc free %.1f", chnk.texture_id, (float)chnk.bfree * 100.0f / (float)chnk.blength);
-        //        RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + ((7.0f + (tctr++)) * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
-        //    }
-        //}
+
+        MEMORYSTATUSEX memstat = { 0 };
+        memstat.dwLength = sizeof(MEMORYSTATUSEX);
+        GlobalMemoryStatusEx(&memstat);
+        memset(textBuffer, 0, 256);
+        sprintf_s(textBuffer, 256, "memory load %i%%", memstat.dwMemoryLoad);
+        RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (8.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+
+        PROCESS_MEMORY_COUNTERS pmc = { 0 };
+        GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+        memset(textBuffer, 0, 256);
+        sprintf_s(textBuffer, 256, "process mem %lli bytes", pmc.WorkingSetSize);
+        RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (9.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
 
         // render depth map
         rctx->ddProg.Use();
@@ -1044,12 +1050,24 @@ DWORD WINAPI RenderThread(LPVOID parm)
     // create the rendering contxt
     HWND hwnd = (HWND)parm;
     VOXC_WINDOW_CONTEXT* lpctx = (VOXC_WINDOW_CONTEXT*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
-    HDC hdc = GetDC(hwnd);
+    HDC hdc = GetDC(hwnd); 
+
+    PROCESS_MEMORY_COUNTERS pmc = { 0 };
+    std::ofstream memStatsFile;
+    memStatsFile.open("memstats.txt");
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     createRenderingContext2(hdc, lpctx);
 
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
+
     // load all the xtension functions
     loadExtensionFunctions();
+
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // opengl configuration
     glEnable(GL_MULTISAMPLE);
@@ -1062,6 +1080,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glShadeModel(GL_SMOOTH);
     HANDLE_GL_ERROR();
 
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
+
     // load programs
     OpenGlProgram voxcProgram("vshader.txt", "fshader.txt");
     voxcProgram.Use();
@@ -1072,12 +1093,21 @@ DWORD WINAPI RenderThread(LPVOID parm)
     OpenGlProgram fontProg("vfont.txt", "ffont.txt");
     OpenGlProgram selCubeProg("selcube.vert", "selcube.frag");
 
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
+
     load_textures(lpctx);
+
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // physics: must be done before create vertex buffer
     glm::vec3 startingPosition(8, 8, 10);
     initPhysics(lpctx, startingPosition);
     // end physics
+
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // vertex buffer
     {
@@ -1132,9 +1162,15 @@ DWORD WINAPI RenderThread(LPVOID parm)
         //}
     }
 
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
+
     // model
     std::vector<VBO_DATA> modelVboData;
     LoadModel(modelVboData);
+
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // create the vertex array
     glCreateVertexArrays(1, &lpctx->vao);
@@ -1150,6 +1186,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glEnableVertexArrayAttrib(lpctx->vao, 2);
     HANDLE_GL_ERROR();
     // end vertex array 
+
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // create a frame buffer for shadows 
     GLuint depthMapFBO = 0;
@@ -1183,15 +1222,24 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glm::mat4 lightView1 = glm::lookAt(eye1, cntr1, glm::vec3(0.0f, 0.0f, 1.0f));
     // end shadows
 
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
+
     // vbo for 2d quad
     OpenGlVertexBuffer<VERTEX4> quadBuffer(lpctx->vao, (GLsizei)6, &quadVerts[0]);
     quadBuffer.setTextureInfo(GL_TEXTURE0, GL_TEXTURE_2D, depthMap);
+
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // selection cube vertex buffer
     std::vector<VERTEX4> zeroCubeVertices;
     getZeroCubeVertices(zeroCubeVertices);
     OpenGlVertexBuffer<VERTEX4> zeroCubeBuffer(lpctx->vao, (GLsizei)zeroCubeVertices.size(), zeroCubeVertices.data());
     zeroCubeVertices.clear();
+
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // add initial set of actors based on starting location
     addActorsForCurrentLocation(lpctx,
@@ -1210,6 +1258,11 @@ DWORD WINAPI RenderThread(LPVOID parm)
     glm::mat4 modelMatrix = glm::mat4(1.0f);
     HANDLE_GL_ERROR();
 
+    memStatsFile << "start render loop" << std::endl;
+
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
+
     // ***********
     // render loop
     // ***********
@@ -1221,6 +1274,10 @@ DWORD WINAPI RenderThread(LPVOID parm)
     };
     render_loop(lpctx, &rctx);
 
+    memStatsFile << "end render loop" << std::endl;
+
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // *******
     // cleanup
@@ -1284,6 +1341,11 @@ DWORD WINAPI RenderThread(LPVOID parm)
     block_release_all_actors(lpctx);
 
     cleanupPhysics(lpctx);
+
+    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+    memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
+
+    memStatsFile.close();
 
     return 0;
 }

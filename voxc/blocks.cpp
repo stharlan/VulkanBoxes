@@ -9,14 +9,14 @@ void block_allocate(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z)
 	memset(lpctx->lpBlockEntities, 0, x * y * z * sizeof(BLOCK_ENTITY));
 	lpctx->numEntities = x * y * z;
 
-	for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
-		for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
-			for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
-				int64_t index = GRIDIDX(xc, yc, zc);
-				//lpctx->lpBlockEntities[index].gridLocation = glm::uvec3(xc, yc, zc);
-			}
-		}
-	}
+	//for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
+	//	for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
+	//		for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
+	//			int64_t index = GRIDIDX(xc, yc, zc);
+	//			lpctx->lpBlockEntities[index].gridLocation = glm::uvec3(xc, yc, zc);
+	//		}
+	//	}
+	//}
 }
 
 void block_cleanup(VOXC_WINDOW_CONTEXT* lpctx)
@@ -99,7 +99,7 @@ uint64_t block_get_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index)
 	return lpctx->lpBlockEntities[index].flags;
 }
 
-void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index, uint64_t value)
+void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index, uint16_t value)
 {
 	lpctx->lpBlockEntities[index].flags = value;
 }

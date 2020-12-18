@@ -107,9 +107,9 @@
 #define TOGL_BIT(t,b) (t ^= b)
 #define IS_BITSET(t,b) (t & b)
 
-#define X_GRID_EXTENT 256ll
-#define Y_GRID_EXTENT 256ll
-#define Z_GRID_EXTENT 256ll
+#define X_GRID_EXTENT 512ll
+#define Y_GRID_EXTENT 512ll
+#define Z_GRID_EXTENT 512ll
 
 #define GRIDIDX(ix,iy,iz) (((iz) * X_GRID_EXTENT * Y_GRID_EXTENT) + ((iy) * X_GRID_EXTENT) + (ix))
 //#define VERTEX_BLOCK_ID(X,Y,Z) (((X / 8) << 10) + ((Y / 8) << 5) + (Z / 8))
@@ -138,6 +138,7 @@
 #define FACES_ALL 0x3F000 // all the face bits
 
 #include <Windows.h>
+#include <Psapi.h>
 #include <gl/GL.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -149,6 +150,8 @@
 #include <algorithm>
 #include <future>
 #include <fmt/format.h>
+#include <iostream>
+#include <fstream>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -224,11 +227,9 @@ typedef struct _VERTEX
 // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
 typedef struct _BLOCK_ENTITY
 {
-    //glm::uvec3 gridLocation;
     int8_t regType = 0; 
     physx::PxRigidStatic* rigidStatic = NULL;
-    uint64_t flags;
-    //int64_t hashCode = 0;
+    uint16_t flags;
 } BLOCK_ENTITY, * PBLOCK_ENTITY;
 
 #define TEXTURE_INDEX_TOP 0
@@ -280,6 +281,7 @@ typedef struct _VBLOCK_SUBVERT
 {
     GLuint tex_id = 0;
     uint32_t num_vertices = 0;
+    glm::vec2 centroid;
 } VBLOCK_SUBVERT;
 
 typedef struct _VBLOCK_16 {
@@ -412,7 +414,7 @@ void block_cleanup(VOXC_WINDOW_CONTEXT* lpctx);
 //void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode);
 void block_release_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 uint64_t block_get_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index);
-void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index, uint64_t value);
+void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index, uint16_t value);
 
 #include "OpenGlProgram.h"
 #include "OpenGlVertexBuffer.h"

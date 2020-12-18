@@ -107,9 +107,9 @@
 #define TOGL_BIT(t,b) (t ^= b)
 #define IS_BITSET(t,b) (t & b)
 
-#define X_GRID_EXTENT 512ll
-#define Y_GRID_EXTENT 512ll
-#define Z_GRID_EXTENT 512ll
+#define X_GRID_EXTENT 256ll
+#define Y_GRID_EXTENT 256ll
+#define Z_GRID_EXTENT 256ll
 
 #define GRIDIDX(ix,iy,iz) (((iz) * X_GRID_EXTENT * Y_GRID_EXTENT) + ((iy) * X_GRID_EXTENT) + (ix))
 //#define VERTEX_BLOCK_ID(X,Y,Z) (((X / 8) << 10) + ((Y / 8) << 5) + (Z / 8))
@@ -153,6 +153,7 @@
 #include <fmt/format.h>
 #include <iostream>
 #include <fstream>
+#include <random>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -435,6 +436,8 @@ void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint32_t blockId, uint16_t flag
 uint16_t block_get_flags(VOXC_WINDOW_CONTEXT* lpctx, uint32_t blockId);
 uint32_t block_compute_block_id(uint32_t x, uint32_t y, uint32_t z);
 glm::u32vec3 block_compute_position(uint32_t blockId);
+
+void generate_terrain(BYTE* pixels);
 
 #include "OpenGlProgram.h"
 #include "OpenGlVertexBuffer.h"

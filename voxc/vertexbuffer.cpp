@@ -673,14 +673,18 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx,
     return facesAdded;
 }
 
+// the hight map is a buffer w pixels wide and h pixels high
+// the values are 0 to 255
 void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 {
-    int texWidth = 0;
-    int texHeight = 0;
-    int texChannels = 0;
-    stbi_uc* pixels = stbi_load("c:\\temp\\height8.png", &texWidth, &texHeight, &texChannels, 1);
-    if (!pixels)
-        throw new std::runtime_error("failed to load height map");
+    int texWidth = 256;
+    int texHeight = 256;
+    int texChannels = 1;
+    //stbi_uc* pixels = stbi_load("c:\\temp\\height8.png", &texWidth, &texHeight, &texChannels, 1);
+    //if (!pixels)
+        //throw new std::runtime_error("failed to load height map");
+    BYTE* pixels = (BYTE*)malloc(256 * 256);
+    generate_terrain(pixels);
 
     printf("assigning block types\n");
     // assign blocks to level 0

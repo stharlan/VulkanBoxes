@@ -1108,7 +1108,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // physics: must be done before create vertex buffer
-    glm::vec3 startingPosition(8, 8, 10);
+    glm::vec3 startingPosition(8, 8, 260);
     initPhysics(lpctx, startingPosition);
     // end physics
 

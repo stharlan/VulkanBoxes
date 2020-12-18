@@ -156,6 +156,7 @@ copy "C:\Users\stuar\source\repos\PhysX\physx\bin\win.x86_64.vc142.mt\debug\*.dl
     <ClCompile Include="format.cc" />
     <ClCompile Include="glextfn.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="noise.cpp" />
     <ClCompile Include="OpenGlProgram.cpp" />
     <ClCompile Include="OpenGlVertexBuffer.cpp" />
     <ClCompile Include="os.cc" />

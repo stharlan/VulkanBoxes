@@ -675,7 +675,7 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx,
 
 // the hight map is a buffer w pixels wide and h pixels high
 // the values are 0 to 255
-void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
+void create_vertex_buffer(VOXC_WINDOW_CONTEXT* lpctx, RENDER_MSG_ON_SCREEN_FNPTR msgfn, MESSAGE_CONTEXT* mctx)
 {
     int texWidth = 256;
     int texHeight = 256;
@@ -684,9 +684,11 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
     //if (!pixels)
         //throw new std::runtime_error("failed to load height map");
     BYTE* pixels = (BYTE*)malloc(256 * 256);
+    msgfn(mctx, "Generating terrain...");
     generate_terrain(pixels);
 
     printf("assigning block types\n");
+    msgfn(mctx, "Assigning block types...");
     // assign blocks to level 0
     for (uint32_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
         for (uint32_t xc = 0; xc < X_GRID_EXTENT; xc++) {
@@ -800,6 +802,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 
     //glm::u32vec3 block_compute_position(uint32_t blockId)
 
+    msgfn(mctx, "Updating bit masks...");
     std::unordered_map<uint32_t, BLOCK_ENTITY>::iterator ii = lpctx->blockVector.begin();
     for (; ii != lpctx->blockVector.end(); ++ii)
     {
@@ -816,6 +819,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
     //    }
     //}
 
+    msgfn(mctx, "Generating faces...");
     for (uint32_t zz = 0; zz < Z_GRID_EXTENT; zz += 16)
     {
         for (uint32_t yy = 0; yy < Y_GRID_EXTENT; yy += 16)

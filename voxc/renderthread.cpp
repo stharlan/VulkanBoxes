@@ -294,7 +294,7 @@ void RenderText(VOXC_WINDOW_CONTEXT* lpctx, OpenGlProgram& prog, std::string tex
     HANDLE_GL_ERROR();
 }
 
-void RenderScene(VOXC_WINDOW_CONTEXT* lpctx, const glm::vec3& pos, const glm::vec3& look, std::ofstream& msf)
+void RenderScene(VOXC_WINDOW_CONTEXT* lpctx, const glm::vec3& pos, const glm::vec3& look)
 {
 
     glActiveTexture(GL_TEXTURE0);
@@ -586,7 +586,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
     }
 }
 
-void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx, std::ofstream& memStatsFile)
+void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 {
     std::future<void> isDoneProcessing;
     std::map<GLuint, GLuint> vbosToUpdate;
@@ -610,6 +610,8 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx, std::ofs
     lastCount = perfCount;
     if (false == QueryPerformanceFrequency(&perfFreq)) // counts per second
         throw new std::runtime_error("failed to query perf freq");
+
+    PROCESS_MEMORY_COUNTERS pmc = { 0 };
 
     // GO!
     while (TRUE)
@@ -857,7 +859,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx, std::ofs
 
             glBindVertexArray(lpctx->vao);
 
-            RenderScene(lpctx, posLocation3, lookVector, memStatsFile);
+            RenderScene(lpctx, posLocation3, lookVector);
 
             // render model
             for (const auto& modelVboItem : rctx->modelVboData)
@@ -905,7 +907,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx, std::ofs
 
             glBindVertexArray(lpctx->vao);
 
-            RenderScene(lpctx, posLocation3, lookVector, memStatsFile);
+            RenderScene(lpctx, posLocation3, lookVector);
 
             // render model
             rctx->voxcProgram.SetUniform1i("useDiffuseColor", 1);
@@ -1004,7 +1006,6 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx, std::ofs
         sprintf_s(textBuffer, 256, "memory load %i%%", memstat.dwMemoryLoad);
         RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (8.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
 
-        PROCESS_MEMORY_COUNTERS pmc = { 0 };
         GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
         memset(textBuffer, 0, 256);
         sprintf_s(textBuffer, 256, "process mem %lli bytes", pmc.WorkingSetSize);
@@ -1049,6 +1050,33 @@ void load_textures(VOXC_WINDOW_CONTEXT* lpctx)
     // after this, there will be one block group
     // for each texture 
     load_textures_2(tsArray, 6, lpctx);
+}
+
+void render_message_on_screen(MESSAGE_CONTEXT* mctx, const char* msg)
+{
+    char textBuffer[256];
+    glViewport(0, 0, mctx->lpctx->screenWidth, mctx->lpctx->screenHeight);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+    memset(textBuffer, 0, 256);
+    sprintf_s(textBuffer, 256, "%s", msg);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    RenderText(
+        mctx->lpctx,
+        *mctx->prog,
+        textBuffer, 
+        0.0f, 
+        mctx->lpctx->screenHeight - (14.0f + (1.0f * 14.0f)),
+        0.3f, 
+        glm::vec3(0.5, 0.8f, 0.2f), 
+        mctx->fontVAO,
+        mctx->fontVBO,
+        *mctx->Characters);
+    glDisable(GL_BLEND);
+    glFlush();
+    if (false == SwapBuffers(mctx->hdc))
+        throw new std::runtime_error("failed to swap buffers");
+    glUseProgram(0);
 }
 
 DWORD WINAPI RenderThread(LPVOID parm)
@@ -1099,15 +1127,34 @@ DWORD WINAPI RenderThread(LPVOID parm)
     OpenGlProgram fontProg("vfont.txt", "ffont.txt");
     OpenGlProgram selCubeProg("selcube.vert", "selcube.frag");
 
+    // freetype init
+    GLuint fontVAO = 0;
+    GLuint fontVBO = 0;
+    std::map<char, Character> Characters;
+    setupFreeType(Characters, &fontVAO, &fontVBO);
+
+    MESSAGE_CONTEXT mctx = { 0 };
+    mctx.Characters = &Characters;
+    mctx.fontVAO = fontVAO;
+    mctx.fontVBO = fontVBO;
+    mctx.hdc = hdc;
+    mctx.lpctx = lpctx;
+    mctx.prog = &fontProg;
+
+    // now we can render messages
+    render_message_on_screen(&mctx, "Preparing...");
+
     GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
+    render_message_on_screen(&mctx, "Loading textures...");
     load_textures(lpctx);
 
     GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // physics: must be done before create vertex buffer
+    render_message_on_screen(&mctx, "Initializing physics...");
     glm::vec3 startingPosition(8, 8, 260);
     initPhysics(lpctx, startingPosition);
     // end physics
@@ -1116,8 +1163,9 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // vertex buffer
+    render_message_on_screen(&mctx, "Creating vertex buffer...");
     {
-        CreateVertexBuffer(lpctx);
+        create_vertex_buffer(lpctx, render_message_on_screen, &mctx);
 
         //for (const auto& vertex_buffer : lpctx->vertex_buffers)
         //{
@@ -1172,6 +1220,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // model
+    render_message_on_screen(&mctx, "Loading model...");
     std::vector<VBO_DATA> modelVboData;
     LoadModel(modelVboData);
 
@@ -1179,6 +1228,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // create the vertex array
+    render_message_on_screen(&mctx, "Creating vertex array specs...");
     glCreateVertexArrays(1, &lpctx->vao);
     glVertexArrayAttribBinding(lpctx->vao, 0, 0);
     glVertexArrayAttribBinding(lpctx->vao, 1, 0);
@@ -1197,6 +1247,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // create a frame buffer for shadows 
+    render_message_on_screen(&mctx, "Creating shadow buffer...");
     GLuint depthMapFBO = 0;
     glGenFramebuffers(1, &depthMapFBO);
     HANDLE_GL_ERROR();
@@ -1232,6 +1283,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // vbo for 2d quad
+    render_message_on_screen(&mctx, "Creating quad buffer for shadow thumbnail...");
     OpenGlVertexBuffer<VERTEX4> quadBuffer(lpctx->vao, (GLsizei)6, &quadVerts[0]);
     quadBuffer.setTextureInfo(GL_TEXTURE0, GL_TEXTURE_2D, depthMap);
 
@@ -1239,6 +1291,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // selection cube vertex buffer
+    render_message_on_screen(&mctx, "Creating selection cube...");
     std::vector<VERTEX4> zeroCubeVertices;
     getZeroCubeVertices(zeroCubeVertices);
     OpenGlVertexBuffer<VERTEX4> zeroCubeBuffer(lpctx->vao, (GLsizei)zeroCubeVertices.size(), zeroCubeVertices.data());
@@ -1248,16 +1301,11 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // add initial set of actors based on starting location
+    render_message_on_screen(&mctx, "Adding initial actors...");
     addActorsForCurrentLocation(lpctx,
         (int64_t)startingPosition.x,
         (int64_t)startingPosition.y,
         (int64_t)startingPosition.z);
-
-    // freetype init
-    GLuint fontVAO = 0;
-    GLuint fontVBO = 0;
-    std::map<char, Character> Characters;
-    setupFreeType(Characters, &fontVAO, &fontVBO);
 
     // final prep
     glClearColor(0.9f, 0.9f, 1.0f, 1.0f);
@@ -1278,7 +1326,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
         depthMap, selCubeProg, zeroCubeBuffer, fontProg, fontVAO, fontVBO,
         Characters, ddProg, quadBuffer
     };
-    render_loop(lpctx, &rctx, memStatsFile);
+    render_loop(lpctx, &rctx);
 
     memStatsFile << "end render loop" << std::endl;
 

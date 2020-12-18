@@ -400,7 +400,6 @@ extern wglChoosePixelFormatARBFN wglChoosePixelFormatARB;
 DWORD WINAPI RenderThread(LPVOID parm);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void loadExtensionFunctions();
-void CreateVertexBuffer(VOXC_WINDOW_CONTEXT*);
 void update_surrounding_blocks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc); 
 void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition);
 void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx);
@@ -441,6 +440,20 @@ void generate_terrain(BYTE* pixels);
 
 #include "OpenGlProgram.h"
 #include "OpenGlVertexBuffer.h"
+
+typedef struct _MESSAGE_CONTEXT
+{
+    VOXC_WINDOW_CONTEXT* lpctx = nullptr;
+    OpenGlProgram* prog = nullptr;
+    GLuint fontVAO = 0;
+    GLuint fontVBO = 0;
+    std::map<char, Character>* Characters = nullptr;
+    HDC hdc = 0;
+} MESSAGE_CONTEXT;
+
+typedef void (*RENDER_MSG_ON_SCREEN_FNPTR)(MESSAGE_CONTEXT* mctx, const char* msg);
+
+void create_vertex_buffer(VOXC_WINDOW_CONTEXT* lpctx, RENDER_MSG_ON_SCREEN_FNPTR msgfn, MESSAGE_CONTEXT* mctx);
 
 typedef struct _RENDER_LOOP_CONTEXT
 {

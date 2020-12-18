@@ -15,7 +15,7 @@ const GLuint plusyVertexIndices[6] = { 12, 13, 14, 14, 15, 12 };
 const GLuint minusyVertexIndices[6] = { 16, 17, 18, 18, 19, 16 };
 const GLuint bottomVertexIndices[6] = { 20, 21, 22, 22, 23, 20 };
 
-const int8_t TreeLeaves[] = {
+const uint8_t TreeLeaves[] = {
     0,0,0,0,0,0,0,
     0,0,1,1,1,0,0,
     0,1,0,0,0,1,0,
@@ -339,14 +339,15 @@ void getZeroCubeVertices(std::vector<VERTEX4>& zeroCubeVerts)
 
 // update the exists and alpha mask for a block adjacent to another block
 // target side is an exists flag
-void update_mask_surround(VOXC_WINDOW_CONTEXT * lpctx, int64_t srcx, int64_t srcy, int64_t srcz, int64_t indexToUpdate,
-    uint64_t existsFlag)
+void update_mask_surround(VOXC_WINDOW_CONTEXT * lpctx, uint32_t srcx, uint32_t srcy, uint32_t srcz, 
+    uint32_t ix, uint32_t iy, uint32_t iz,
+    uint16_t existsFlag)
 {
-    uint64_t alphaFlag = existsFlag << 6ll;
-    int8_t srcBlockType = block_get_regtype(lpctx, srcx, srcy, srcz, false);
+    uint16_t alphaFlag = existsFlag << 6ll;
+    uint8_t srcBlockType = block_get_regtype(lpctx, srcx, srcy, srcz);
     //int8_t existsMaskToUpdate = block_get_surround_exists_mask(lpctx, indexToUpdate);
     //int8_t alphaMaskToUpdate = block_get_surround_alpha_mask(lpctx, indexToUpdate);
-    uint64_t flags = block_get_flags(lpctx, indexToUpdate);
+    uint16_t flags = block_get_flags(lpctx, ix, iy, iz);
     if (srcBlockType) {
         SET_BIT(flags, existsFlag);
         std::vector<BLOCK_REG>::iterator ifb = std::find_if(
@@ -368,36 +369,36 @@ void update_mask_surround(VOXC_WINDOW_CONTEXT * lpctx, int64_t srcx, int64_t src
     }
     //block_set_surround_exists_mask(lpctx, indexToUpdate, existsMaskToUpdate);
     //block_set_surround_alpha_mask(lpctx, indexToUpdate, alphaMaskToUpdate);
-    block_set_flags(lpctx, indexToUpdate, flags);
+    block_set_flags(lpctx, ix, iy, iz, flags);
 }
 
 // update exists and alpha mask for all blocks surrounding a block
 // TODO update this to allow specifying only one side to update (optimization)
 // THE SIDE TO UPDATE FLAG IS AN EXISTS FLAG
-void update_masks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
-    uint8_t sideToUpdate)
+void update_masks(VOXC_WINDOW_CONTEXT* lpctx, uint32_t xc, uint32_t yc, uint32_t zc,
+    uint16_t sideToUpdate)
 {
 
-    if (sideToUpdate > 0) printf("masks: updating face %i only\n", sideToUpdate);
+    //if (sideToUpdate > 0) printf("masks: updating face %i only\n", sideToUpdate);
 
-    if (sideToUpdate > 0) {
-        int8_t blockType = block_get_regtype(lpctx, xc, yc, zc, true);
-        printf("masks: %i %i %i block type is %i\n", xc, yc, zc, blockType);
-    }
+    //if (sideToUpdate > 0) {
+        //uint8_t blockType = block_get_regtype(lpctx, xc, yc, zc);
+        //printf("masks: %i %i %i block type is %i\n", xc, yc, zc, blockType);
+    //}
 
-    int64_t idx = GRIDIDX(xc, yc, zc);
+    //int64_t idx = GRIDIDX(xc, yc, zc);
     if(sideToUpdate == 0 || sideToUpdate == EXISTS_ON_TOP) 
-        if (zc < (Z_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc, yc, zc + 1, idx, EXISTS_ON_TOP);
+        if (zc < (Z_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc, yc, zc + 1, xc, yc, zc, EXISTS_ON_TOP);
     if (sideToUpdate == 0 || sideToUpdate == EXISTS_ON_BOTTOM)
-        if (zc > 0) update_mask_surround(lpctx, xc, yc, zc - 1, idx, EXISTS_ON_BOTTOM);
+        if (zc > 0) update_mask_surround(lpctx, xc, yc, zc - 1, xc, yc, zc, EXISTS_ON_BOTTOM);
     if (sideToUpdate == 0 || sideToUpdate == EXISTS_PLUS_X)
-        if (xc < (X_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc + 1, yc, zc, idx, EXISTS_PLUS_X);
+        if (xc < (X_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc + 1, yc, zc, xc, yc, zc, EXISTS_PLUS_X);
     if (sideToUpdate == 0 || sideToUpdate == EXISTS_MINUS_X)
-        if (xc > 0) update_mask_surround(lpctx, xc - 1, yc, zc, idx, EXISTS_MINUS_X);
+        if (xc > 0) update_mask_surround(lpctx, xc - 1, yc, zc, xc, yc, zc, EXISTS_MINUS_X);
     if (sideToUpdate == 0 || sideToUpdate == EXISTS_PLUS_Y)
-        if (yc < (Y_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc, yc + 1, zc, idx, EXISTS_PLUS_Y);
+        if (yc < (Y_GRID_EXTENT - 1)) update_mask_surround(lpctx, xc, yc + 1, zc, xc, yc, zc, EXISTS_PLUS_Y);
     if (sideToUpdate == 0 || sideToUpdate == EXISTS_MINUS_Y)
-        if (yc > 0) update_mask_surround(lpctx, xc, yc - 1, zc, idx, EXISTS_MINUS_Y);
+        if (yc > 0) update_mask_surround(lpctx, xc, yc - 1, zc, xc, yc, zc, EXISTS_MINUS_Y);
 }
 
 void add_vertex(VOXC_WINDOW_CONTEXT* lpctx, BLOCK_REG& fndBlock, uint32_t textureIndexConst, 
@@ -498,16 +499,16 @@ void add_vertex(VOXC_WINDOW_CONTEXT* lpctx, BLOCK_REG& fndBlock, uint32_t textur
 
 // THE SIDE TO UPDATE FLAG IS AN EXISTS FLAG
 int update_faces(VOXC_WINDOW_CONTEXT* lpctx,
-    int64_t xc, int64_t yc, int64_t zc,
+    uint32_t xc, uint32_t yc, uint32_t zc,
     uint8_t sideToUpdate,
     std::map <GLuint, std::vector<VERTEX4>>& vertices)
 {
 
-    int64_t idx = GRIDIDX(xc, yc, zc);
+    //int64_t idx = GRIDIDX(xc, yc, zc);
     //int16_t gridLocationId = VERTEX_BLOCK_ID(xc, yc, zc);
     //glm::u8vec4 blockId = glm::u8vec4(0, xc, yc, zc);
 
-    int8_t blockType = block_get_regtype(lpctx, idx, false);
+    uint8_t blockType = block_get_regtype(lpctx, xc, yc, zc);
 
     //if (sideToUpdate > 0) {
     //    printf("faces: %i %i %i %i block type is %i\n", idx, xc, yc, zc, blockType);
@@ -525,7 +526,7 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx,
         glm::mat4 xlate = glm::translate(glm::mat4(1.0f), translateVector);
 
         // get the existing masks
-        uint64_t flags = block_get_flags(lpctx, idx);
+        uint16_t flags = block_get_flags(lpctx, xc, yc, zc);
 
         // find the registry information for block type
         std::vector<BLOCK_REG>::iterator ifoundBlock = std::find_if(
@@ -657,13 +658,16 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx,
         }
 
         // if any faces are set
-        if ((flags & FACES_ALL) && block_get_actor(lpctx, idx) == NULL)
+        //if ((flags & FACES_ALL) && block_get_actor(lpctx, idx) == NULL)
+        if ((flags & FACES_ALL) && block_get_actor(lpctx, xc, yc, zc) == NULL)
         {
-            block_create_new_actor(lpctx, idx, xc, yc, zc);
+            //block_create_new_actor(lpctx, idx, xc, yc, zc);
+            block_create_new_actor(lpctx, xc, yc, zc, (float)xc, (float)yc, (float)zc);
         }
 
         //block_set_face_mask(lpctx, idx, faceMask);
-        block_set_flags(lpctx, idx, flags);
+        //block_set_flags(lpctx, idx, flags);
+        block_set_flags(lpctx, xc, yc, zc, flags);
     }
 
     return facesAdded;
@@ -680,13 +684,13 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 
     printf("assigning block types\n");
     // assign blocks to level 0
-    for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
-        for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
+    for (uint32_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
+        for (uint32_t xc = 0; xc < X_GRID_EXTENT; xc++) {
 
             int h = pixels[(yc * texWidth) + xc];
 
             if (h < 1) h = 1;
-            for (int64_t zc = 0; zc < h; zc++) {
+            for (uint32_t zc = 0; zc < h; zc++) {
                 if(zc == (h - 1))
                 {
                     block_set_regtype(lpctx, xc, yc, zc, REG_DIRTGRASS);
@@ -706,24 +710,28 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                 }
                 else if (rand() % 200 == 1) {
                     // tree trunk
-                    for (uint64_t th = 0; th < 6; th++) {
+                    for (uint32_t th = 0; th < 6; th++) {
                         if ((h + th) < Z_GRID_EXTENT) {
                             if (th == 5) {
                                 // the top of the tree (leaves)
                                 //block_set_type(lpctx, xc, yc, h + th, REG_TREELEAVES);
-                                for (int64_t tlz = 1; tlz < 6; tlz++) {
+                                for (uint32_t tlz = 1; tlz < 6; tlz++) {
                                     if (tlz < Z_GRID_EXTENT) {
-                                        for (int64_t ly = yc - 3; ly < yc + 4; ly++) {
+                                        for (uint32_t ly = yc - 3; ly < yc + 4; ly++) {
                                             if (ly > 0 && ly < Y_GRID_EXTENT) {
-                                                int64_t tly = ly - (yc - 3);
-                                                for (int64_t lx = xc - 3; lx < xc + 4; lx++) {
+                                                uint32_t tly = ly - (yc - 3);
+                                                for (uint32_t lx = xc - 3; lx < xc + 4; lx++) {
                                                     if (lx > 0 && lx < X_GRID_EXTENT)
                                                     {
-                                                        int64_t tlx = lx - (xc - 3);
+                                                        uint32_t tlx = lx - (xc - 3);
                                                         if (TreeLeaves[(tlz * 7 * 7) + (tly * 7) + tlx] == 1)
                                                         {
-                                                            int64_t lidx = GRIDIDX(lx, ly, h + th + (tlz - 1));
-                                                            if (block_get_regtype(lpctx, lidx, false) == 0) block_set_regtype(lpctx, lidx, REG_TREELEAVES);
+                                                            //int64_t lidx = GRIDIDX(lx, ly, h + th + (tlz - 1));
+                                                            //if (block_get_regtype(lpctx, lidx, false) == 0) block_set_regtype(lpctx, lidx, REG_TREELEAVES);
+                                                            if (block_get_regtype(lpctx, lx, ly, h + th + (tlz - 1)) == REG_AIR)
+                                                            {
+                                                                block_set_regtype(lpctx, lx, ly, h + th + (tlz - 1), REG_TREELEAVES);
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -735,17 +743,21 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
                             else if (th == 4)
                             {
                                 block_set_regtype(lpctx, xc, yc, h + th, REG_TREETRUNK);
-                                for (int64_t ly = yc - 3; ly < yc + 4; ly++) {
+                                for (uint32_t ly = yc - 3; ly < yc + 4; ly++) {
                                     if (ly > 0 && ly < Y_GRID_EXTENT) {
-                                        int64_t tly = ly - (yc - 3);
-                                        for (int64_t lx = xc - 3; lx < xc + 4; lx++) {
+                                        uint32_t tly = ly - (yc - 3);
+                                        for (uint32_t lx = xc - 3; lx < xc + 4; lx++) {
                                             if (lx > 0 && lx < X_GRID_EXTENT)
                                             {
-                                                int64_t tlx = lx - (xc - 3);
+                                                uint32_t tlx = lx - (xc - 3);
                                                 if (TreeLeaves[(tly * 7) + tlx] == 1)
                                                 {
-                                                    int64_t lidx = GRIDIDX(lx, ly, h + th);
-                                                    if(block_get_regtype(lpctx, lidx, false) == 0) block_set_regtype(lpctx, lidx, REG_TREELEAVES);
+                                                    //int64_t lidx = GRIDIDX(lx, ly, h + th);
+                                                    //if(block_get_regtype(lpctx, lidx, false) == 0) block_set_regtype(lpctx, lidx, REG_TREELEAVES);
+                                                    if (block_get_regtype(lpctx, lx, ly, h + th) == REG_AIR)
+                                                    {
+                                                        block_set_regtype(lpctx, lx, ly, h + th, REG_TREELEAVES);
+                                                    }
                                                 }
                                             }
                                         }
@@ -766,17 +778,32 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
 
     stbi_image_free(pixels);
 
-    printf("assigning surround values\n");
-    for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
-        for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
-            for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
-                // update all aides
-                update_masks(lpctx, xc, yc, zc, 0);
-            }
-        }
+    //printf("assigning surround values\n");
+    //for (uint32_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
+    //    for (uint32_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
+    //        for (uint32_t xc = 0; xc < X_GRID_EXTENT; xc++) {
+    //            // update all aides
+    //            update_masks(lpctx, xc, yc, zc, 0);
+    //        }
+    //    }
+    //}
+
+    //uint32_t block_compute_block_id(uint32_t x, uint32_t y, uint32_t z)
+    //{
+    //    uint32_t g = ((y >> 8) << 4) + (x >> 8);
+    //    uint32_t blockId = COMPUTE_BLOCK_ID(g, x % 256, y % 256, z % 256);
+    //}
+
+    //glm::u32vec3 block_compute_position(uint32_t blockId)
+
+    std::unordered_map<uint32_t, BLOCK_ENTITY>::iterator ii = lpctx->blockVector.begin();
+    for (; ii != lpctx->blockVector.end(); ++ii)
+    {
+        glm::u32vec3 upos = block_compute_position(ii->first);
+        update_masks(lpctx, upos.x, upos.y, upos.z, 0);
     }
 
-    printf("creating vertex array and physics actors\n");
+    //printf("creating vertex array and physics actors\n");
     //for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
     //    for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
     //        for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
@@ -785,26 +812,26 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
     //    }
     //}
 
-    for (int64_t zz = 0; zz < Z_GRID_EXTENT; zz += 16)
+    for (uint32_t zz = 0; zz < Z_GRID_EXTENT; zz += 16)
     {
-        for (int64_t yy = 0; yy < Y_GRID_EXTENT; yy += 16)
+        for (uint32_t yy = 0; yy < Y_GRID_EXTENT; yy += 16)
         {
-            for (int64_t xx = 0; xx < X_GRID_EXTENT; xx += 16)
+            for (uint32_t xx = 0; xx < X_GRID_EXTENT; xx += 16)
             {
 
                 VBLOCK_16 v16;
 
                 std::map <GLuint, std::vector<VERTEX4>> vertices;
-                for (int64_t zc = zz; zc < zz + 16; zc++) {
-                    for (int64_t yc = yy; yc < yy + 16; yc++) {
-                        for (int64_t xc = xx; xc < xx + 16; xc++) {
+                for (uint32_t zc = zz; zc < zz + 16; zc++) {
+                    for (uint32_t yc = yy; yc < yy + 16; yc++) {
+                        for (uint32_t xc = xx; xc < xx + 16; xc++) {
                             // get vertices of faces
                             update_faces(lpctx, xc, yc, zc, 0, vertices);
                         }
                     }
                 }
 
-                uint64_t nverts = 0;
+                uint32_t nverts = 0;
                 for (const auto& vItem : vertices) nverts += vItem.second.size();
                 if (nverts > 0) {
 

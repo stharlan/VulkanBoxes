@@ -146,6 +146,7 @@
 #include <vector>
 #include <chrono>
 #include <map>
+#include <unordered_map>
 #include <string>
 #include <algorithm>
 #include <future>
@@ -254,8 +255,8 @@ typedef struct _BLOCK_ENTITY
 
 typedef struct _BLOCK_REG
 {
-    int64_t regType = 0;
-    int64_t textureIndex[6] = { 0,0,0,0,0,0 };
+    uint8_t regType = 0;
+    uint32_t textureIndex[6] = { 0,0,0,0,0,0 };
     BOOL isTransparent = FALSE;
 } BLOCK_REG, * PBLOCK_REG;
 
@@ -289,6 +290,8 @@ typedef struct _VBLOCK_16 {
     std::vector<VBLOCK_SUBVERT> subverts;
 } VBLOCK_16;
 
+typedef std::pair<uint32_t, BLOCK_ENTITY> BLOCK_MAP_ENTRY;
+
 typedef struct _VOXC_WINDOW_CONTEXT
 {
     HGLRC hglrc;
@@ -300,8 +303,9 @@ typedef struct _VOXC_WINDOW_CONTEXT
     float vz = 0.0f;
     float elevation = 0.0f;
     float azimuth = 0.0f;
-    BLOCK_ENTITY* lpBlockEntities = NULL;
-    int64_t numEntities = 0;
+    //BLOCK_ENTITY* lpBlockEntities = NULL;
+    std::unordered_map<uint32_t,BLOCK_ENTITY> blockVector;
+    //int64_t numEntities = 0;
     //std::vector<VERTEX_BUFFER_GROUP1> groups;
     //std::vector<VERTEX_BUFFER> vertex_buffers;
     std::map<int, int> tex_const_id_map;
@@ -401,20 +405,36 @@ void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition);
 void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx);
 void getZeroCubeVertices(std::vector<VERTEX4>& zeroCubeVerts);
 
-void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type);
-void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int8_t type);
-int8_t block_get_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z,bool);
-int8_t block_get_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t index,bool);
-void block_create_new_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t xc, int64_t yc, int64_t zc);
-physx::PxRigidStatic* block_get_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
-void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx);
+//void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type);
+//void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int8_t type);
+//int8_t block_get_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z,bool);
+//int8_t block_get_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t index,bool);
+//void block_create_new_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t xc, int64_t yc, int64_t zc);
+//physx::PxRigidStatic* block_get_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
+//void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx);
 
-void block_allocate(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z);
-void block_cleanup(VOXC_WINDOW_CONTEXT* lpctx);
+//void block_allocate(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z);
+//void block_cleanup(VOXC_WINDOW_CONTEXT* lpctx);
 //void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode);
-void block_release_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
-uint64_t block_get_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index);
-void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index, uint16_t value);
+//void block_release_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
+//uint64_t block_get_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index);
+//void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index, uint16_t value);
+
+void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, uint32_t x, uint32_t y, uint32_t z, uint8_t type);
+uint8_t block_get_regtype(VOXC_WINDOW_CONTEXT* lpctx, uint32_t x, uint32_t y, uint32_t z);
+uint8_t block_get_regtype(VOXC_WINDOW_CONTEXT* lpctx, uint32_t blockId);
+void block_create_new_actor(VOXC_WINDOW_CONTEXT* lpctx,
+    uint32_t x, uint32_t y, uint32_t z,
+    float xc, float yc, float zc);
+void block_release_actor(VOXC_WINDOW_CONTEXT* lpctx, uint32_t x, uint32_t y, uint32_t z);
+void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx);
+uint16_t block_get_flags(VOXC_WINDOW_CONTEXT* lpctx, uint32_t x, uint32_t y, uint32_t z);
+void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint32_t x, uint32_t y, uint32_t z, uint16_t flags);
+physx::PxRigidStatic* block_get_actor(VOXC_WINDOW_CONTEXT* lpctx, uint32_t x, uint32_t y, uint32_t z);
+void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint32_t blockId, uint16_t flags);
+uint16_t block_get_flags(VOXC_WINDOW_CONTEXT* lpctx, uint32_t blockId);
+uint32_t block_compute_block_id(uint32_t x, uint32_t y, uint32_t z);
+glm::u32vec3 block_compute_position(uint32_t blockId);
 
 #include "OpenGlProgram.h"
 #include "OpenGlVertexBuffer.h"

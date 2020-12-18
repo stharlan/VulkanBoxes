@@ -44,11 +44,13 @@ void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64
                     {
                         if (zbl >= 0 && zbl < Z_GRID_EXTENT)
                         {
-                            idx = GRIDIDX(xbl, ybl, zbl);
-                            int64_t blockType = block_get_regtype(lpctx, idx, false);
-                            if (blockType == REG_DIRT || blockType == REG_DIRTGRASS) 
+                            //idx = GRIDIDX(xbl, ybl, zbl);
+                            //int64_t blockType = block_get_regtype(lpctx, idx, false);
+                            uint8_t regType = block_get_regtype(lpctx, xbl, ybl, zbl);
+                            if (regType == REG_DIRT || regType == REG_DIRTGRASS)
                             {
-                                physx::PxRigidStatic* lpActor = block_get_actor(lpctx, idx);
+                                //physx::PxRigidStatic* lpActor = block_get_actor(lpctx, idx);
+                                physx::PxRigidStatic* lpActor = block_get_actor(lpctx, xbl, ybl, zbl);
                                 if (lpActor != NULL)
                                 {
                                     lpctx->blocksAroundMe.push_back(lpActor);
@@ -292,7 +294,7 @@ void RenderText(VOXC_WINDOW_CONTEXT* lpctx, OpenGlProgram& prog, std::string tex
     HANDLE_GL_ERROR();
 }
 
-void RenderScene(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3& pos)
+void RenderScene(VOXC_WINDOW_CONTEXT* lpctx, const glm::vec3& pos, const glm::vec3& look, std::ofstream& msf)
 {
 
     glActiveTexture(GL_TEXTURE0);
@@ -303,8 +305,12 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3& pos)
         int64_t voffset = 0;
         for (const auto& sv : dv.subverts)
         {
-            float dist = glm::length(sv.centroid - glm::vec2(pos));
-            if (dist < 256.0f)
+            glm::vec2 cen2pos = sv.centroid - glm::vec2(pos);
+            float dist = glm::length(cen2pos);
+            
+            float cen2pos_look_dotp = glm::dot(cen2pos, glm::vec2(look));
+
+            if (dist < 256.0f && cen2pos_look_dotp > -8.0f)
             {
                 glBindTexture(GL_TEXTURE_2D, sv.tex_id);
 
@@ -580,7 +586,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
     }
 }
 
-void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
+void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx, std::ofstream& memStatsFile)
 {
     std::future<void> isDoneProcessing;
     std::map<GLuint, GLuint> vbosToUpdate;
@@ -831,6 +837,10 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
         // render the shadow buffer
         glm::vec3 lightLooking = glm::vec3(pos.x - 100, pos.y - 100, pos.z + 100);
         glm::vec3 posLocation3 = glm::vec3(pos.x, pos.y, pos.z + 1.0f);
+        glm::vec3 lookVector(
+            (cosf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
+            (sinf(DEG2RAD(lpctx->azimuth)) * invSinfElevation),
+            sinfElevation);
         glm::vec3 lightDir = glm::normalize(posLocation3 - lightLooking);
         glm::mat4 lightView = glm::lookAt(lightLooking, posLocation3, glm::vec3(0.0f, 0.0f, 1.0f));
         glm::mat4 lightSpaceMatrix = rctx->lightProjection * lightView;
@@ -847,7 +857,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
             glBindVertexArray(lpctx->vao);
 
-            RenderScene(lpctx, posLocation3);
+            RenderScene(lpctx, posLocation3, lookVector, memStatsFile);
 
             // render model
             for (const auto& modelVboItem : rctx->modelVboData)
@@ -864,10 +874,6 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
         // configure player matrices (view and projection)
         // based on current location
-        glm::vec3 lookVector(
-            (cosf(DEG2RAD(lpctx->azimuth))* invSinfElevation),
-            (sinf(DEG2RAD(lpctx->azimuth))* invSinfElevation),
-            sinfElevation);
         glm::mat4 viewMatrix = glm::lookAt(
             posLocation3,
             posLocation3 + lookVector,
@@ -899,7 +905,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
 
             glBindVertexArray(lpctx->vao);
 
-            RenderScene(lpctx, posLocation3);
+            RenderScene(lpctx, posLocation3, lookVector, memStatsFile);
 
             // render model
             rctx->voxcProgram.SetUniform1i("useDiffuseColor", 1);
@@ -1272,7 +1278,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
         depthMap, selCubeProg, zeroCubeBuffer, fontProg, fontVAO, fontVBO,
         Characters, ddProg, quadBuffer
     };
-    render_loop(lpctx, &rctx);
+    render_loop(lpctx, &rctx, memStatsFile);
 
     memStatsFile << "end render loop" << std::endl;
 

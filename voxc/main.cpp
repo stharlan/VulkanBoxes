@@ -107,7 +107,7 @@ void setup(HINSTANCE hInstance, VOXC_WINDOW_CONTEXT* lpctx)
 
     lpctx->screenWidth = wr.right;
     lpctx->screenHeight = wr.bottom;
-    block_allocate(lpctx, X_GRID_EXTENT, Y_GRID_EXTENT, Z_GRID_EXTENT);
+    //block_allocate(lpctx, X_GRID_EXTENT, Y_GRID_EXTENT, Z_GRID_EXTENT);
 
     HWND hwnd = CreateWindowEx(
         dwExStyle,
@@ -183,7 +183,7 @@ void cleanup(VOXC_WINDOW_CONTEXT* lpctx)
     if (!ClipCursor(nullptr))
         throw new std::runtime_error("failed to release clipped cursor");
 
-    block_cleanup(lpctx);
+    //block_cleanup(lpctx);
 
 #ifdef _DEBUG
     int throw_away = getchar();

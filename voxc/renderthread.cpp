@@ -4,13 +4,13 @@
 // ISSUE: jump and hit ceiling, head goes out of map
 // ISSUE: select block ray is too low, raise it up
 
-const VERTEX3 quadVerts[] = {
-    { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0,0,0,0 } },
-    { { 1, 0.5, 0 },{ 1, 0 }, {0,0,0}, { 0,0,0,0 } },
-    { { 1, 1, 0 },{ 1, 1 }, {0,0,0}, { 0,0,0,0 } },
-    { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0}, { 0,0,0,0 } },
-    { { 1, 1, 0 },{ 1, 1 }, {0,0,0}, { 0,0,0,0 } },
-    { { 0.5, 1, 0 },{ 0, 1 }, {0,0,0}, { 0,0,0,0 } }
+const VERTEX4 quadVerts[] = {
+    { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0} },
+    { { 1, 0.5, 0 },{ 1, 0 }, {0,0,0} },
+    { { 1, 1, 0 },{ 1, 1 }, {0,0,0} },
+    { { 0.5, 0.5, 0 },{ 0, 0 }, {0,0,0} },
+    { { 1, 1, 0 },{ 1, 1 }, {0,0,0} },
+    { { 0.5, 1, 0 },{ 0, 1 }, {0,0,0} }
 };
 
 void addActorsForCurrentLocation(VOXC_WINDOW_CONTEXT* lpctx, int64_t xint, int64_t yint, int64_t zint)
@@ -223,9 +223,11 @@ void load_textures_2(TEXTURE_SPEC tsArray[], int numFilenames, VOXC_WINDOW_CONTE
         //lpctx->groups[i].vbo = 0;
         //lpctx->groups[i].vertices.clear();
         //lpctx->groups[i].vsize = 0;
+
+        lpctx->tex_const_id_map.insert(std::pair<int, int>(i, texids[i]));
     }
     
-    vmm_allocate_buffer(lpctx, texids);
+    //vmm_allocate_buffer(lpctx, texids);
 
 }
 
@@ -296,31 +298,58 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx)
     glActiveTexture(GL_TEXTURE0);
     HANDLE_GL_ERROR();
 
-    for (const auto& vertex_buffer : lpctx->vertex_buffers)    
+    for (const auto& dv : lpctx->drawVector)
     {
-        for (const auto& chunk : vertex_buffer.chunks)
+        int64_t vertsDrawn = 0;
+        for (const auto& sv : dv.subverts)
         {
-            if (chunk.num_vertices > 0) {
+            glBindTexture(GL_TEXTURE_2D, sv.tex_id);
 
-                glBindTexture(GL_TEXTURE_2D, chunk.texture_id);
-                HANDLE_GL_ERROR();
+            glVertexArrayVertexBuffer(
+                lpctx->vao,
+                0,
+                dv.vbo,
+                vertsDrawn * sizeof(VERTEX4),
+                sizeof(VERTEX4));
 
-                glVertexArrayVertexBuffer(
-                    lpctx->vao,
-                    0,
-                    vertex_buffer.vbo,
-                    chunk.boffset,
-                    sizeof(VERTEX3));
-                HANDLE_GL_ERROR();
+            glDrawArrays(GL_TRIANGLES, 0, sv.num_vertices);
 
-                glDrawArrays(GL_TRIANGLES, 0, chunk.num_vertices);
-                HANDLE_GL_ERROR();
-            }
+            vertsDrawn += sv.num_vertices;
         }
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);
     HANDLE_GL_ERROR();
+
+
+    //glActiveTexture(GL_TEXTURE0);
+    //HANDLE_GL_ERROR();
+
+    //for (const auto& vertex_buffer : lpctx->vertex_buffers)    
+    //{
+    //    for (const auto& chunk : vertex_buffer.chunks)
+    //    {
+    //        if (chunk.num_vertices > 0) {
+
+    //            glBindTexture(GL_TEXTURE_2D, chunk.texture_id);
+    //            HANDLE_GL_ERROR();
+
+    //            glVertexArrayVertexBuffer(
+    //                lpctx->vao,
+    //                0,
+    //                vertex_buffer.vbo,
+    //                chunk.boffset,
+    //                sizeof(VERTEX3));
+    //            HANDLE_GL_ERROR();
+
+    //            glDrawArrays(GL_TRIANGLES, 0, chunk.num_vertices);
+    //            HANDLE_GL_ERROR();
+    //        }
+    //    }
+    //}
+
+    //glBindTexture(GL_TEXTURE_2D, 0);
+    //HANDLE_GL_ERROR();
 
     //glActiveTexture(GL_TEXTURE0);
     //HANDLE_GL_ERROR();
@@ -495,7 +524,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
 
     for(int i=0; i<materials.size(); i++)
     {
-        std::vector<VERTEX3> vertices;
+        std::vector<VERTEX4> vertices;
         for (const auto& shape : shapes)
         {
             int64_t f = 0;
@@ -506,7 +535,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
                 int current_material_id = shape.mesh.material_ids[face];
                 if (current_material_id == i) {
 
-                    VERTEX3 v;
+                    VERTEX4 v;
                     v.vertex = tr * glm::vec4(
                         attrib.vertices[3 * index.vertex_index + 0],
                         attrib.vertices[3 * index.vertex_index + 1],
@@ -525,7 +554,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
                     );
                     //v.userData[0] = 0;
                     //v.userData[1] = 0;
-                    v.blockId = glm::u8vec4(0, 0, 0, 0);
+                    //v.blockId = glm::u8vec4(0, 0, 0, 0);
                     vertices.push_back(v);
                 }
                 f++;
@@ -537,7 +566,7 @@ void LoadModel(std::vector<VBO_DATA>& vboData)
             glCreateBuffers(1, &vboObject.vboId);
             HANDLE_GL_ERROR();
 
-            glNamedBufferStorage(vboObject.vboId, sizeof(VERTEX3) * vertices.size(), vertices.data(), 0);
+            glNamedBufferStorage(vboObject.vboId, sizeof(VERTEX4) * vertices.size(), vertices.data(), 0);
             HANDLE_GL_ERROR();
 
             vboObject.numVerts = (GLsizei)vertices.size();
@@ -820,7 +849,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
             // render model
             for (const auto& modelVboItem : rctx->modelVboData)
             {
-                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, sizeof(VERTEX3));
+                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, sizeof(VERTEX4));
 
                 glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
             }
@@ -876,7 +905,7 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
             {
                 rctx->voxcProgram.SetUniform4fv("diffuseColor", &modelVboItem.diffuseColor[0]);
 
-                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, sizeof(VERTEX3));
+                glVertexArrayVertexBuffer(lpctx->vao, 0, modelVboItem.vboId, 0, sizeof(VERTEX4));
 
                 glDrawArrays(GL_TRIANGLES, 0, modelVboItem.numVerts);
             }
@@ -935,35 +964,39 @@ void render_loop(VOXC_WINDOW_CONTEXT* lpctx, RENDER_LOOP_CONTEXT* rctx)
                 memset(textBuffer, 0, 256);
                 sprintf_s(textBuffer, 256, "HIT POS: %.1f %.1f %.1f", gp.p[0], gp.p[1], gp.p[2]);
                 RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (3.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
-                if (hitBlock != NULL)
-                {
-                    memset(textBuffer, 0, 256);
-                    sprintf_s(textBuffer, 256, "T: %i F: %i H: 0x%08x", hitBlock->regType, hitBlock->flags, (unsigned int)hitBlock->hashCode);
-                    RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (4.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
-                    memset(textBuffer, 0, 256);
-                    sprintf_s(textBuffer, 256, "GRIDLOC: %i %i %i",
-                        hitBlock->gridLocation.x,
-                        hitBlock->gridLocation.y,
-                        hitBlock->gridLocation.z);
-                    RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (5.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+                //if (hitBlock != NULL)
+                //{
+                    //memset(textBuffer, 0, 256);
+                    //sprintf_s(textBuffer, 256, "T: %i F: %i H: 0x%08x", hitBlock->regType, hitBlock->flags, (unsigned int)hitBlock->hashCode);
+                    //RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (4.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+                    //memset(textBuffer, 0, 256);
+                    //sprintf_s(textBuffer, 256, "GRIDLOC: %i %i %i",
+                    //    hitBlock->gridLocation.x,
+                    //    hitBlock->gridLocation.y,
+                    //    hitBlock->gridLocation.z);
+                    //RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (5.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
 
-                    uint8_t regType = block_get_regtype(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z, false);
-                    memset(textBuffer, 0, 256);
-                    sprintf_s(textBuffer, 256, "REGTYPE: %i", regType);
-                    RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (6.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
-                }
+                    //uint8_t regType = block_get_regtype(lpctx, hitBlock->gridLocation.x, hitBlock->gridLocation.y, hitBlock->gridLocation.z, false);
+                    //memset(textBuffer, 0, 256);
+                    //sprintf_s(textBuffer, 256, "REGTYPE: %i", regType);
+                    //RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (6.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+                //}
             }
         }
-        int tctr = 0;
-        for (const auto& vb : lpctx->vertex_buffers)
-        {
-            for (const auto& chnk : vb.chunks)
-            {
-                memset(textBuffer, 0, 256);
-                sprintf_s(textBuffer, 256, "chnk %i perc free %.1f", chnk.texture_id, (float)chnk.bfree * 100.0f / (float)chnk.blength);
-                RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + ((7.0f + (tctr++)) * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
-            }
-        }
+
+        memset(textBuffer, 0, 256);
+        sprintf_s(textBuffer, 256, "draw vector has %i items", lpctx->drawVector.size());
+        RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + (7.0f * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+        //int tctr = 0;
+        //for (const auto& vb : lpctx->vertex_buffers)
+        //{
+        //    for (const auto& chnk : vb.chunks)
+        //    {
+        //        memset(textBuffer, 0, 256);
+        //        sprintf_s(textBuffer, 256, "chnk %i perc free %.1f", chnk.texture_id, (float)chnk.bfree * 100.0f / (float)chnk.blength);
+        //        RenderText(lpctx, rctx->fontProg, textBuffer, 0.0f, lpctx->screenHeight - (14.0f + ((7.0f + (tctr++)) * 14.0f)), 0.3f, glm::vec3(0.5, 0.8f, 0.2f), rctx->fontVAO, rctx->fontVBO, rctx->Characters);
+        //    }
+        //}
 
         // render depth map
         rctx->ddProg.Use();
@@ -1042,7 +1075,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     load_textures(lpctx);
 
     // physics: must be done before create vertex buffer
-    glm::vec3 startingPosition(30, 30, 10);
+    glm::vec3 startingPosition(8, 8, 10);
     initPhysics(lpctx, startingPosition);
     // end physics
 
@@ -1050,15 +1083,15 @@ DWORD WINAPI RenderThread(LPVOID parm)
     {
         CreateVertexBuffer(lpctx);
 
-        for (const auto& vertex_buffer : lpctx->vertex_buffers)
-        {
-            glNamedBufferStorage(
-                vertex_buffer.vbo,
-                vertex_buffer.mem_size,
-                vertex_buffer.mem,
-                GL_DYNAMIC_STORAGE_BIT);
-            HANDLE_GL_ERROR();
-        }
+        //for (const auto& vertex_buffer : lpctx->vertex_buffers)
+        //{
+        //    glNamedBufferStorage(
+        //        vertex_buffer.vbo,
+        //        vertex_buffer.mem_size,
+        //        vertex_buffer.mem,
+        //        GL_DYNAMIC_STORAGE_BIT);
+        //    HANDLE_GL_ERROR();
+        //}
 
         //std::vector<GLuint> vbos(6);
         //glCreateBuffers(6, vbos.data());
@@ -1151,13 +1184,13 @@ DWORD WINAPI RenderThread(LPVOID parm)
     // end shadows
 
     // vbo for 2d quad
-    OpenGlVertexBuffer<VERTEX3> quadBuffer(lpctx->vao, (GLsizei)6, &quadVerts[0]);
+    OpenGlVertexBuffer<VERTEX4> quadBuffer(lpctx->vao, (GLsizei)6, &quadVerts[0]);
     quadBuffer.setTextureInfo(GL_TEXTURE0, GL_TEXTURE_2D, depthMap);
 
     // selection cube vertex buffer
-    std::vector<VERTEX3> zeroCubeVertices;
+    std::vector<VERTEX4> zeroCubeVertices;
     getZeroCubeVertices(zeroCubeVertices);
-    OpenGlVertexBuffer<VERTEX3> zeroCubeBuffer(lpctx->vao, (GLsizei)zeroCubeVertices.size(), zeroCubeVertices.data());
+    OpenGlVertexBuffer<VERTEX4> zeroCubeBuffer(lpctx->vao, (GLsizei)zeroCubeVertices.size(), zeroCubeVertices.data());
     zeroCubeVertices.clear();
 
     // add initial set of actors based on starting location
@@ -1219,10 +1252,15 @@ DWORD WINAPI RenderThread(LPVOID parm)
     //    }
     //}
 
-    for (const auto& vertex_buffer : lpctx->vertex_buffers)
+    //for (const auto& vertex_buffer : lpctx->vertex_buffers)
+    //{
+    //    glDeleteBuffers(1, &vertex_buffer.vbo);
+    //    free(vertex_buffer.mem);
+    //}
+
+    for (const auto& dv : lpctx->drawVector)
     {
-        glDeleteBuffers(1, &vertex_buffer.vbo);
-        free(vertex_buffer.mem);
+        glDeleteBuffers(1, &dv.vbo);
     }
 
     glDeleteVertexArrays(1, &lpctx->vao);

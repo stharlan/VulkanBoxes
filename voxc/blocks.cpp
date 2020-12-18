@@ -13,7 +13,7 @@ void block_allocate(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z)
 		for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
 			for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
 				int64_t index = GRIDIDX(xc, yc, zc);
-				lpctx->lpBlockEntities[index].gridLocation = glm::uvec3(xc, yc, zc);
+				//lpctx->lpBlockEntities[index].gridLocation = glm::uvec3(xc, yc, zc);
 			}
 		}
 	}
@@ -40,8 +40,8 @@ int8_t block_get_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64
 	if (debug == true)
 	{
 		BLOCK_ENTITY be = lpctx->lpBlockEntities[GRIDIDX(x, y, z)];
-		printf("block_get_regtype: hash: %lli %lli %lli %lli\n", x, y, z, be.hashCode);
-		printf("block_get_regtype: rigid: %lli %lli %lli %i\n", x, y, z, be.rigidStatic);		
+		//printf("block_get_regtype: hash: %lli %lli %lli %lli\n", x, y, z, be.hashCode);
+		//printf("block_get_regtype: rigid: %lli %lli %lli %i\n", x, y, z, be.rigidStatic);		
 	}
 	return lpctx->lpBlockEntities[GRIDIDX(x, y, z)].regType;
 }
@@ -51,8 +51,8 @@ int8_t block_get_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, bool debug=f
 	if (debug == true)
 	{
 		BLOCK_ENTITY be = lpctx->lpBlockEntities[index];
-		printf("block_get_regtype: hash: %lli %lli\n", index, be.hashCode);
-		printf("block_get_regtype: rigid: %lli %i\n", index, be.rigidStatic);
+		//printf("block_get_regtype: hash: %lli %lli\n", index, be.hashCode);
+		//printf("block_get_regtype: rigid: %lli %i\n", index, be.rigidStatic);
 	}
 	return lpctx->lpBlockEntities[index].regType;
 }
@@ -104,7 +104,7 @@ void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index, uint64_t value)
 	lpctx->lpBlockEntities[index].flags = value;
 }
 
-void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode)
-{
-	lpctx->lpBlockEntities[index].hashCode = hashCode;
-}
+//void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode)
+//{
+//	lpctx->lpBlockEntities[index].hashCode = hashCode;
+//}

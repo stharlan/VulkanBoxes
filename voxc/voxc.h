@@ -100,7 +100,7 @@
 // | ...       |
 // | 240 - 255 |
 // +-----------+
-#define COMPUTE_BLOCK_ID(g,x,y,z) ((g << 24) + (x << 16) + (y << 8) + z)
+//#define COMPUTE_BLOCK_ID(g,x,y,z) ((g << 24) + (x << 16) + (y << 8) + z)
 
 #define CLEAR_BIT(t,b) (t &= ~(b))
 #define SET_BIT(t,b) (t |= b)
@@ -112,7 +112,7 @@
 #define Z_GRID_EXTENT 256ll
 
 #define GRIDIDX(ix,iy,iz) (((iz) * X_GRID_EXTENT * Y_GRID_EXTENT) + ((iy) * X_GRID_EXTENT) + (ix))
-#define VERTEX_BLOCK_ID(X,Y,Z) (((X / 8) << 10) + ((Y / 8) << 5) + (Z / 8))
+//#define VERTEX_BLOCK_ID(X,Y,Z) (((X / 8) << 10) + ((Y / 8) << 5) + (Z / 8))
 
 #define EXISTS_ON_TOP    0x01
 #define EXISTS_PLUS_X    0x02
@@ -189,9 +189,9 @@ typedef struct _VERTEX
     glm::vec3 vertex;
     glm::vec2 texc;
     glm::vec3 norm;
-    glm::u8vec4 blockId;
+    //glm::u8vec4 blockId;
     //int64_t userData[2];
-} VERTEX3;
+} VERTEX4;
 
 // each vertex block will handle
 // a 8x8x8 block area (origin at 0,0,0)
@@ -204,31 +204,31 @@ typedef struct _VERTEX
 // y << 5 bits
 // z << 0 bits
 // that fits into a 16 bit number
-typedef struct _VERTEX_BLOCK
-{
-    std::vector<VERTEX3> vertices;
-    uint16_t gridLocationId;
-    GLuint vbo;
-    int64_t vsize;
-} VERTEX_BLOCK;
+//typedef struct _VERTEX_BLOCK
+//{
+//    std::vector<VERTEX3> vertices;
+//    uint16_t gridLocationId;
+//    GLuint vbo;
+//    int64_t vsize;
+//} VERTEX_BLOCK;
 
-typedef struct _VERTEX_BUFFER_GROUP1
-{
-    GLuint tid;
-    std::map<uint16_t, VERTEX_BLOCK> vertexBlocks;
-    //GLuint vbo;
-    //std::vector<VERTEX2> vertices;
-    //int64_t vsize;
-} VERTEX_BUFFER_GROUP1;
+//typedef struct _VERTEX_BUFFER_GROUP1
+//{
+//    GLuint tid;
+//    std::map<uint16_t, VERTEX_BLOCK> vertexBlocks;
+//    //GLuint vbo;
+//    //std::vector<VERTEX2> vertices;
+//    //int64_t vsize;
+//} VERTEX_BUFFER_GROUP1;
 
 // [X_GRID_EXTENT * Y_GRID_EXTENT * Z_GRID_EXTENT] ;
 typedef struct _BLOCK_ENTITY
 {
-    glm::uvec3 gridLocation;
+    //glm::uvec3 gridLocation;
     int8_t regType = 0; 
     physx::PxRigidStatic* rigidStatic = NULL;
     uint64_t flags;
-    int64_t hashCode = 0;
+    //int64_t hashCode = 0;
 } BLOCK_ENTITY, * PBLOCK_ENTITY;
 
 #define TEXTURE_INDEX_TOP 0
@@ -258,23 +258,34 @@ typedef struct _BLOCK_REG
     BOOL isTransparent = FALSE;
 } BLOCK_REG, * PBLOCK_REG;
 
-typedef struct _VERTEX_BUFFER_CHUNK
-{
-    GLuint texture_id = 0;
-    int64_t texture_const = 0;
-    int64_t boffset = 0;
-    int64_t blength = 0;
-    int64_t bfree = 0;
-    GLsizei num_vertices = 0;
-} VERTEX_BUFFER_CHUNK;
+//typedef struct _VERTEX_BUFFER_CHUNK
+//{
+//    GLuint texture_id = 0;
+//    int64_t texture_const = 0;
+//    int64_t boffset = 0;
+//    int64_t blength = 0;
+//    int64_t bfree = 0;
+//    GLsizei num_vertices = 0;
+//} VERTEX_BUFFER_CHUNK;
+//
+//typedef struct _VERTEX_BUFFER
+//{
+//    GLuint vbo = 0;
+//    BYTE* mem = nullptr;
+//    int64_t mem_size = 0;
+//    std::vector<VERTEX_BUFFER_CHUNK> chunks;
+//} VERTEX_BUFFER;
 
-typedef struct _VERTEX_BUFFER
+typedef struct _VBLOCK_SUBVERT
 {
+    GLuint tex_id = 0;
+    uint32_t num_vertices = 0;
+} VBLOCK_SUBVERT;
+
+typedef struct _VBLOCK_16 {
     GLuint vbo = 0;
-    BYTE* mem = nullptr;
-    int64_t mem_size = 0;
-    std::vector<VERTEX_BUFFER_CHUNK> chunks;
-} VERTEX_BUFFER;
+    std::vector<VBLOCK_SUBVERT> subverts;
+} VBLOCK_16;
 
 typedef struct _VOXC_WINDOW_CONTEXT
 {
@@ -290,7 +301,9 @@ typedef struct _VOXC_WINDOW_CONTEXT
     BLOCK_ENTITY* lpBlockEntities = NULL;
     int64_t numEntities = 0;
     //std::vector<VERTEX_BUFFER_GROUP1> groups;
-    std::vector<VERTEX_BUFFER> vertex_buffers;
+    //std::vector<VERTEX_BUFFER> vertex_buffers;
+    std::map<int, int> tex_const_id_map;
+    std::vector<VBLOCK_16> drawVector;
     float viewportRatio = 0.0f;
     bool isFullscreen = 0;
     int screenWidth = 0;
@@ -384,7 +397,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT*);
 void update_surrounding_blocks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc); 
 void initPhysics(VOXC_WINDOW_CONTEXT* lpctx, glm::vec3 startingPosition);
 void cleanupPhysics(VOXC_WINDOW_CONTEXT* lpctx);
-void getZeroCubeVertices(std::vector<VERTEX3>& zeroCubeVerts);
+void getZeroCubeVertices(std::vector<VERTEX4>& zeroCubeVerts);
 
 void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z, int8_t type);
 void block_set_regtype(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int8_t type);
@@ -396,7 +409,7 @@ void block_release_all_actors(VOXC_WINDOW_CONTEXT* lpctx);
 
 void block_allocate(VOXC_WINDOW_CONTEXT* lpctx, int64_t x, int64_t y, int64_t z);
 void block_cleanup(VOXC_WINDOW_CONTEXT* lpctx);
-void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode);
+//void block_set_hash_code(VOXC_WINDOW_CONTEXT* lpctx, int64_t index, int64_t hashCode);
 void block_release_actor(VOXC_WINDOW_CONTEXT* lpctx, int64_t index);
 uint64_t block_get_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index);
 void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint64_t index, uint64_t value);
@@ -417,15 +430,15 @@ typedef struct _RENDER_LOOP_CONTEXT
     OpenGlProgram& voxcProgram;
     GLuint depthMap;
     OpenGlProgram& selCubeProg;
-    OpenGlVertexBuffer<VERTEX3>& zeroCubeBuffer;
+    OpenGlVertexBuffer<VERTEX4>& zeroCubeBuffer;
     OpenGlProgram& fontProg;
     GLuint fontVAO;
     GLuint fontVBO;
     std::map<char, Character>& Characters;
     OpenGlProgram& ddProg;
-    OpenGlVertexBuffer<VERTEX3>& quadBuffer;
+    OpenGlVertexBuffer<VERTEX4>& quadBuffer;
 } RENDER_LOOP_CONTEXT;
 
-void vmm_allocate_buffer(VOXC_WINDOW_CONTEXT* lpctx, std::vector<GLuint> textureIds);
-int vmm_add_vertex(VOXC_WINDOW_CONTEXT* lpctx, int64_t textureConst, VERTEX3* vertex);
-void vmm_allocate_single_buffer(VOXC_WINDOW_CONTEXT* lpctx, GLuint textureId, int64_t texture_const);
+//void vmm_allocate_buffer(VOXC_WINDOW_CONTEXT* lpctx, std::vector<GLuint> textureIds);
+//int vmm_add_vertex(VOXC_WINDOW_CONTEXT* lpctx, int64_t textureConst, VERTEX4* vertex);
+//void vmm_allocate_single_buffer(VOXC_WINDOW_CONTEXT* lpctx, GLuint textureId, int64_t texture_const);

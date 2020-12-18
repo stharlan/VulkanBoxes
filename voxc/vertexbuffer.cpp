@@ -314,23 +314,23 @@ const glm::vec3 normals[40] = {
 //    return zeroCubeId;
 //}
 
-void getZeroCubeVertices(std::vector<VERTEX3>& zeroCubeVerts)
+void getZeroCubeVertices(std::vector<VERTEX4>& zeroCubeVerts)
 {
     glm::mat4 xz = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, -0.5f, -0.5f));
     glm::mat4 sc = glm::scale(glm::mat4(1.0f), glm::vec3(1.1f, 1.1f, 1.1f));
     //std::vector<VERTEX2> zeroCubeVerts;
     for (int i = 0; i < 6; i++) 
-        zeroCubeVerts.push_back({ sc * (xz * locs[topVertexIndices[i]]), texcrds[topVertexIndices[i]], normals[topVertexIndices[i]], {0,0,0,0} });
+        zeroCubeVerts.push_back({ sc * (xz * locs[topVertexIndices[i]]), texcrds[topVertexIndices[i]], normals[topVertexIndices[i]] });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[bottomVertexIndices[i]]), texcrds[bottomVertexIndices[i]], normals[bottomVertexIndices[i]], {0,0,0,0} });
+        zeroCubeVerts.push_back({ sc * (xz * locs[bottomVertexIndices[i]]), texcrds[bottomVertexIndices[i]], normals[bottomVertexIndices[i]] });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[plusxVertexIndices[i]]), texcrds[plusxVertexIndices[i]], normals[plusxVertexIndices[i]], {0,0,0,0} });
+        zeroCubeVerts.push_back({ sc * (xz * locs[plusxVertexIndices[i]]), texcrds[plusxVertexIndices[i]], normals[plusxVertexIndices[i]] });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[minusxVertexIndices[i]]), texcrds[minusxVertexIndices[i]], normals[minusxVertexIndices[i]], {0,0,0,0} });
+        zeroCubeVerts.push_back({ sc * (xz * locs[minusxVertexIndices[i]]), texcrds[minusxVertexIndices[i]], normals[minusxVertexIndices[i]] });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[plusyVertexIndices[i]]), texcrds[plusyVertexIndices[i]], normals[plusyVertexIndices[i]], {0,0,0,0} });
+        zeroCubeVerts.push_back({ sc * (xz * locs[plusyVertexIndices[i]]), texcrds[plusyVertexIndices[i]], normals[plusyVertexIndices[i]] });
     for (int i = 0; i < 6; i++)
-        zeroCubeVerts.push_back({ sc * (xz * locs[minusyVertexIndices[i]]), texcrds[minusyVertexIndices[i]], normals[minusyVertexIndices[i]], {0,0,0,0} });
+        zeroCubeVerts.push_back({ sc * (xz * locs[minusyVertexIndices[i]]), texcrds[minusyVertexIndices[i]], normals[minusyVertexIndices[i]] });
     //GLuint zeroCubeId = 0;
     //glCreateBuffers(1, &zeroCubeId);
     //glNamedBufferStorage(zeroCubeId, sizeof(VERTEX2) * 36, zeroCubeVerts.data(), 0);
@@ -400,51 +400,71 @@ void update_masks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc
         if (yc > 0) update_mask_surround(lpctx, xc, yc - 1, zc, idx, EXISTS_MINUS_Y);
 }
 
-void add_vertex(VOXC_WINDOW_CONTEXT* lpctx, BLOCK_REG& fndBlock, uint16_t gridLocationId,
-    glm::mat4& xlate, int64_t idx, uint32_t textureIndexConst, const GLuint vertexIndices[],
-    glm::u8vec4& blockId)
+void add_vertex(VOXC_WINDOW_CONTEXT* lpctx, BLOCK_REG& fndBlock, uint32_t textureIndexConst, 
+    glm::mat4& xlate, const GLuint vertexIndices[],
+    std::map <GLuint, std::vector<VERTEX4>>& vertices)
+    //(VOXC_WINDOW_CONTEXT* lpctx, BLOCK_REG& fndBlock,
+    //glm::mat4& xlate, int64_t idx, uint32_t textureIndexConst, const GLuint vertexIndices[],
+    //std::vector<VERTEX4>& vertices)
 {
     for (int64_t v = 0; v < 6; v++) {
         // TODO find out what vertex block this belongs to
         // vertex blocks will be 8x8x8 with the origin at zero
         // so block position will be x / 8, y / 8, z / 8
-        int64_t textureConst = fndBlock.textureIndex[textureIndexConst];
+        //int64_t textureConst = fndBlock.textureIndex[textureIndexConst];
 
-        VERTEX3 vtx;
-        vtx.blockId = blockId;
+        VERTEX4 vtx;
+        //vtx.blockId = blockId;
         vtx.vertex = glm::vec3(xlate * locs[vertexIndices[v]]);
         vtx.norm = normals[vertexIndices[v]];
         vtx.texc = texcrds[vertexIndices[v]];
-        int result = vmm_add_vertex(lpctx, textureConst, &vtx);
 
-        if (result == 1)
+        GLuint texId = lpctx->tex_const_id_map.at(fndBlock.textureIndex[textureIndexConst]);
+
+        std::map<GLuint, std::vector<VERTEX4>>::iterator viter = vertices.find(texId);
+        if (viter != vertices.end())
         {
-            // need new allocation
-            uint32_t numBuffers = lpctx->vertex_buffers.size();
-            for (int i = 0; i < numBuffers; i++)
-            {
-                std::vector<VERTEX_BUFFER_CHUNK>::iterator vbchnk = std::find_if(
-                    lpctx->vertex_buffers[i].chunks.begin(),
-                    lpctx->vertex_buffers[i].chunks.end(),
-                    [textureConst](const VERTEX_BUFFER_CHUNK& vbufch) {
-                        return (vbufch.texture_const == textureConst);
-                    }
-                );
-                if (vbchnk != lpctx->vertex_buffers[i].chunks.end())
-                {
-                    vmm_allocate_single_buffer(lpctx, vbchnk->texture_id, vbchnk->texture_const);
-                    result = vmm_add_vertex(lpctx, textureConst, &vtx);
-                    if (result != 0) throw std::runtime_error("failed to aded vertex after adding new chunk");
-                    i = numBuffers; // quit for
-                }
-            }
-            if (result == 1)
-            {
-                // can't find chunk with texture id
-                // shouldn't happen
-                throw new std::runtime_error("failed to find chunk with tex id");
-            }
+            // found it
+            viter->second.push_back(vtx);
         }
+        else {
+            // insert it
+            std::vector<VERTEX4> v = {vtx};
+            vertices.insert(std::pair < GLuint, std::vector<VERTEX4>>(texId, v));
+        }
+
+        //vertices.push_back(vtx);
+
+        //int result = vmm_add_vertex(lpctx, textureConst, &vtx);
+
+        //if (result == 1)
+        //{
+        //    // need new allocation
+        //    uint32_t numBuffers = lpctx->vertex_buffers.size();
+        //    for (int i = 0; i < numBuffers; i++)
+        //    {
+        //        std::vector<VERTEX_BUFFER_CHUNK>::iterator vbchnk = std::find_if(
+        //            lpctx->vertex_buffers[i].chunks.begin(),
+        //            lpctx->vertex_buffers[i].chunks.end(),
+        //            [textureConst](const VERTEX_BUFFER_CHUNK& vbufch) {
+        //                return (vbufch.texture_const == textureConst);
+        //            }
+        //        );
+        //        if (vbchnk != lpctx->vertex_buffers[i].chunks.end())
+        //        {
+        //            vmm_allocate_single_buffer(lpctx, vbchnk->texture_id, vbchnk->texture_const);
+        //            result = vmm_add_vertex(lpctx, textureConst, &vtx);
+        //            if (result != 0) throw std::runtime_error("failed to aded vertex after adding new chunk");
+        //            i = numBuffers; // quit for
+        //        }
+        //    }
+        //    if (result == 1)
+        //    {
+        //        // can't find chunk with texture id
+        //        // shouldn't happen
+        //        throw new std::runtime_error("failed to find chunk with tex id");
+        //    }
+        //}
 
         //VERTEX_BUFFER_GROUP1& group = lpctx->groups[textureIndex];
         //std::map<uint16_t, VERTEX_BLOCK>::iterator vBlock = group.vertexBlocks.find(gridLocationId);
@@ -477,34 +497,34 @@ void add_vertex(VOXC_WINDOW_CONTEXT* lpctx, BLOCK_REG& fndBlock, uint16_t gridLo
 }
 
 // THE SIDE TO UPDATE FLAG IS AN EXISTS FLAG
-int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc, uint8_t sideToUpdate)
+int update_faces(VOXC_WINDOW_CONTEXT* lpctx,
+    int64_t xc, int64_t yc, int64_t zc,
+    uint8_t sideToUpdate,
+    std::map <GLuint, std::vector<VERTEX4>>& vertices)
 {
 
     int64_t idx = GRIDIDX(xc, yc, zc);
-    int16_t gridLocationId = VERTEX_BLOCK_ID(xc, yc, zc);
-    glm::u8vec4 blockId = glm::u8vec4(0, xc, yc, zc);
+    //int16_t gridLocationId = VERTEX_BLOCK_ID(xc, yc, zc);
+    //glm::u8vec4 blockId = glm::u8vec4(0, xc, yc, zc);
 
     int8_t blockType = block_get_regtype(lpctx, idx, false);
 
-    if (sideToUpdate > 0) {
-        printf("faces: %i %i %i %i block type is %i\n", idx, xc, yc, zc, blockType);
-    }
+    //if (sideToUpdate > 0) {
+    //    printf("faces: %i %i %i %i block type is %i\n", idx, xc, yc, zc, blockType);
+    //}
 
     int facesAdded = 0;
 
     if (blockType)
     {
 
-        if (sideToUpdate > 0) printf("faces: updating face %i only\n", sideToUpdate);
+        //if (sideToUpdate > 0) printf("faces: updating face %i only\n", sideToUpdate);
 
         // create a transform
         glm::vec3 translateVector = glm::vec3(xc, yc, zc);
         glm::mat4 xlate = glm::translate(glm::mat4(1.0f), translateVector);
 
         // get the existing masks
-        //uint8_t existsMask = block_get_surround_exists_mask(lpctx, idx);
-        //uint8_t alphaMask = block_get_surround_alpha_mask(lpctx, idx);
-        //uint8_t faceMask = block_get_surround_alpha_mask(lpctx, idx);
         uint64_t flags = block_get_flags(lpctx, idx);
 
         // find the registry information for block type
@@ -520,7 +540,7 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
 
         BLOCK_REG& fndBlock = *ifoundBlock;
 
-        block_set_hash_code(lpctx, idx, idx);
+        //block_set_hash_code(lpctx, idx, idx);
 
         // logic:
         //   if no block on bottom, add a face
@@ -533,7 +553,9 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
                 if (!IS_BITSET(flags, FACE_ON_BOTTOM)) {
                     SET_BIT(flags, FACE_ON_BOTTOM);
                     // texture index bottom
-                    add_vertex(lpctx, fndBlock, gridLocationId, xlate, idx, TEXTURE_INDEX_BOTTOM, bottomVertexIndices, blockId);
+                    //add_vertex(lpctx, fndBlock, xlate, idx, TEXTURE_INDEX_BOTTOM, bottomVertexIndices, vertices);
+                    //add_vertex(lpctx, fndBlock, xlate, idx, TEXTURE_INDEX_BOTTOM, bottomVertexIndices, vertices);
+                    add_vertex(lpctx, fndBlock, TEXTURE_INDEX_BOTTOM, xlate, bottomVertexIndices, vertices);
                     facesAdded++;
                 }
             }
@@ -549,7 +571,8 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
                         //    glm::vec3(xlate * locs[topVertexIndices[v]]),
                         //    texcrds[topVertexIndices[v]],normals[topVertexIndices[v]], {idx,0}
                         //    });
-                        add_vertex(lpctx, fndBlock, gridLocationId, xlate, idx, TEXTURE_INDEX_TOP, topVertexIndices, blockId);
+                        //add_vertex(lpctx, fndBlock, xlate, idx, TEXTURE_INDEX_TOP, topVertexIndices, vertices);
+                        add_vertex(lpctx, fndBlock, TEXTURE_INDEX_TOP, xlate, topVertexIndices, vertices);
                     }
                     SET_BIT(flags, FACE_ON_TOP);
                     facesAdded++;
@@ -567,7 +590,8 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
                             //glm::vec3(xlate * locs[plusxVertexIndices[v]]),
                             //texcrds[plusxVertexIndices[v]],normals[plusxVertexIndices[v]], {idx,0}
                             //});
-                        add_vertex(lpctx, fndBlock, gridLocationId, xlate, idx, TEXTURE_INDEX_PLUSX, plusxVertexIndices, blockId);
+                        //add_vertex(lpctx, fndBlock, xlate, idx, TEXTURE_INDEX_PLUSX, plusxVertexIndices, vertices);
+                        add_vertex(lpctx, fndBlock, TEXTURE_INDEX_PLUSX, xlate, plusxVertexIndices, vertices);
                     }
                     SET_BIT(flags, FACE_PLUS_X);
                     facesAdded++;
@@ -585,7 +609,8 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
                         //    glm::vec3(xlate * locs[minusxVertexIndices[v]]),
                         //    texcrds[minusxVertexIndices[v]],normals[minusxVertexIndices[v]], {idx,0}
                         //    });
-                        add_vertex(lpctx, fndBlock, gridLocationId, xlate, idx, TEXTURE_INDEX_MINUSX, minusxVertexIndices, blockId);
+                        //add_vertex(lpctx, fndBlock, xlate, idx, TEXTURE_INDEX_MINUSX, minusxVertexIndices, vertices);
+                        add_vertex(lpctx, fndBlock, TEXTURE_INDEX_MINUSX, xlate, minusxVertexIndices, vertices);
                     }
                     SET_BIT(flags, FACE_MINUS_X);
                     facesAdded++;
@@ -603,7 +628,8 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
                         //    glm::vec3(xlate * locs[plusyVertexIndices[v]]),
                         //    texcrds[plusyVertexIndices[v]],normals[plusyVertexIndices[v]], {idx,0}
                         //    });
-                        add_vertex(lpctx, fndBlock, gridLocationId, xlate, idx, TEXTURE_INDEX_PLUSY, plusyVertexIndices, blockId);
+                        //add_vertex(lpctx, fndBlock, xlate, idx, TEXTURE_INDEX_PLUSY, plusyVertexIndices, vertices);
+                        add_vertex(lpctx, fndBlock, TEXTURE_INDEX_PLUSY, xlate, plusyVertexIndices, vertices);
                     }
                     SET_BIT(flags, FACE_PLUS_Y);
                     facesAdded++;
@@ -621,7 +647,8 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc,
                         //    glm::vec3(xlate * locs[minusyVertexIndices[v]]),
                         //    texcrds[minusyVertexIndices[v]],normals[minusyVertexIndices[v]], {idx,0}
                         //    });
-                        add_vertex(lpctx, fndBlock, gridLocationId, xlate, idx, TEXTURE_INDEX_MINUSY, minusyVertexIndices, blockId);
+                        //add_vertex(lpctx, fndBlock, xlate, idx, TEXTURE_INDEX_MINUSY, minusyVertexIndices, vertices);
+                        add_vertex(lpctx, fndBlock, TEXTURE_INDEX_MINUSY, xlate, minusyVertexIndices, vertices);
                     }
                     SET_BIT(flags, FACE_MINUS_Y);
                     facesAdded++;
@@ -677,7 +704,7 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
             //        // flower
             //        block_set_type(lpctx, xc, yc, h, 2);
                 }
-                else if (rand() % 1000 == 1) {
+                else if (rand() % 200 == 1) {
                     // tree trunk
                     for (uint64_t th = 0; th < 6; th++) {
                         if ((h + th) < Z_GRID_EXTENT) {
@@ -750,13 +777,74 @@ void CreateVertexBuffer(VOXC_WINDOW_CONTEXT* lpctx)
     }
 
     printf("creating vertex array and physics actors\n");
-    for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
-        for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
-            for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
-                update_faces(lpctx, xc, yc, zc, 0);
+    //for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
+    //    for (int64_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
+    //        for (int64_t xc = 0; xc < X_GRID_EXTENT; xc++) {
+    //            update_faces(lpctx, xc, yc, zc, 0);
+    //        }
+    //    }
+    //}
+
+    for (int64_t zz = 0; zz < 256; zz += 16)
+    {
+        for (int64_t yy = 0; yy < 256; yy += 16)
+        {
+            for (int64_t xx = 0; xx < 256; xx += 16)
+            {
+
+                VBLOCK_16 v16;
+
+                std::map <GLuint, std::vector<VERTEX4>> vertices;
+                for (int64_t zc = zz; zc < zz + 16; zc++) {
+                    for (int64_t yc = yy; yc < yy + 16; yc++) {
+                        for (int64_t xc = xx; xc < xx + 16; xc++) {
+                            // get vertices of faces
+                            update_faces(lpctx, xc, yc, zc, 0, vertices);
+                        }
+                    }
+                }
+
+                uint64_t nverts = 0;
+                for (const auto& vItem : vertices) nverts += vItem.second.size();
+                if (nverts > 0) {
+
+                    BYTE* mem = (BYTE*)malloc(nverts * sizeof(VERTEX4));
+                    memset(mem, 0, nverts * sizeof(VERTEX4));
+
+                    BYTE* mptr = mem;
+                    for (const auto& vItem : vertices)
+                    {
+                        memcpy(mptr, vItem.second.data(), vItem.second.size() * sizeof(VERTEX4));
+                        mptr += vItem.second.size() * sizeof(VERTEX4);
+                        VBLOCK_SUBVERT sv;
+                        sv.tex_id = vItem.first;
+                        sv.num_vertices = vItem.second.size();
+                        //lpctx->draw.subverts.push_back(sv);
+                        v16.subverts.push_back(sv);
+                    }
+
+                    // turn vertices into vbo
+                    // now I have a map by texture id with vertices
+                    // need to get some memory to put the vertices in
+                    // sort them by texture id and record
+                    // the texture id and offset in a list of structures
+                    // and store them in the vblock
+                    v16.vbo = 0;
+                    //glCreateBuffers(1, &lpctx->draw.vbo);
+                    //glNamedBufferStorage(lpctx->draw.vbo, nverts * sizeof(VERTEX4), mem, 0);
+                    glCreateBuffers(1, &v16.vbo);
+                    glNamedBufferStorage(v16.vbo, nverts * sizeof(VERTEX4), mem, 0);
+
+
+                    free(mem);
+
+                    lpctx->drawVector.push_back(v16);
+                }
+
             }
         }
     }
+
 }
 
 // side to update is opposide the offset
@@ -771,31 +859,31 @@ int64_t blocksToAddress[] = {
 
 void update_surrounding_blocks(VOXC_WINDOW_CONTEXT* lpctx, int64_t xc, int64_t yc, int64_t zc)
 {
-    printf("--update_surrounding_blocks--\n");
+    //printf("--update_surrounding_blocks--\n");
 
-    // update masks for this block
-    // surround mask needs to be updated
-    // alpha mask needs to be updated
-    update_masks(lpctx, xc, yc, zc, 0);
-    int64_t grididx = GRIDIDX(xc, yc, zc);
-    printf("%i - %i\n", grididx, block_get_regtype(lpctx, grididx, true));
+    //// update masks for this block
+    //// surround mask needs to be updated
+    //// alpha mask needs to be updated
+    //update_masks(lpctx, xc, yc, zc, 0);
+    //int64_t grididx = GRIDIDX(xc, yc, zc);
+    //printf("%i - %i\n", grididx, block_get_regtype(lpctx, grididx, true));
 
-    // update faces and mask for 'some' surrounding blocks
-    for (int i = 0; i < 6; i++)
-    {
-        int64_t xx = xc + blocksToAddress[i * 4];
-        if (xx < 0 || xx > (X_GRID_EXTENT - 1)) continue;
-        int64_t yy = yc + blocksToAddress[(i * 4) + 1];
-        if (yy < 0 || yy > (Y_GRID_EXTENT - 1)) continue;
-        int64_t zz = zc + blocksToAddress[(i * 4) + 2];
-        if (zz < 0 || zz > (Z_GRID_EXTENT - 1)) continue;
+    //// update faces and mask for 'some' surrounding blocks
+    //for (int i = 0; i < 6; i++)
+    //{
+    //    int64_t xx = xc + blocksToAddress[i * 4];
+    //    if (xx < 0 || xx > (X_GRID_EXTENT - 1)) continue;
+    //    int64_t yy = yc + blocksToAddress[(i * 4) + 1];
+    //    if (yy < 0 || yy > (Y_GRID_EXTENT - 1)) continue;
+    //    int64_t zz = zc + blocksToAddress[(i * 4) + 2];
+    //    if (zz < 0 || zz > (Z_GRID_EXTENT - 1)) continue;
 
-        uint8_t sideToUpdate = (uint8_t)blocksToAddress[(i * 4) + 3];
-        grididx = GRIDIDX(xx, yy, zz);
-        printf("%i - %i\n", grididx, block_get_regtype(lpctx, grididx, false));
-        update_masks(lpctx, xx, yy, zz, sideToUpdate);
-        int fa = update_faces(lpctx, xx, yy, zz, sideToUpdate);
-        printf("faces added = %i\n", fa);
-    }
+    //    uint8_t sideToUpdate = (uint8_t)blocksToAddress[(i * 4) + 3];
+    //    grididx = GRIDIDX(xx, yy, zz);
+    //    printf("%i - %i\n", grididx, block_get_regtype(lpctx, grididx, false));
+    //    update_masks(lpctx, xx, yy, zz, sideToUpdate);
+    //    int fa = update_faces(lpctx, xx, yy, zz, sideToUpdate);
+    //    printf("faces added = %i\n", fa);
+    //}
 }
 

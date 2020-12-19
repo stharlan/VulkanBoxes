@@ -191,6 +191,23 @@ void cleanup(VOXC_WINDOW_CONTEXT* lpctx)
 #endif
 }
 
+void testSqlite()
+{
+    sqlite3* pdb = nullptr;
+    sqlite3_stmt* pstmt = nullptr;
+    const char* pzTail;
+    int result = sqlite3_open("block.sdb", &pdb);
+    //result = sqlite3_prepare_v2(pdb, "create table ttest (tval INTEGER)", 34, &pstmt, &pzTail);
+    //result = sqlite3_prepare_v2(pdb, "insert into ttest values (9801)", 32, &pstmt, &pzTail);
+    result = sqlite3_prepare_v2(pdb, "select * from ttest", 32, &pstmt, &pzTail);
+    while (SQLITE_ROW == sqlite3_step(pstmt))
+    {
+        result = sqlite3_column_int(pstmt, 0);
+    }
+    sqlite3_finalize(pstmt);
+    sqlite3_close(pdb);    
+}
+
 int WINAPI WinMain(
     _In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,

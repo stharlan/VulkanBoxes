@@ -66,6 +66,15 @@
     <ClCompile Include="noise.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="shell.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sqlite3.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="blockdb.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="voxc.h">
@@ -87,6 +96,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="OpenGlVertexBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sqlite3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sqlite3ext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -117,6 +132,18 @@
     </Text>
     <Text Include="selcube.frag" />
     <Text Include="selcube.vert" />
+    <Text Include="vert2d.txt">
+      <Filter>Shaders</Filter>
+    </Text>
+    <Text Include="frag2d.txt">
+      <Filter>Shaders</Filter>
+    </Text>
+    <Text Include="fselcube.txt">
+      <Filter>Shaders</Filter>
+    </Text>
+    <Text Include="vselcube.txt">
+      <Filter>Shaders</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="vocxdirt.png">

@@ -64,21 +64,21 @@
 #define WGL_CONTEXT_PROFILE_MASK_ARB            0x9126
 
 #if _DEBUG
-    #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\debug\\PhysX_64.lib")
-    #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\debug\\PhysXCommon_64.lib")
-    #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\debug\\PhysXFoundation_64.lib")
-    #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\debug\\PhysXExtensions_static_64.lib")
-    #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\debug\\PhysXPvdSDK_static_64.lib")
-    #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\debug\\PhysXCharacterKinematic_static_64.lib")
-    #pragma comment(lib, "C:\\Library\\freetype-windows-binaries\\release dll\\win64\\freetype.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\debug\\PhysX_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\debug\\PhysXCommon_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\debug\\PhysXFoundation_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\debug\\PhysXExtensions_static_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\debug\\PhysXPvdSDK_static_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\debug\\PhysXCharacterKinematic_static_64.lib")
+#pragma comment(lib, "C:\\Library\\freetype-windows-binaries\\release dll\\win64\\freetype.lib")
 #else
-    #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysX_64.lib")
-    #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXCommon_64.lib")
-    #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXFoundation_64.lib")
-    #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXExtensions_static_64.lib")
-    #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXPvdSDK_static_64.lib")
-    #pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXCharacterKinematic_static_64.lib")
-    #pragma comment(lib, "C:\\Library\\freetype-windows-binaries\\release dll\\win64\\freetype.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysX_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXCommon_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXFoundation_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXExtensions_static_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXPvdSDK_static_64.lib")
+#pragma comment(lib, "C:\\Users\\stuar\\source\\repos\\PhysX\\physx\\bin\\win.x86_64.vc142.mt\\release\\PhysXCharacterKinematic_static_64.lib")
+#pragma comment(lib, "C:\\Library\\freetype-windows-binaries\\release dll\\win64\\freetype.lib")
 #endif
 
 #ifdef _DEBUG
@@ -107,8 +107,8 @@
 #define TOGL_BIT(t,b) (t ^= b)
 #define IS_BITSET(t,b) (t & b)
 
-#define X_GRID_EXTENT 256ll
-#define Y_GRID_EXTENT 256ll
+#define X_GRID_EXTENT 512ll
+#define Y_GRID_EXTENT 512ll
 #define Z_GRID_EXTENT 256ll
 
 #define GRIDIDX(ix,iy,iz) (((iz) * X_GRID_EXTENT * Y_GRID_EXTENT) + ((iy) * X_GRID_EXTENT) + (ix))
@@ -175,6 +175,7 @@
 #include "stb_image.h"
 #include "tiny_obj_loader.h"
 #include "glext.h"
+#include "sqlite3.h"
 
 typedef struct _VBO_DATA
 {
@@ -283,12 +284,19 @@ typedef struct _VBLOCK_SUBVERT
 {
     GLuint tex_id = 0;
     uint32_t num_vertices = 0;
-    glm::vec2 centroid;
 } VBLOCK_SUBVERT;
 
+// a 16x16x16 block group
+// each block has a single vbo
+// each vbo has a list of vertices
+// that are sorted by texture id
+// each texture id has a list of vertices
+// that are rendered just for that texture
 typedef struct _VBLOCK_16 {
     GLuint vbo = 0;
     std::vector<VBLOCK_SUBVERT> subverts;
+    uint32_t block16id;
+    glm::vec2 centroid;
 } VBLOCK_16;
 
 typedef std::pair<uint32_t, BLOCK_ENTITY> BLOCK_MAP_ENTRY;
@@ -435,6 +443,8 @@ void block_set_flags(VOXC_WINDOW_CONTEXT* lpctx, uint32_t blockId, uint16_t flag
 uint16_t block_get_flags(VOXC_WINDOW_CONTEXT* lpctx, uint32_t blockId);
 uint32_t block_compute_block_id(uint32_t x, uint32_t y, uint32_t z);
 glm::u32vec3 block_compute_position(uint32_t blockId);
+uint32_t block_compute_block16_id(uint32_t x, uint32_t y, uint32_t z);
+glm::u32vec3 block_compute_position16(uint32_t block16Id);
 
 void generate_terrain(BYTE* pixels);
 
@@ -445,13 +455,14 @@ typedef struct _MESSAGE_CONTEXT
 {
     VOXC_WINDOW_CONTEXT* lpctx = nullptr;
     OpenGlProgram* prog = nullptr;
+    OpenGlProgram* prog2d = nullptr;
     GLuint fontVAO = 0;
     GLuint fontVBO = 0;
     std::map<char, Character>* Characters = nullptr;
     HDC hdc = 0;
 } MESSAGE_CONTEXT;
 
-typedef void (*RENDER_MSG_ON_SCREEN_FNPTR)(MESSAGE_CONTEXT* mctx, const char* msg);
+typedef void (*RENDER_MSG_ON_SCREEN_FNPTR)(MESSAGE_CONTEXT* mctx, const char* msg, float prog);
 
 void create_vertex_buffer(VOXC_WINDOW_CONTEXT* lpctx, RENDER_MSG_ON_SCREEN_FNPTR msgfn, MESSAGE_CONTEXT* mctx);
 

@@ -4,10 +4,20 @@
 uint32_t block_compute_block_id(uint32_t x, uint32_t y, uint32_t z)
 {
 	uint32_t g = ((y >> 8) << 4) + (x >> 8);
-	//return COMPUTE_BLOCK_ID(g, x % 256, y % 256, z % 256);
 	uint32_t bx = x % 256;
 	uint32_t by = y % 256;
 	uint32_t bz = z % 256;
+	return (g << 24) + (bx << 16) + (by << 8) + bz;
+}
+
+// incoming coord is a regular coord
+// when stored, it is reduced to range 0-15 for block id
+uint32_t block_compute_block16_id(uint32_t x, uint32_t y, uint32_t z)
+{
+	uint32_t g = ((y >> 8) << 4) + (x >> 8);
+	uint32_t bx = (x % 256) / 16;
+	uint32_t by = (y % 256) / 16;
+	uint32_t bz = (z % 256) / 16;
 	return (g << 24) + (bx << 16) + (by << 8) + bz;
 }
 
@@ -18,6 +28,17 @@ glm::u32vec3 block_compute_position(uint32_t blockId)
 	BYTE x = (blockId & 0xff0000) >> 16;
 	BYTE y = (blockId & 0xff00) >> 8;
 	BYTE z = blockId & 0xff;
+	uint32_t gx = g % 16;
+	uint32_t gy = g / 16;
+	return glm::u32vec3((gx * 256) + x, (gy * 256) + y, z);
+}
+
+glm::u32vec3 block_compute_position16(uint32_t block16Id)
+{
+	BYTE g = (block16Id & 0xff000000) >> 24;
+	BYTE x = ((block16Id & 0xff0000) >> 16) * 16;
+	BYTE y = ((block16Id & 0xff00) >> 8) * 16;
+	BYTE z = (block16Id & 0xff) * 16;
 	uint32_t gx = g % 16;
 	uint32_t gy = g / 16;
 	return glm::u32vec3((gx * 256) + x, (gy * 256) + y, z);

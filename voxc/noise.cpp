@@ -3,13 +3,14 @@
 
 // https://lodev.org/cgtutor/randomnoise.html
 
-#define noiseWidth 256
-#define noiseHeight 256
+#define noiseWidth 512
+#define noiseHeight 512
 
 double noise[noiseHeight][noiseWidth]; //the noise array
 
 void generateNoise()
 {
+    srand(clock());
     for (int y = 0; y < noiseHeight; y++)
         for (int x = 0; x < noiseWidth; x++)
         {
@@ -57,9 +58,9 @@ double turbulence(double x, double y, double size)
 void generate_terrain(BYTE* pixels)
 {
     generateNoise();
-    for (int y = 0; y < 256; y++)
-        for (int x = 0; x < 256; x++)
+    for (int y = 0; y < 512; y++)
+        for (int x = 0; x < 512; x++)
         {
-            pixels[(y * 256) + x] = (BYTE)(turbulence(x, y, 256));
+            pixels[(y * 512) + x] = (BYTE)(turbulence(x, y, 512));
         }
 }

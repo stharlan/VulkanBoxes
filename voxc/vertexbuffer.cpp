@@ -677,20 +677,20 @@ int update_faces(VOXC_WINDOW_CONTEXT* lpctx,
 // the values are 0 to 255
 void create_vertex_buffer(VOXC_WINDOW_CONTEXT* lpctx, RENDER_MSG_ON_SCREEN_FNPTR msgfn, MESSAGE_CONTEXT* mctx)
 {
-    int texWidth = 256;
-    int texHeight = 256;
+    int texWidth = 512;
+    int texHeight = 512;
     int texChannels = 1;
     //stbi_uc* pixels = stbi_load("c:\\temp\\height8.png", &texWidth, &texHeight, &texChannels, 1);
     //if (!pixels)
         //throw new std::runtime_error("failed to load height map");
-    BYTE* pixels = (BYTE*)malloc(256 * 256);
-    msgfn(mctx, "Generating terrain...");
+    BYTE* pixels = (BYTE*)malloc(512 * 512);
+    msgfn(mctx, "Generating terrain...", 1.0f);
     generate_terrain(pixels);
 
     printf("assigning block types\n");
-    msgfn(mctx, "Assigning block types...");
     // assign blocks to level 0
     for (uint32_t yc = 0; yc < Y_GRID_EXTENT; yc++) {
+        msgfn(mctx, "Assigning block types...", yc / (float)Y_GRID_EXTENT);
         for (uint32_t xc = 0; xc < X_GRID_EXTENT; xc++) {
 
             int h = pixels[(yc * texWidth) + xc];
@@ -802,13 +802,50 @@ void create_vertex_buffer(VOXC_WINDOW_CONTEXT* lpctx, RENDER_MSG_ON_SCREEN_FNPTR
 
     //glm::u32vec3 block_compute_position(uint32_t blockId)
 
-    msgfn(mctx, "Updating bit masks...");
+    uint32_t bvctr = 0;
+    uint32_t bvmax = lpctx->blockVector.size();
+    uint32_t bvstep = bvmax / 100;
     std::unordered_map<uint32_t, BLOCK_ENTITY>::iterator ii = lpctx->blockVector.begin();
     for (; ii != lpctx->blockVector.end(); ++ii)
     {
+        if(bvctr % bvstep == 0) 
+            msgfn(mctx, "Updating bit masks...", bvctr / (float)bvmax);
         glm::u32vec3 upos = block_compute_position(ii->first);
         update_masks(lpctx, upos.x, upos.y, upos.z, 0);
+        bvctr++;
     }
+
+    bvctr = 0;
+    bvmax = lpctx->blockVector.size();
+    bvstep = bvmax / 100;
+    for (auto bvi = lpctx->blockVector.begin(), last = lpctx->blockVector.end(); bvi != last; ) {
+        if ((bvi->second.flags & EXISTS_ALL) == EXISTS_ALL)
+        {
+            bvi = lpctx->blockVector.erase(bvi);
+            if (bvctr % bvstep == 0)
+                msgfn(mctx, "Culling blocks...", bvctr / (float)bvmax);
+            bvctr++;
+        }
+        else {
+            ++bvi;
+        }
+    }
+
+    //lpctx->blockVector.erase(
+    //    std::remove_if(
+    //        lpctx->blockVector.begin(),
+    //        lpctx->blockVector.end(),
+    //        [](std::pair<const uint32_t,BLOCK_ENTITY>& item) {
+    //            return item.second.flags & EXISTS_ALL;
+    //        }
+    //    ),
+    //    lpctx->blockVector.end());
+
+                    //lpctx->groups[gi].vertices.erase(
+                    //    std::remove_if(lpctx->groups[gi].vertices.begin(), lpctx->groups[gi].vertices.end(),
+                    //        [hashCode](const VERTEX2& item) { return item.userData[0] == hashCode;  }),
+                    //    lpctx->groups[gi].vertices.end());
+
 
     //printf("creating vertex array and physics actors\n");
     //for (int64_t zc = 0; zc < Z_GRID_EXTENT; zc++) {
@@ -819,15 +856,18 @@ void create_vertex_buffer(VOXC_WINDOW_CONTEXT* lpctx, RENDER_MSG_ON_SCREEN_FNPTR
     //    }
     //}
 
-    msgfn(mctx, "Generating faces...");
     for (uint32_t zz = 0; zz < Z_GRID_EXTENT; zz += 16)
     {
+        msgfn(mctx, "Generating faces...", zz / (float)Z_GRID_EXTENT);
+
         for (uint32_t yy = 0; yy < Y_GRID_EXTENT; yy += 16)
         {
             for (uint32_t xx = 0; xx < X_GRID_EXTENT; xx += 16)
             {
 
                 VBLOCK_16 v16;
+                v16.block16id = block_compute_block16_id(xx, yy, zz);
+                v16.centroid = glm::vec2(xx + 8.0f, yy + 8.0f);
 
                 std::map <GLuint, std::vector<VERTEX4>> vertices;
                 for (uint32_t zc = zz; zc < zz + 16; zc++) {
@@ -854,7 +894,6 @@ void create_vertex_buffer(VOXC_WINDOW_CONTEXT* lpctx, RENDER_MSG_ON_SCREEN_FNPTR
                         VBLOCK_SUBVERT sv;
                         sv.tex_id = vItem.first;
                         sv.num_vertices = vItem.second.size();
-                        sv.centroid = glm::vec2(xx + 8.0f, yy + 8.0f);
                       
                         //lpctx->draw.subverts.push_back(sv);
                         v16.subverts.push_back(sv);

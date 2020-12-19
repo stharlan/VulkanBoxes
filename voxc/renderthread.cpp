@@ -303,14 +303,13 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx, const glm::vec3& pos, const glm::ve
     for (const auto& dv : lpctx->drawVector)
     {
         int64_t voffset = 0;
-        for (const auto& sv : dv.subverts)
-        {
-            glm::vec2 cen2pos = sv.centroid - glm::vec2(pos);
-            float dist = glm::length(cen2pos);
-            
-            float cen2pos_look_dotp = glm::dot(cen2pos, glm::vec2(look));
+        glm::vec2 cen2pos = dv.centroid - glm::vec2(pos);
+        float cen2pos_look_dotp = glm::dot(cen2pos, glm::vec2(look));
+        float dist = glm::length(cen2pos);
 
-            if (dist < 256.0f && cen2pos_look_dotp > -8.0f)
+        if (dist < 256.0f && cen2pos_look_dotp > -8.0f)
+        {
+            for (const auto& sv : dv.subverts)
             {
                 glBindTexture(GL_TEXTURE_2D, sv.tex_id);
 
@@ -322,8 +321,9 @@ void RenderScene(VOXC_WINDOW_CONTEXT* lpctx, const glm::vec3& pos, const glm::ve
                     sizeof(VERTEX4));
 
                 glDrawArrays(GL_TRIANGLES, 0, sv.num_vertices);
+
+                voffset += sv.num_vertices;
             }
-            voffset += sv.num_vertices;
         }
     }
 
@@ -1052,7 +1052,7 @@ void load_textures(VOXC_WINDOW_CONTEXT* lpctx)
     load_textures_2(tsArray, 6, lpctx);
 }
 
-void render_message_on_screen(MESSAGE_CONTEXT* mctx, const char* msg)
+void render_message_on_screen(MESSAGE_CONTEXT* mctx, const char* msg, float prog)
 {
     char textBuffer[256];
     glViewport(0, 0, mctx->lpctx->screenWidth, mctx->lpctx->screenHeight);
@@ -1073,10 +1073,30 @@ void render_message_on_screen(MESSAGE_CONTEXT* mctx, const char* msg)
         mctx->fontVBO,
         *mctx->Characters);
     glDisable(GL_BLEND);
+
+    mctx->prog2d->Use();
+    glm::vec2 vs[6] = { {-1,0},{(prog * 2.0f) - 1.0f,0},{(prog * 2.0f) - 1.0f,0.1},
+        {-1,0},{(prog * 2.0f) - 1.0f,0.1},{-1,0.1} };
+    GLuint vao2d;
+    glCreateVertexArrays(1, &vao2d);
+    glVertexArrayAttribBinding(vao2d, 0, 0);
+    glVertexArrayAttribFormat(vao2d, 0, 2, GL_FLOAT, FALSE, 0);
+    glVertexArrayBindingDivisor(vao2d, 0, 0);
+    glEnableVertexArrayAttrib(vao2d, 0);
+    glBindVertexArray(vao2d);
+    GLuint vbo2d;
+    glCreateBuffers(1, &vbo2d);
+    glNamedBufferStorage(vbo2d, 12 * sizeof(GLfloat), vs, 0);
+    glVertexArrayVertexBuffer(vao2d, 0, vbo2d, 0, 2 * sizeof(GLfloat));
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
     glFlush();
     if (false == SwapBuffers(mctx->hdc))
         throw new std::runtime_error("failed to swap buffers");
-    glUseProgram(0);
+
+    glBindVertexArray(0);
+    glDeleteBuffers(1, &vbo2d);
+    glDeleteVertexArrays(1, &vao2d);
 }
 
 DWORD WINAPI RenderThread(LPVOID parm)
@@ -1126,6 +1146,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     OpenGlProgram ddProg("vsh2d.txt", "fsh2d.txt");
     OpenGlProgram fontProg("vfont.txt", "ffont.txt");
     OpenGlProgram selCubeProg("selcube.vert", "selcube.frag");
+    OpenGlProgram shader2d("vert2d.txt", "frag2d.txt");
 
     // freetype init
     GLuint fontVAO = 0;
@@ -1140,21 +1161,22 @@ DWORD WINAPI RenderThread(LPVOID parm)
     mctx.hdc = hdc;
     mctx.lpctx = lpctx;
     mctx.prog = &fontProg;
+    mctx.prog2d = &shader2d;
 
     // now we can render messages
-    render_message_on_screen(&mctx, "Preparing...");
+    render_message_on_screen(&mctx, "Preparing...", 0.0f);
 
     GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
-    render_message_on_screen(&mctx, "Loading textures...");
+    render_message_on_screen(&mctx, "Loading textures...", 0.0f);
     load_textures(lpctx);
 
     GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // physics: must be done before create vertex buffer
-    render_message_on_screen(&mctx, "Initializing physics...");
+    render_message_on_screen(&mctx, "Initializing physics...", 0.0f);
     glm::vec3 startingPosition(8, 8, 260);
     initPhysics(lpctx, startingPosition);
     // end physics
@@ -1163,7 +1185,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // vertex buffer
-    render_message_on_screen(&mctx, "Creating vertex buffer...");
+    render_message_on_screen(&mctx, "Creating vertex buffer...", 0.0f);
     {
         create_vertex_buffer(lpctx, render_message_on_screen, &mctx);
 
@@ -1220,7 +1242,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // model
-    render_message_on_screen(&mctx, "Loading model...");
+    render_message_on_screen(&mctx, "Loading model...", 0.0f);
     std::vector<VBO_DATA> modelVboData;
     LoadModel(modelVboData);
 
@@ -1228,7 +1250,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // create the vertex array
-    render_message_on_screen(&mctx, "Creating vertex array specs...");
+    render_message_on_screen(&mctx, "Creating vertex array specs...", 0.0f);
     glCreateVertexArrays(1, &lpctx->vao);
     glVertexArrayAttribBinding(lpctx->vao, 0, 0);
     glVertexArrayAttribBinding(lpctx->vao, 1, 0);
@@ -1247,7 +1269,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // create a frame buffer for shadows 
-    render_message_on_screen(&mctx, "Creating shadow buffer...");
+    render_message_on_screen(&mctx, "Creating shadow buffer...", 0.0f);
     GLuint depthMapFBO = 0;
     glGenFramebuffers(1, &depthMapFBO);
     HANDLE_GL_ERROR();
@@ -1283,7 +1305,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // vbo for 2d quad
-    render_message_on_screen(&mctx, "Creating quad buffer for shadow thumbnail...");
+    render_message_on_screen(&mctx, "Creating quad buffer for shadow thumbnail...", 0.0f);
     OpenGlVertexBuffer<VERTEX4> quadBuffer(lpctx->vao, (GLsizei)6, &quadVerts[0]);
     quadBuffer.setTextureInfo(GL_TEXTURE0, GL_TEXTURE_2D, depthMap);
 
@@ -1291,7 +1313,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // selection cube vertex buffer
-    render_message_on_screen(&mctx, "Creating selection cube...");
+    render_message_on_screen(&mctx, "Creating selection cube...", 0.0f);
     std::vector<VERTEX4> zeroCubeVertices;
     getZeroCubeVertices(zeroCubeVertices);
     OpenGlVertexBuffer<VERTEX4> zeroCubeBuffer(lpctx->vao, (GLsizei)zeroCubeVertices.size(), zeroCubeVertices.data());
@@ -1301,7 +1323,7 @@ DWORD WINAPI RenderThread(LPVOID parm)
     memStatsFile << (double)clock() / CLOCKS_PER_SEC << " s " << pmc.WorkingSetSize << " bytes " << std::endl;
 
     // add initial set of actors based on starting location
-    render_message_on_screen(&mctx, "Adding initial actors...");
+    render_message_on_screen(&mctx, "Adding initial actors...", 0.0f);
     addActorsForCurrentLocation(lpctx,
         (int64_t)startingPosition.x,
         (int64_t)startingPosition.y,
